@@ -365,7 +365,7 @@ class c_filter_glsl : public c_filter
 {
 public:
     c_filter_glsl(const char *optarg);
-    const char *filter_filename;
+    char *filter_filename;
     char *uniform_names[16];
     GLuint filter_pid;
     GLuint uniform_texture_src_id;
@@ -393,7 +393,10 @@ c_filter::~c_filter(void)
  */
 c_filter_glsl::c_filter_glsl(const char *optarg) : c_filter(optarg)
 {
-    filter_filename = optarg;
+    int buffer_length;
+    buffer_length = strlen(optarg)+strlen("shaders/")+10;
+    filter_filename = (char *)malloc(buffer_length);
+    snprintf(filter_filename, buffer_length, "shaders/%s.glsl", optarg);
     filter_pid = 0;
     uniform_texture_src_id = 0;
     for (int i=0; i<16; i++) {
@@ -538,20 +541,14 @@ typedef struct
     const char *image_input_filename;
     const char *image_output_filename;
     int num_filters;
-    char *filter_filenames[256];
+    const char *filter_filenames[256];
 } t_options;
 
 /*f add_filter
 */
 static void add_filter(t_options *options, const char *filename)
 {
-    int i;
-    int buffer_length;
-    i = options->num_filters;
-    buffer_length = strlen(filename)+strlen("shaders/")+10;
-    options->filter_filenames[i] = (char *)malloc(buffer_length);
-    snprintf(options->filter_filenames[i],buffer_length,"shaders/%s.glsl",filename);
-    options->num_filters++;
+    options->filter_filenames[options->num_filters++] = filename;
 }
 
 /*f get_options

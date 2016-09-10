@@ -58,7 +58,7 @@ void main(){
           Ixy = Ixy + Ix[i]*Iy[i];
      }
      //color = 10000*Ix*Ix*Iy*Iy;//1000.0*(Ix*Ix*Iy*Iy-Ix*Iy*Ix*Iy);
-     color = 3*sqrt(sqrt(Ix2*Iy2-Ixy*Ixy));
+     color = sqrt(sqrt(Ix2*Iy2-Ixy*Ixy));
      //color = 100000.0*(Ix*Ix-Iy*Iy);
 }
 

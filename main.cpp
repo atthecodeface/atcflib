@@ -11,6 +11,15 @@
 
 /*a Types
  */
+/*t t_point_value
+ */
+typedef struct
+{
+    int x;
+    int y;
+    float value;
+} t_point_value;
+
 /*t t_texture
  */
 typedef struct
@@ -19,14 +28,17 @@ typedef struct
     int width;
     int height;
     GLuint format;
+
+    void *raw_buffer;
 } t_texture;
 
 /*t t_exec_context
  */
 typedef struct
 {
-    t_texture *current_texture;
-    t_texture *next_texture;
+    t_texture *textures[16];
+    t_point_value *points;
+    int num_points;
 } t_exec_context;
 
 /*t c_main
@@ -74,6 +86,11 @@ GLuint shader_load(const char *shader_filename, GLenum shader_type)
     GLint compile_result;
 
     f = fopen(shader_filename,"r");
+    if (!f) {
+        fprintf(stderr, "Failed to open shader file '%s'\n",shader_filename);
+        return 0;
+    }
+
     fseek(f, 0L, SEEK_END);
     file_length = ftell(f);
     rewind(f);
@@ -151,8 +168,8 @@ void texture_save(t_texture *texture, const char *png_filename)
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     if (0) {
         float *raw_img;
-        raw_img = (float*) malloc(texture->width * texture->height * sizeof(float));
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, raw_img);
+        raw_img = (float*)texture->raw_buffer;
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, texture->raw_buffer);
         for (int j=0;j<texture->height;j++){
             for (int i=0;i<texture->width; i++){
                 image_pixels[4*(j*texture->width+i)+0]=255*raw_img[j*texture->width+i];            
@@ -161,11 +178,9 @@ void texture_save(t_texture *texture, const char *png_filename)
                 image_pixels[4*(j*texture->width+i)+3]=255*raw_img[j*texture->width+i];
             }
         }
-        free(raw_img);
     } else {
-        char *raw_img;
-        raw_img = (char*) malloc(texture->width * texture->height * 8);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, raw_img);
+        char *raw_img = (char *)texture->raw_buffer;
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture->raw_buffer);
         for (int j=0;j<texture->height;j++){
             for (int i=0;i<texture->width; i++){
                 int p_in = (j*texture->width+i)*4;
@@ -176,10 +191,16 @@ void texture_save(t_texture *texture, const char *png_filename)
                 image_pixels[p_out+3]=1;
             }
         }
-        free(raw_img);
     }
     IMG_SavePNG(image, png_filename);
     free(image);
+}
+
+/*f texture_buffers
+ */
+static void texture_buffers(t_texture *texture)
+{
+    texture->raw_buffer = malloc(texture->width * texture->height * 8); //sizeof(float));
 }
 
 /*f texture_load
@@ -192,7 +213,7 @@ t_texture *texture_load(const char *image_filename, GLuint image_type)
 
     texture = (t_texture *)malloc(sizeof(t_texture));
 
-    fprintf(stderr,"Attempting image load from %s...",image_filename);
+    fprintf(stderr,"Attempting image load from %s...\n",image_filename);
 
     image_surface=IMG_Load(image_filename);
     if (image_surface==NULL) {
@@ -229,7 +250,8 @@ t_texture *texture_load(const char *image_filename, GLuint image_type)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
     SDL_FreeSurface(surface);
     SDL_FreeSurface(image_surface);
-    fprintf(stderr," Success\n");
+
+    texture_buffers(texture);
     return texture;
 }
 
@@ -256,6 +278,7 @@ t_texture *texture_create(GLuint format, int width, int height)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_BORDER);    
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_BORDER);
+    texture_buffers(texture);
     return texture;
 }
 
@@ -281,9 +304,10 @@ int texture_target_as_framebuffer(t_texture *texture)
     return 1;
 }
 
-/*t texture_draw
+/*t texture_draw_init
  */
-static void texture_draw(t_texture *texture, GLuint t_u)
+static GLuint texture_draw_buffers[2];
+static void texture_draw_init(void)
 {
     float vertices[3*2*3];
     float uvs[2*2*3];
@@ -323,27 +347,54 @@ static void texture_draw(t_texture *texture, GLuint t_u)
     GLuint VertexArrayID;
     glGenVertexArrays(1,&VertexArrayID);
     glBindVertexArray(VertexArrayID);
-    GLuint buffers[2];
-    glGenBuffers(2,buffers);
-    glBindBuffer(GL_ARRAY_BUFFER,buffers[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER,buffers[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
 
+    glGenBuffers(2, texture_draw_buffers);
+    glBindBuffer(GL_ARRAY_BUFFER, texture_draw_buffers[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, texture_draw_buffers[1]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
+    gl_get_errors("texture_draw_init");
+}
+
+/*t texture_draw_prepare
+ */
+static void texture_draw_prepare(t_texture *texture, GLuint t_u)
+{
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,texture->gl_id);
     glUniform1i(t_u,0);
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, texture_draw_buffers[0]);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, texture_draw_buffers[1]);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+}
+
+/*t texture_draw_do
+ */
+static void texture_draw_do(void)
+{
     glDrawArrays(GL_TRIANGLES,0,6);
+}
+
+/*t texture_draw_tidy
+ */
+static void texture_draw_tidy(void)
+{
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
-    gl_get_errors("draw k");
+    gl_get_errors("texture_draw");
+}
+
+/*t texture_draw
+ */
+static void texture_draw(t_texture *texture, GLuint t_u)
+{
+    texture_draw_prepare(texture, t_u);
+    texture_draw_do();
+    texture_draw_tidy();
 }
 
 /*a Filters
@@ -357,6 +408,8 @@ public:
     ~c_filter();
     virtual int compile(void) {return 1;};
     virtual int execute(t_exec_context *ec) {return 1;};
+    int texture_src;
+    int texture_dest;
 };
 
 /*t c_filter_glsl
@@ -370,6 +423,42 @@ public:
     GLuint filter_pid;
     GLuint uniform_texture_src_id;
     GLuint uniform_ids[16];
+
+    virtual int compile(void);
+    virtual int execute(t_exec_context *ec);
+};
+
+/*t c_filter_correlate
+ */
+class c_filter_correlate : public c_filter
+{
+public:
+    c_filter_correlate(const char *optarg);
+    char *filter_filename;
+    char *uniform_names[16];
+    GLuint filter_pid;
+    GLuint uniform_texture_src_id;
+    GLuint uniform_out_xy_id;
+    GLuint uniform_out_size_id;
+    GLuint uniform_src_xy_id;
+    GLuint uniform_ids[16];
+
+    virtual int compile(void);
+    virtual int execute(t_exec_context *ec);
+};
+
+/*t c_filter_find
+ */
+class c_filter_find : public c_filter
+{
+public:
+    c_filter_find(const char *optarg);
+    int perimeter;
+    float minimum;
+    float min_distance;
+    int max_elements;
+    int num_elements;
+    t_point_value *points;
 
     virtual int compile(void);
     virtual int execute(t_exec_context *ec);
@@ -420,15 +509,151 @@ int c_filter_glsl::compile(void)
  */
 int c_filter_glsl::execute(t_exec_context *ec)
 {
-    t_texture *next_texture;
-    next_texture = ec->next_texture;
-    texture_target_as_framebuffer(next_texture);
+    texture_target_as_framebuffer(ec->textures[texture_dest]);
     glUseProgram(filter_pid);
-    //glClearColor(0.5,0.3,0.4,1.0);
-    //glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    texture_draw(ec->current_texture, uniform_texture_src_id);
-    ec->next_texture = ec->current_texture;
-    ec->current_texture = next_texture;
+    texture_draw(ec->textures[texture_src], uniform_texture_src_id);
+    return 0;
+}
+
+/*f c_filter_correlate constructor
+ */
+c_filter_correlate::c_filter_correlate(const char *optarg) : c_filter(optarg)
+{
+    int buffer_length;
+    buffer_length = strlen(optarg)+strlen("shaders/")+10;
+    filter_filename = (char *)malloc(buffer_length);
+    snprintf(filter_filename, buffer_length, "shaders/%s.glsl", optarg);
+    filter_pid = 0;
+    uniform_texture_src_id = 0;
+    for (int i=0; i<16; i++) {
+        uniform_ids[i] = 0;
+    }
+}
+
+/*f c_filter_correlate::compile
+ */
+int c_filter_correlate::compile(void)
+{
+    filter_pid = shader_load_and_link(0, "shaders/vertex_correlation_shader.glsl", filter_filename);
+    if (filter_pid==0) {
+        return 1;
+    }
+    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_src");
+    uniform_out_xy_id      = glGetUniformLocation(filter_pid, "out_xy");
+    uniform_out_size_id    = glGetUniformLocation(filter_pid, "out_size");
+    uniform_src_xy_id      = glGetUniformLocation(filter_pid, "src_xy");
+    return 0;
+}
+
+/*f c_filter_correlate::execute
+ */
+int c_filter_correlate::execute(t_exec_context *ec)
+{
+    texture_target_as_framebuffer(ec->textures[texture_dest]);
+
+    glClearColor(0.1,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(filter_pid);
+    glUniform2f(uniform_out_size_id,32,32);
+    texture_draw_prepare(ec->textures[texture_src], uniform_texture_src_id);
+
+    float xsc, ysc;
+    xsc = 1024.0 / (ec->textures[texture_src]->width);
+    ysc = 1024.0 / (ec->textures[texture_src]->height);
+    xsc = 1.0;
+    ysc = 1.0;
+    for (int i=0; i<ec->num_points; i++) {
+        glUniform2f(uniform_out_xy_id,i*32,0);
+        glUniform2f(uniform_src_xy_id,(ec->points[i].x-16)*xsc,(ec->points[i].y-16)*ysc);
+        texture_draw_do();
+    }
+
+    texture_draw_tidy();
+    return 0;
+}
+
+/*f c_filter_find constructor
+ */
+c_filter_find::c_filter_find(const char *optarg) : c_filter(optarg)
+{
+    perimeter = 10;
+    minimum = 0.0;
+    max_elements = 512;
+    min_distance = 10.0;
+}
+
+/*f c_filter_find::compile
+ */
+int c_filter_find::compile(void)
+{
+    return 0;
+}
+
+/*f c_filter_find::execute
+ */
+int c_filter_find::execute(t_exec_context *ec)
+{
+    t_texture *texture;
+    float *raw_img;
+    float elements_minimum;
+    int   n;
+
+    texture = ec->textures[texture_src];
+    raw_img = (float *)texture->raw_buffer;
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, texture->raw_buffer);
+
+    elements_minimum = -1.0;
+    n=0;
+    points = (t_point_value *)malloc(sizeof(t_point_value)*max_elements);
+    for (int y=perimeter; y<texture->height-perimeter; y++) {
+        for (int x=perimeter; x<texture->width-perimeter; x++) {
+            int i;
+            float value_xy;
+            value_xy = raw_img[y*texture->width+x];
+            if (value_xy<=elements_minimum) continue;
+            if (value_xy<minimum) continue;
+            for (i=0; i<n; i++) {
+                if (points[i].value<value_xy) break;
+            }
+            if (n==max_elements) n--;
+            if (i<n) {
+                memmove(&points[i+1], &points[i], sizeof(t_point_value)*(n-i));
+            }
+            n++;
+            points[i].x=x;
+            points[i].y=y;
+            points[i].value = value_xy;
+            if (n==max_elements) {
+                elements_minimum = points[n-1].value;
+            }
+        }
+    }
+    float min_distance_sq;
+    min_distance_sq = min_distance * min_distance;
+    for (int i=0; i<n; i++) {
+        int j;
+        j = i+1;
+        while (j<n) {
+            float dx, dy, d_sq;
+            dx = points[i].x-points[j].x;
+            dy = points[i].y-points[j].y;
+            d_sq = dx*dx+dy*dy;
+            if (d_sq>min_distance_sq) {
+                j++;
+                continue;
+            }
+            n--;
+            if (j<n) {
+                memmove(&points[j], &points[j+1], sizeof(t_point_value)*(n-j));
+            }
+        }
+    }
+    for (int i=0; i<n; i++) {
+        fprintf(stderr,"%d: (%d,%d) = %f\n", i, points[i].x, points[i].y, points[i].value);
+    }
+    if (ec->points) free(ec->points);
+    ec->points = points;
+    ec->num_points = n;
     return 0;
 }
 
@@ -612,7 +837,10 @@ int main(int argc,char *argv[])
 
     for (int i=0; i<options.num_filters; i++) {
         filters[i] = new c_filter_glsl(options.filter_filenames[i]);
+        filters[i]->texture_src  = 2-(i&1);
+        filters[i]->texture_dest = 1+(i&1);
     }
+    filters[0]->texture_src = 0;
     int failures=0;
     for (int i=0; i<options.num_filters; i++) {
         if (filters[i]->compile()!=0) failures++;
@@ -622,20 +850,37 @@ int main(int argc,char *argv[])
     }
 
     t_exec_context ec;
-    t_texture *t, *t_db[2];
-    t = texture_load(options.image_input_filename, GL_RGB);
-    for (int i=0; i<2; i++) {
-        t_db[i] = texture_create(GL_R16, 1024, 1024);
+    texture_draw_init();
+    ec.textures[0] = texture_load(options.image_input_filename, GL_RGB);
+    for (int i=0; i<3; i++) {
+        ec.textures[i+1] = texture_create(GL_R16, 1024, 1024);
     }
-    ec.current_texture = t;
-    ec.next_texture    = t_db[0];
+    ec.points = NULL;
+
     for (int i=0; i<options.num_filters; i++) {
         filters[i]->execute(&ec);
-        if (ec.next_texture==t) {
-            ec.next_texture = t_db[1];
-        }
-    }        
-    texture_save(ec.current_texture, options.image_output_filename);
+    }
+    texture_save(ec.textures[filters[options.num_filters-1]->texture_dest], options.image_output_filename);
+
+    if (1) {
+        class c_filter_find *f;
+        f = new c_filter_find("");
+        f->texture_src  = filters[options.num_filters-1]->texture_dest;
+        f->compile();
+        f->execute(&ec);
+    }
+
+    if (1) {
+        class c_filter_correlate *f;
+        f = new c_filter_correlate("correlation_copy_shader");
+        f->texture_src  = 0;//filters[options.num_filters-1]->texture_dest;
+        f->texture_dest = 3;
+        f->compile();
+        f->execute(&ec);
+    }
+
+    texture_save(ec.textures[3], "test2.png");
+
 
     m->exit();
     return 0;

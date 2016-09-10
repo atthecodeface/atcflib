@@ -71,6 +71,8 @@ public:
 
 /*a Helper functions
  */
+/*f gl_get_errors
+ */
 int gl_get_errors(const char *msg)
 {
     GLenum err;
@@ -81,6 +83,45 @@ int gl_get_errors(const char *msg)
         num_errors++;
     }
     return num_errors;
+}
+
+/*f key_value_parse
+ */
+typedef struct
+{
+    int a;
+} t_key_value_entry;
+typedef struct
+{
+    int a;
+} t_key_values;
+static void key_value_add(t_key_values *kv, const char *key, int key_len, const char *value, int value_len)
+{
+}
+static const char *key_value_parse(const char *string, t_key_values *kv)
+{
+    const char *ptr, *end;
+    const char *equals;
+
+    while (string[0]=='&') string++;
+    end = strchr(string,'&');
+    if (!end) {
+        end = string+strlen(end);
+    }
+    equals = strchr(string,'=');
+    if (!equals) {
+        key_value_add(kv, string, end-string, NULL, 0);
+    } else {
+        key_value_add(kv, string, equals-string, equals+1, end-equals-1);
+    }
+    return end;
+}
+
+/*f key_value_find
+ */
+static t_key_value_entry *key_value_find(const char *key)
+{
+    return NULL;
 }
 
 /*a Shader methods
@@ -448,9 +489,13 @@ public:
     char *uniform_names[16];
     GLuint filter_pid;
     GLuint uniform_texture_src_id;
+    GLuint uniform_texture_base_id;
+    GLuint uniform_texture_base_x;
+    GLuint uniform_texture_base_y;
     GLuint uniform_ids[16];
     int texture_src;
     int texture_dest;
+    int texture_base;
 
     virtual int compile(void);
     virtual int execute(t_exec_context *ec);
@@ -516,6 +561,7 @@ void c_filter::set_filename(const char *dirname, const char *suffix, t_len_strin
         ptr = strcpy( *filter_filename,  dirname);
     }
     ptr = strncpy(ptr + strlen(ptr), filename->ptr, filename->len);
+    ptr[filename->len]=0;
     if (suffix) {
         ptr = strcpy( ptr + filename->len, suffix);
     }
@@ -538,8 +584,12 @@ c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list,
     for (int i=0; i<16; i++) {
         uniform_ids[i] = 0;
     }
-    if (sscanf(options_list->ptr,"%d,%d",&texture_src,&texture_dest)!=2) {
-        parse_error = "Failed to parse GLSL texture options - need '(<src>,<dst>)' texture numbers";
+    if (sscanf(options_list->ptr,"%d,%d,%d",&texture_base,&texture_src,&texture_dest)==3) {
+    } else {
+        texture_base = 0;
+        if (sscanf(options_list->ptr,"%d,%d",&texture_src,&texture_dest)!=2) {
+            parse_error = "Failed to parse GLSL texture options - need '(<src>,<dst>)' texture numbers";
+        }
     }
 }
 
@@ -552,6 +602,13 @@ int c_filter_glsl::compile(void)
         return 1;
     }
     uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_to_draw");
+    if (texture_base!=0) {
+        gl_get_errors("before get uniforms");
+        uniform_texture_base_id = glGetUniformLocation(filter_pid, "texture_base");
+        uniform_texture_base_x = glGetUniformLocation(filter_pid, "uv_base_x");
+        uniform_texture_base_y = glGetUniformLocation(filter_pid, "uv_base_y");
+        gl_get_errors("after get uniforms");
+    }
     return 0;
 }
 
@@ -561,6 +618,13 @@ int c_filter_glsl::execute(t_exec_context *ec)
 {
     texture_target_as_framebuffer(ec->textures[texture_dest]);
     glUseProgram(filter_pid);
+    if (uniform_texture_base_id!=0) {
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, ec->textures[texture_base]->gl_id);
+        glUniform1i(uniform_texture_base_id, 1);
+        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,(15.5+32*7)/1024.0);}
+        if (uniform_texture_base_y) {glUniform1f(uniform_texture_base_y,15.5/1024.0);}
+    }
     texture_draw(ec->textures[texture_src], uniform_texture_src_id);
     return 0;
 }
@@ -985,6 +1049,7 @@ int main(int argc,char *argv[])
     ec.points = NULL;
 
     for (int i=0; i<options.filters.num; i++) {
+        fprintf(stderr, "Execute '%s'\n", options.filters.strings[i]);
         filters[i]->execute(&ec);
     }
 

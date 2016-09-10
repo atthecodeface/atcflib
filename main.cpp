@@ -7,6 +7,7 @@
 #include <SDL_image.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <getopt.h>
 
 /*a Types
  */
@@ -25,16 +26,15 @@ typedef struct
 class c_main
 {
 public:
-    c_main(int screen_width, int screen_height);
+    c_main(void);
     ~c_main();
-    void checkSDLError(void);
-    int Init(void);
-    void Exit(void);
-    int CreateWindow(int width, int height);
+    void check_sdl_error(void);
+    int init(void);
+    void exit(void);
+    int create_window(void);
 
     SDL_Window    *window;
     SDL_GLContext glContext;
-    int screen_width, screen_height;
 };
 
 /*a Helper functions
@@ -273,13 +273,12 @@ int texture_target_as_framebuffer(t_texture *texture)
     return 1;
 }
 
-/*t
+/*t texture_draw
  */
 static void texture_draw(t_texture *texture, GLuint t_u)
 {
     float vertices[3*2*3];
     float uvs[2*2*3];
-    float normals[3*2*3];
 
     vertices[0*3+0] = 1.0f;
     vertices[0*3+1] = 0.0f;
@@ -316,16 +315,12 @@ static void texture_draw(t_texture *texture, GLuint t_u)
     GLuint VertexArrayID;
     glGenVertexArrays(1,&VertexArrayID);
     glBindVertexArray(VertexArrayID);
-    GLuint buffers[3];
-    gl_get_errors("draw a");
-    glGenBuffers(3,buffers);
+    GLuint buffers[2];
+    glGenBuffers(2,buffers);
     glBindBuffer(GL_ARRAY_BUFFER,buffers[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER,buffers[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER,buffers[2]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(normals), normals, GL_STATIC_DRAW);
-    gl_get_errors("draw d");
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,texture->gl_id);
@@ -333,20 +328,13 @@ static void texture_draw(t_texture *texture, GLuint t_u)
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-    //glEnableVertexAttribArray(2);
-    gl_get_errors("draw e");
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glBindBuffer(GL_ARRAY_BUFFER, buffers[1]);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-    //glBindBuffer(GL_ARRAY_BUFFER, buffers[2]);
-    //glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-    gl_get_errors("draw g");
     glDrawArrays(GL_TRIANGLES,0,6);
-    gl_get_errors("draw i");
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
     gl_get_errors("draw k");
 }
 
@@ -354,13 +342,15 @@ static void texture_draw(t_texture *texture, GLuint t_u)
  */
 /*f c_main constructor
  */
-c_main::c_main(int screen_width, int screen_height)
+c_main::c_main(void)
 {
     window = NULL;
 }
 
+/*f c_main::check_sdl_error
+ */
 void
-c_main::checkSDLError(void)
+c_main::check_sdl_error(void)
 {
 	const char *error;
     error = SDL_GetError();
@@ -370,7 +360,9 @@ c_main::checkSDLError(void)
 	}
 }
 
-int c_main::Init(void)
+/*f c_main::init
+*/
+int c_main::init(void)
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         return 0;
@@ -384,29 +376,38 @@ int c_main::Init(void)
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 3 );
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    checkSDLError();
+    check_sdl_error();
 
     fprintf(stderr,"Main Init() completed\n");
     return 1;
 }
 
+/*f c_main::exit
+*/
 void
-c_main::Exit(void)
+c_main::exit(void)
 {
     if (window) {
         SDL_DestroyWindow(window);
+        window = NULL;
     }
     SDL_Quit();
 }
 
+/*f c_main::create_window
+ */
 int
-c_main::CreateWindow(int width, int height)
+c_main::create_window()
 {
-    int flags; 
+    int flags;
+    int width;
+    int height;
+    width = 64;
+    height = 64;
 
     flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     window = SDL_CreateWindow("OpenGL Test",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,width, height, flags);
-    checkSDLError();
+    check_sdl_error();
 
     if (!window) {
         return 0;
@@ -421,41 +422,131 @@ c_main::CreateWindow(int width, int height)
         int major, minor;
         SDL_GL_GetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, &major );
         SDL_GL_GetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, &minor );
-        checkSDLError();
+        check_sdl_error();
         fprintf(stderr, "Using OpenGL version %d.%d\n",major,minor);
     }
     return 1;
 }
 
+/*a Options
+ */
+/*v long_options
+*/
+static struct option long_options[] =
+{
+    {"filter",  required_argument, 0, 'f'},
+    {"infile",  required_argument, 0, 'i'},
+    {"output",  required_argument, 0, 'o'},
+    {0, 0, 0, 0}
+};
 
-int main(int argc,char *argv[]){
+/*t t_options 
+*/
+typedef struct
+{
+    const char *image_input_filename;
+    const char *image_output_filename;
+    int num_filters;
+    char *filter_filenames[256];
+} t_options;
+
+/*f add_filter
+*/
+static void add_filter(t_options *options, const char *filename)
+{
+    int i;
+    int buffer_length;
+    i = options->num_filters;
+    buffer_length = strlen(filename)+strlen("shaders/")+10;
+    options->filter_filenames[i] = (char *)malloc(buffer_length);
+    snprintf(options->filter_filenames[i],buffer_length,"shaders/%s.glsl",filename);
+    options->num_filters++;
+}
+
+/*f get_options
+*/
+static int get_options(int argc, char **argv, t_options *options)
+{
+    int c;
+    while (1)
+    {
+        int option_index = 0;
+
+        c = getopt_long (argc, argv, "f:i:o:",
+                         long_options, &option_index);
+        if (c == -1)
+            break;
+
+        switch (c) {
+        case 'f':
+            add_filter(options, optarg);
+            break;
+        case 'i':
+            options->image_input_filename = optarg;
+            break;
+        case 'o':
+            options->image_output_filename = optarg;
+            break;
+        default:
+            break;
+        }
+    }
+    return 1;
+}
+
+/*a Toplevel
+*/
+/*f main
+ */
+int main(int argc,char *argv[])
+{
 
     c_main *m;
     GLuint filter_pids[256];
+    t_options options;
 
-    m = new c_main(64,64);
-    if (m->Init()==0) {
+    m = new c_main();
+    if (m->init()==0) {
         fprintf(stderr,"Initializtion failed\n");
         return 4;
     }
-    if (!m->CreateWindow(64,64)) {
+    if (!m->create_window()) {
         fprintf(stderr,"Create window failed\n");
         return 4;
     }
 
-    GLuint p_id = shader_load_and_link(0,"shaders/vertex_shader.glsl", "shaders/intensity_from_rgb.glsl");
+    if (get_options(argc, argv, &options)==0) {
+        return 4;
+    }
 
-    t_texture *t, *t_y;
-    t = texture_load("images/IMG_1687.JPG", GL_RGB);
-    t_y = texture_create(GL_R16, t->width, t->height);
-    texture_target_as_framebuffer(t_y);
-    glUseProgram(p_id);
-    GLuint t_u = glGetUniformLocation(p_id, "texture_to_draw");
-    glClearColor(0.5,0.3,0.4,1.0);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    texture_draw(t, t_u);
-    texture_save(t_y, "test.png");
+    if (!options.image_input_filename)  options.image_input_filename="images/IMG_1687.JPG";
+    if (!options.image_output_filename) options.image_output_filename="test.png";
 
-    m->Exit();
+    for (int i=0; i<options.num_filters; i++) {
+        filter_pids[i] = shader_load_and_link(0,"shaders/vertex_shader.glsl", options.filter_filenames[i]);
+    }
+    for (int i=0; i<options.num_filters; i++) {
+        if (filter_pids[i]==0) {
+            exit(4);
+        }
+    }
+
+    t_texture *t, *last_t, *t_db[2];
+    t = texture_load(options.image_input_filename, GL_RGB);
+    for (int i=0; i<2; i++) {
+        t_db[i] = texture_create(GL_R16, 1024, 1024); //t->width, t->height);
+    }
+    last_t = t;
+    for (int i=0; i<options.num_filters; i++) {
+        texture_target_as_framebuffer(t_db[i&1]);
+        glUseProgram(filter_pids[i]);
+        glClearColor(0.5,0.3,0.4,1.0);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        texture_draw(last_t, glGetUniformLocation(filter_pids[i], "texture_to_draw"));
+        last_t = t_db[i&1];
+    }        
+    texture_save(last_t, options.image_output_filename);
+
+    m->exit();
     return 0;
 }

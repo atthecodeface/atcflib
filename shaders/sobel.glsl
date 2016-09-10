@@ -5,8 +5,7 @@ uniform sampler2D texture_to_draw;
 
 float intensity_at(in float x, in float y)
 {
-     vec3 t=texture(texture_to_draw, vec2(x,y)).rgb;
-     return sqrt(t.r*t.r + t.g*t.g + t.b*t.b)*0.8;
+     return texture(texture_to_draw, vec2(x,y)).r;
 }
 
 const vec3 offset_weights[9] = vec3[](

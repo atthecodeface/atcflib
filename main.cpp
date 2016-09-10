@@ -1,3 +1,7 @@
+/*a Documentation
+Example
+./prog -i images/IMG_1664.JPG --filter='glsl:intensity_from_rgb(0,1)' --filter='glsl:gauss_x9(1,2)' --filter='glsl:gauss_y9(2,1)' --filter='glsl:harris(1,2)' --filter='find:a(2)' --filter='corr:correlation_copy_shader(0,3)'
+ */
 /*a Includes
  */
 #define GL_GLEXT_PROTOTYPES
@@ -40,6 +44,14 @@ typedef struct
     t_point_value *points;
     int num_points;
 } t_exec_context;
+
+/*t t_len_string
+ */
+typedef struct
+{
+    const char *ptr;
+    int len;
+} t_len_string;
 
 /*t c_main
  */
@@ -156,10 +168,11 @@ GLuint shader_load_and_link(GLuint program_id, const char *vertex_shader, const 
  */
 /*f texture_save
  */
-void texture_save(t_texture *texture, const char *png_filename)
+int texture_save(t_texture *texture, const char *png_filename)
 {
     SDL_Surface *image;
     unsigned char *image_pixels;
+    int ret;
 
     image = SDL_CreateRGBSurface(0, texture->width, texture->height,32,0,0,0,0);
     image_pixels = (unsigned char*)image->pixels;
@@ -192,8 +205,9 @@ void texture_save(t_texture *texture, const char *png_filename)
             }
         }
     }
-    IMG_SavePNG(image, png_filename);
+    ret = IMG_SavePNG(image, png_filename);
     free(image);
+    return ret;
 }
 
 /*f texture_buffers
@@ -404,12 +418,24 @@ static void texture_draw(t_texture *texture, GLuint t_u)
 class c_filter
 {
 public:
-    c_filter(const char *optarg);
+    c_filter(void);
     ~c_filter();
-    virtual int compile(void) {return 1;};
-    virtual int execute(t_exec_context *ec) {return 1;};
-    int texture_src;
-    int texture_dest;
+    void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);
+    virtual int compile(void) {return 0;};
+    virtual int execute(t_exec_context *ec) {return 0;};
+    const char *parse_error;
+};
+
+/*t c_filter_save
+ */
+class c_filter_save : public c_filter
+{
+public:
+    c_filter_save(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    char *save_filename;
+    int texture_to_save;
+
+    virtual int execute(t_exec_context *ec);
 };
 
 /*t c_filter_glsl
@@ -417,12 +443,14 @@ public:
 class c_filter_glsl : public c_filter
 {
 public:
-    c_filter_glsl(const char *optarg);
+    c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
     char *filter_filename;
     char *uniform_names[16];
     GLuint filter_pid;
     GLuint uniform_texture_src_id;
     GLuint uniform_ids[16];
+    int texture_src;
+    int texture_dest;
 
     virtual int compile(void);
     virtual int execute(t_exec_context *ec);
@@ -433,9 +461,11 @@ public:
 class c_filter_correlate : public c_filter
 {
 public:
-    c_filter_correlate(const char *optarg);
+    c_filter_correlate(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
     char *filter_filename;
     char *uniform_names[16];
+    int texture_src;
+    int texture_dest;
     GLuint filter_pid;
     GLuint uniform_texture_src_id;
     GLuint uniform_out_xy_id;
@@ -452,7 +482,9 @@ public:
 class c_filter_find : public c_filter
 {
 public:
-    c_filter_find(const char *optarg);
+    c_filter_find(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    int texture_src;
+    int texture_dest;
     int perimeter;
     float minimum;
     float min_distance;
@@ -466,9 +498,27 @@ public:
 
 /*f c_filter constructor
  */
-c_filter::c_filter(const char *optarg)
+c_filter::c_filter(void)
 {
+    parse_error = NULL;
     return;
+}
+
+/*f c_filter::set_filename
+ */
+void c_filter::set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename)
+{
+    char *ptr;
+    int buffer_length;
+    buffer_length = filename->len+strlen("shaders/")+10;
+    ptr = *filter_filename = (char *)malloc(buffer_length);
+    if (dirname) {
+        ptr = strcpy( *filter_filename,  dirname);
+    }
+    ptr = strncpy(ptr + strlen(ptr), filename->ptr, filename->len);
+    if (suffix) {
+        ptr = strcpy( ptr + filename->len, suffix);
+    }
 }
 
 /*f c_filter destructor
@@ -480,16 +530,16 @@ c_filter::~c_filter(void)
 
 /*f c_filter_glsl constructor
  */
-c_filter_glsl::c_filter_glsl(const char *optarg) : c_filter(optarg)
+c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
-    int buffer_length;
-    buffer_length = strlen(optarg)+strlen("shaders/")+10;
-    filter_filename = (char *)malloc(buffer_length);
-    snprintf(filter_filename, buffer_length, "shaders/%s.glsl", optarg);
+    set_filename("shaders/", ".glsl", filename, &filter_filename);
     filter_pid = 0;
     uniform_texture_src_id = 0;
     for (int i=0; i<16; i++) {
         uniform_ids[i] = 0;
+    }
+    if (sscanf(options_list->ptr,"%d,%d",&texture_src,&texture_dest)!=2) {
+        parse_error = "Failed to parse GLSL texture options - need '(<src>,<dst>)' texture numbers";
     }
 }
 
@@ -517,16 +567,16 @@ int c_filter_glsl::execute(t_exec_context *ec)
 
 /*f c_filter_correlate constructor
  */
-c_filter_correlate::c_filter_correlate(const char *optarg) : c_filter(optarg)
+c_filter_correlate::c_filter_correlate(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
-    int buffer_length;
-    buffer_length = strlen(optarg)+strlen("shaders/")+10;
-    filter_filename = (char *)malloc(buffer_length);
-    snprintf(filter_filename, buffer_length, "shaders/%s.glsl", optarg);
+    set_filename("shaders/", ".glsl", filename, &filter_filename);
     filter_pid = 0;
     uniform_texture_src_id = 0;
     for (int i=0; i<16; i++) {
         uniform_ids[i] = 0;
+    }
+    if (sscanf(options_list->ptr,"%d,%d",&texture_src,&texture_dest)!=2) {
+        parse_error = "Failed to parse GLSL texture options - need '(<src>,<dst>)' texture numbers";
     }
 }
 
@@ -574,12 +624,15 @@ int c_filter_correlate::execute(t_exec_context *ec)
 
 /*f c_filter_find constructor
  */
-c_filter_find::c_filter_find(const char *optarg) : c_filter(optarg)
+c_filter_find::c_filter_find(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     perimeter = 10;
     minimum = 0.0;
     max_elements = 512;
     min_distance = 10.0;
+    if (sscanf(options_list->ptr,"%d",&texture_src)!=1) {
+        parse_error = "Failed to parse find texture options - need '(<src>)' texture number";
+    }
 }
 
 /*f c_filter_find::compile
@@ -655,6 +708,63 @@ int c_filter_find::execute(t_exec_context *ec)
     ec->points = points;
     ec->num_points = n;
     return 0;
+}
+
+/*f c_filter_save constructor
+ */
+c_filter_save::c_filter_save(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
+{
+    set_filename(NULL, NULL, filename, &save_filename);
+    if (sscanf(options_list->ptr,"%d",&texture_to_save)!=1) {
+        parse_error = "Failed to parse save texture - need '(<src>)' texture number";
+    }
+}
+
+/*f c_filter_save::execute
+ */
+int c_filter_save::execute(t_exec_context *ec)
+{
+    return texture_save(ec->textures[texture_to_save], save_filename);
+}
+
+/*f filter_from_string
+  filter string must be:
+  <filter type>:<filename>(<options list>)[&<uniform_name>=<float>]
+ */
+static c_filter *filter_from_string(const char *optarg)
+{
+    char ch[2]; // hack to get sscanf to be useful...
+    t_len_string filter_type;
+    t_len_string filename;
+    t_len_string options_list;
+    t_len_string uniforms;
+
+    if ((sscanf(optarg,"%*[a-z]%n:%*[a-zA-Z0-9_.]%n(%*[0-9,]%n%c",
+                &filter_type.len,
+                &filename.len,
+                &options_list.len,
+                ch)!=1) || (ch[0]!=')')) {
+        fprintf(stderr, "Failed to parse filter string '%s'\n", optarg);
+        return NULL;
+    }
+    filter_type.ptr  = optarg;
+    filename.ptr     = optarg + filter_type.len+1;
+    options_list.ptr = optarg + filename.len+1;
+    uniforms.ptr     = optarg + options_list.len+1;
+    filename.len     = options_list.ptr-filename.ptr-1;
+    options_list.len = uniforms.ptr-options_list.ptr-1;
+    uniforms.len     = strlen(uniforms.ptr);
+    if (!strncmp(filter_type.ptr, "glsl", 4)) {
+        return new c_filter_glsl(&filename, &options_list, &uniforms);
+    } else if (!strncmp(filter_type.ptr, "find", 4)) {
+        return new c_filter_find(&filename, &options_list, &uniforms);
+    } else if (!strncmp(filter_type.ptr, "corr", 4)) {
+        return new c_filter_correlate(&filename, &options_list, &uniforms);
+    } else if (!strncmp(filter_type.ptr, "save", 4)) {
+        return new c_filter_save(&filename, &options_list, &uniforms);
+    }
+    fprintf(stderr, "Failed to parse filter string '%s' - bad filter type probably\n", optarg);
+    return NULL;
 }
 
 /*a Main methods
@@ -764,7 +874,6 @@ static struct option long_options[] =
 typedef struct
 {
     const char *image_input_filename;
-    const char *image_output_filename;
     int num_filters;
     const char *filter_filenames[256];
 } t_options;
@@ -785,7 +894,7 @@ static int get_options(int argc, char **argv, t_options *options)
     {
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "f:i:o:",
+        c = getopt_long (argc, argv, "f:i:",
                          long_options, &option_index);
         if (c == -1)
             break;
@@ -796,9 +905,6 @@ static int get_options(int argc, char **argv, t_options *options)
             break;
         case 'i':
             options->image_input_filename = optarg;
-            break;
-        case 'o':
-            options->image_output_filename = optarg;
             break;
         default:
             break;
@@ -833,16 +939,22 @@ int main(int argc,char *argv[])
     }
 
     if (!options.image_input_filename)  options.image_input_filename="images/IMG_1687.JPG";
-    if (!options.image_output_filename) options.image_output_filename="test.png";
 
     for (int i=0; i<options.num_filters; i++) {
-        filters[i] = new c_filter_glsl(options.filter_filenames[i]);
-        filters[i]->texture_src  = 2-(i&1);
-        filters[i]->texture_dest = 1+(i&1);
+        filters[i] = filter_from_string(options.filter_filenames[i]);
     }
-    filters[0]->texture_src = 0;
+
     int failures=0;
     for (int i=0; i<options.num_filters; i++) {
+        if (!filters[i]) {
+            failures++;
+            continue;
+        }
+        if (filters[i]->parse_error) {
+            fprintf(stderr, "Filter '%s' parse error: %s\n", options.filter_filenames[i], filters[i]->parse_error);
+            failures++;
+            continue;
+        }
         if (filters[i]->compile()!=0) failures++;
     }
     if (failures>0) {
@@ -860,27 +972,6 @@ int main(int argc,char *argv[])
     for (int i=0; i<options.num_filters; i++) {
         filters[i]->execute(&ec);
     }
-    texture_save(ec.textures[filters[options.num_filters-1]->texture_dest], options.image_output_filename);
-
-    if (1) {
-        class c_filter_find *f;
-        f = new c_filter_find("");
-        f->texture_src  = filters[options.num_filters-1]->texture_dest;
-        f->compile();
-        f->execute(&ec);
-    }
-
-    if (1) {
-        class c_filter_correlate *f;
-        f = new c_filter_correlate("correlation_copy_shader");
-        f->texture_src  = 0;//filters[options.num_filters-1]->texture_dest;
-        f->texture_dest = 3;
-        f->compile();
-        f->execute(&ec);
-    }
-
-    texture_save(ec.textures[3], "test2.png");
-
 
     m->exit();
     return 0;

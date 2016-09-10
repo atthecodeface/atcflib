@@ -1,5 +1,3 @@
-#version 330 core
-
 // This shader will be invoked for a rectangle surrounding a single source texture pixel
 // The rectangle should be (0.0,0.999)
 // The source texture pixel is not required here - is is only needed in the fragment shader

@@ -13,6 +13,18 @@ Example
 #include <stdio.h>
 #include <getopt.h>
 
+/*a Defines
+ */
+#define STR(x) #x
+#define STRINGIFY(x) STR(x)
+#define GL_GET_ERRORS do {} while (0);
+#ifdef VERBOSE
+#undef GL_GET_ERRORS
+#define GL_GET_ERRORS do { \
+        gl_get_errors( __FILE__  STRINGIFY(__LINE__) ); \
+    } while (0);
+#endif
+
 /*a Types
  */
 /*t t_point_value
@@ -100,7 +112,7 @@ static void key_value_add(t_key_values *kv, const char *key, int key_len, const 
 }
 static const char *key_value_parse(const char *string, t_key_values *kv)
 {
-    const char *ptr, *end;
+    const char *end;
     const char *equals;
 
     while (string[0]=='&') string++;
@@ -128,42 +140,59 @@ static t_key_value_entry *key_value_find(const char *key)
  */
 /*f shader_load
  */
-GLuint shader_load(const char *shader_filename, GLenum shader_type)
+const char *file_read(const char *filename)
 {
-    //Read all text
-    fprintf(stderr, "Attempting shader load from %s...",shader_filename);
     FILE *f;
     size_t file_length;
-    char *shader_code;
-    GLuint shader_id;
-    GLint compile_result;
+    char *ptr;
 
-    f = fopen(shader_filename,"r");
+    f = fopen(filename,"r");
     if (!f) {
-        fprintf(stderr, "Failed to open shader file '%s'\n",shader_filename);
-        return 0;
+        fprintf(stderr, "Failed to open file '%s'\n",filename);
+        return NULL;
     }
-
     fseek(f, 0L, SEEK_END);
     file_length = ftell(f);
     rewind(f);
-    shader_code = (char *)malloc(file_length+1);
-    fread(shader_code,1,file_length,f);
-    shader_code[file_length]=0;
+    ptr = (char *)malloc(file_length+1);
+    fread(ptr,1,file_length,f);
+    fclose(f);
+    ptr[file_length]=0;
+    return ptr;
+}
+static const char *shader_base_functions_code;
+GLuint shader_load(const char *shader_filename, GLenum shader_type)
+{
+    static const char *shader_base_functions_filename="shaders/base_functions.glsl";
+    const char *shader_code_files[3];
+    const char *shader_code;
+    GLuint shader_id;
+    GLint compile_result;
+
+    if (!shader_base_functions_code) {
+        shader_base_functions_code = file_read(shader_base_functions_filename);
+        if (!shader_base_functions_code) return 0;
+    }
+
+    shader_code = file_read(shader_filename);
+    if (!shader_code) return 0;
 
     shader_id = glCreateShader(shader_type);
-    glShaderSource(shader_id, 1, &shader_code, NULL);
+    shader_code_files[0] = "#version 330\n#define NUM_WEIGHTS 9\n";
+    shader_code_files[1] = shader_base_functions_code;
+    shader_code_files[2] = shader_code;
+    glShaderSource(shader_id, 3, shader_code_files, NULL);
     glCompileShader(shader_id);
-    free(shader_code);
+    free((void *)shader_code);
 
     glGetShaderiv(shader_id,GL_COMPILE_STATUS, &compile_result);
     if (compile_result==GL_FALSE) {
         char error_buf[256];
         glGetShaderInfoLog(shader_id, sizeof(error_buf), NULL, error_buf);
-        fprintf(stderr," Failure\n%s\n",error_buf);
+        fprintf(stderr," Failure to compile shader '%s'\n%s\n", shader_filename, error_buf);
         return 0;
     }
-    fprintf(stderr," Success\n");
+
     return shader_id;
 }
 
@@ -342,20 +371,21 @@ t_texture *texture_create(GLuint format, int width, int height)
 static GLuint frame_buffer=0;
 int texture_target_as_framebuffer(t_texture *texture)
 {
-    gl_get_errors("texture_target_as_framebuffer");
+    GL_GET_ERRORS;
     if (frame_buffer==0) {
         glGenFramebuffers(1, &frame_buffer);
     }
     glBindFramebuffer( GL_FRAMEBUFFER, frame_buffer ); //Tell OpenGL to render to the depth map from now on
     //glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture->gl_id, 0);
     glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->gl_id, 0);
-    gl_get_errors("texture_target_as_framebuffer 2");
+
     glViewport(0, 0, texture->width, texture->height);
-    gl_get_errors("texture_target_as_framebuffer 3");
+
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         fprintf(stderr,"The frame buffer is not working\n");
     }
-    gl_get_errors("texture_target_as_framebuffer 4");
+
+    GL_GET_ERRORS;
     return 1;
 }
 
@@ -399,6 +429,8 @@ static void texture_draw_init(void)
     uvs[5*2+0] = 1.0f;
     uvs[5*2+1] = 1.0f;
 
+    GL_GET_ERRORS;
+
     GLuint VertexArrayID;
     glGenVertexArrays(1,&VertexArrayID);
     glBindVertexArray(VertexArrayID);
@@ -408,13 +440,15 @@ static void texture_draw_init(void)
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, texture_draw_buffers[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
-    gl_get_errors("texture_draw_init");
+
+    GL_GET_ERRORS;
 }
 
 /*t texture_draw_prepare
  */
 static void texture_draw_prepare(t_texture *texture, GLuint t_u)
 {
+    gl_get_errors("draw_prepare in");
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,texture->gl_id);
     glUniform1i(t_u,0);
@@ -425,31 +459,44 @@ static void texture_draw_prepare(t_texture *texture, GLuint t_u)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glBindBuffer(GL_ARRAY_BUFFER, texture_draw_buffers[1]);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+    GL_GET_ERRORS;
 }
 
 /*t texture_draw_do
  */
 static void texture_draw_do(void)
 {
+    GL_GET_ERRORS;
+
     glDrawArrays(GL_TRIANGLES,0,6);
+
+    GL_GET_ERRORS;
 }
 
 /*t texture_draw_tidy
  */
 static void texture_draw_tidy(void)
 {
+    GL_GET_ERRORS;
+
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
-    gl_get_errors("texture_draw");
+
+    GL_GET_ERRORS;
 }
 
 /*t texture_draw
  */
 static void texture_draw(t_texture *texture, GLuint t_u)
 {
+    GL_GET_ERRORS;
+
     texture_draw_prepare(texture, t_u);
     texture_draw_do();
     texture_draw_tidy();
+
+    GL_GET_ERRORS;
 }
 
 /*a Filters
@@ -602,6 +649,9 @@ int c_filter_glsl::compile(void)
         return 1;
     }
     uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_to_draw");
+    uniform_texture_base_id = 0;
+    uniform_texture_base_x = 0;
+    uniform_texture_base_y = 0;
     if (texture_base!=0) {
         gl_get_errors("before get uniforms");
         uniform_texture_base_id = glGetUniformLocation(filter_pid, "texture_base");
@@ -616,16 +666,29 @@ int c_filter_glsl::compile(void)
  */
 int c_filter_glsl::execute(t_exec_context *ec)
 {
+    GL_GET_ERRORS;
     texture_target_as_framebuffer(ec->textures[texture_dest]);
     glUseProgram(filter_pid);
+
+    GL_GET_ERRORS;
+
     if (uniform_texture_base_id!=0) {
+        GL_GET_ERRORS;
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, ec->textures[texture_base]->gl_id);
         glUniform1i(uniform_texture_base_id, 1);
-        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,(15.5+32*7)/1024.0);}
+        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,(15.5+32*0)/1024.0);}
         if (uniform_texture_base_y) {glUniform1f(uniform_texture_base_y,15.5/1024.0);}
+        GL_GET_ERRORS;
     }
+
+    GL_GET_ERRORS;
+
     texture_draw(ec->textures[texture_src], uniform_texture_src_id);
+
+    GL_GET_ERRORS;
+
     return 0;
 }
 

@@ -20,16 +20,28 @@ OBJS = main.o
 prog: $(OBJS)
 	$(LINK) $(OBJS) $(LINKFLAGS) -o prog
 
+gauss1: prog
+	./prog -n 12 -i images/IMG_1664.JPG --filter='glsl:intensity_from_rgb(0,1)'     \
+	                    --filter='glsl:gauss_x9(1,2)' --filter='glsl:gauss_y9(2,3)' \
+	                    --filter='glsl:harris(3,4)'  \
+	                    --filter='save:test_a.png(4)'
+
+
 blah: prog
 	./prog -n 3 -i images/IMG_1664.JPG --filter='glsl:intensity_from_rgb(0,1)' --filter='glsl:gauss_x9(1,2)' --filter='glsl:gauss_y9(2,1)' --filter='glsl:harris(1,2)' --filter='save:test.png(2)' --filter='find:a(2)' --filter='corr:correlation_copy_shader(0,3)' --filter='save:test2.png(3)' 
 
 blah2: prog
-	./prog -n 12 -i images/IMG_1664.JPG -i images/IMG_1665.JPG --filter='glsl:intensity_from_rgb(0,2)' --filter='glsl:intensity_from_rgb(1,8)' \
-	                    --filter='glsl:gauss_x9(2,3)' --filter='glsl:gauss_y9(3,4)' --filter='save:test_a.png(4)'  \
+	./prog -n 12 -i images/IMG_1664.JPG -i images/IMG_1665.JPG --filter='glsl:hue_from_rgb(0,2)' --filter='glsl:hue_from_rgb(1,8)' \
+	                    --filter='glsl:gauss_x9(2,3)' --filter='glsl:gauss_y9(3,4)'  --filter='save:test_a.png(4)'  \
 	                    --filter='glsl:gauss_x9(8,9)' --filter='glsl:gauss_y9(9,10)' --filter='save:test_b.png(10)'  \
-	                    --filter='glsl:harris(4,5)'  --filter='save:test_h.png(5)' --filter='find:a(5)' --filter='corr:correlation_copy_shader(2,6)'  --filter='save:test_corr.png(6)' \
+	                    --filter='glsl:harris(4,5)'   --filter='save:test_h.png(5)'  --filter='find:a(5)' --filter='corr:correlation_copy_shader(2,6)'  --filter='save:test_corr.png(6)' \
 	                    --filter='glsl:sum_sq_pixel_diff(6,2,11)' --filter='save:test_bdb.png(11)'  --filter='find:a(5)'  \
-	                    --filter='glsl:sum_sq_pixel_diff(6,8,11)' --filter='save:test_bda.png(11)'   --filter='find:a(5)' 
+	                    --filter='glsl:sum_sq_pixel_diff(6,8,11)' --filter='save:test_bda.png(11)'  --filter='find:a(5)' 
+
+blah3: prog
+	./prog -n 12 -i images/IMG_1664.JPG -i images/IMG_1665.JPG --filter='glsl:intensity_from_rgb(0,2)' --filter='glsl:intensity_from_rgb(1,8)' \
+	                      --filter='save:test_a.png(2)'
+
 clean:
 	rm *.o prog
 

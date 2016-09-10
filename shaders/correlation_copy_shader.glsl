@@ -1,5 +1,3 @@
-#version 330
-
 // The fragment shader gets an (x,y) output texture frame buffer pixel, since it is invoked for each such pixel
 // For each such (x,y) it will get offset_xy in the range 0..out_size.xy
 // The fragment shader will also get a uniform 'src_xy'

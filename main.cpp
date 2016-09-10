@@ -21,6 +21,14 @@ typedef struct
     GLuint format;
 } t_texture;
 
+/*t t_exec_context
+ */
+typedef struct
+{
+    t_texture *current_texture;
+    t_texture *next_texture;
+} t_exec_context;
+
 /*t c_main
  */
 class c_main
@@ -338,6 +346,89 @@ static void texture_draw(t_texture *texture, GLuint t_u)
     gl_get_errors("draw k");
 }
 
+/*a Filters
+ */
+/*t c_filter
+ */
+class c_filter
+{
+public:
+    c_filter(const char *optarg);
+    ~c_filter();
+    virtual int compile(void) {return 1;};
+    virtual int execute(t_exec_context *ec) {return 1;};
+};
+
+/*t c_filter_glsl
+ */
+class c_filter_glsl : public c_filter
+{
+public:
+    c_filter_glsl(const char *optarg);
+    const char *filter_filename;
+    char *uniform_names[16];
+    GLuint filter_pid;
+    GLuint uniform_texture_src_id;
+    GLuint uniform_ids[16];
+
+    virtual int compile(void);
+    virtual int execute(t_exec_context *ec);
+};
+
+/*f c_filter constructor
+ */
+c_filter::c_filter(const char *optarg)
+{
+    return;
+}
+
+/*f c_filter destructor
+ */
+c_filter::~c_filter(void)
+{
+    return;
+}
+
+/*f c_filter_glsl constructor
+ */
+c_filter_glsl::c_filter_glsl(const char *optarg) : c_filter(optarg)
+{
+    filter_filename = optarg;
+    filter_pid = 0;
+    uniform_texture_src_id = 0;
+    for (int i=0; i<16; i++) {
+        uniform_ids[i] = 0;
+    }
+}
+
+/*f c_filter_glsl::compile
+ */
+int c_filter_glsl::compile(void)
+{
+    filter_pid = shader_load_and_link(0, "shaders/vertex_shader.glsl", filter_filename);
+    if (filter_pid==0) {
+        return 1;
+    }
+    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_to_draw");
+    return 0;
+}
+
+/*f c_filter_glsl::execute
+ */
+int c_filter_glsl::execute(t_exec_context *ec)
+{
+    t_texture *next_texture;
+    next_texture = ec->next_texture;
+    texture_target_as_framebuffer(next_texture);
+    glUseProgram(filter_pid);
+    //glClearColor(0.5,0.3,0.4,1.0);
+    //glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    texture_draw(ec->current_texture, uniform_texture_src_id);
+    ec->next_texture = ec->current_texture;
+    ec->current_texture = next_texture;
+    return 0;
+}
+
 /*a Main methods
  */
 /*f c_main constructor
@@ -502,7 +593,7 @@ int main(int argc,char *argv[])
 {
 
     c_main *m;
-    GLuint filter_pids[256];
+    c_filter *filters[256];
     t_options options;
 
     m = new c_main();
@@ -523,29 +614,31 @@ int main(int argc,char *argv[])
     if (!options.image_output_filename) options.image_output_filename="test.png";
 
     for (int i=0; i<options.num_filters; i++) {
-        filter_pids[i] = shader_load_and_link(0,"shaders/vertex_shader.glsl", options.filter_filenames[i]);
+        filters[i] = new c_filter_glsl(options.filter_filenames[i]);
     }
+    int failures=0;
     for (int i=0; i<options.num_filters; i++) {
-        if (filter_pids[i]==0) {
-            exit(4);
-        }
+        if (filters[i]->compile()!=0) failures++;
+    }
+    if (failures>0) {
+        exit(4);
     }
 
-    t_texture *t, *last_t, *t_db[2];
+    t_exec_context ec;
+    t_texture *t, *t_db[2];
     t = texture_load(options.image_input_filename, GL_RGB);
     for (int i=0; i<2; i++) {
-        t_db[i] = texture_create(GL_R16, 1024, 1024); //t->width, t->height);
+        t_db[i] = texture_create(GL_R16, 1024, 1024);
     }
-    last_t = t;
+    ec.current_texture = t;
+    ec.next_texture    = t_db[0];
     for (int i=0; i<options.num_filters; i++) {
-        texture_target_as_framebuffer(t_db[i&1]);
-        glUseProgram(filter_pids[i]);
-        glClearColor(0.5,0.3,0.4,1.0);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        texture_draw(last_t, glGetUniformLocation(filter_pids[i], "texture_to_draw"));
-        last_t = t_db[i&1];
+        filters[i]->execute(&ec);
+        if (ec.next_texture==t) {
+            ec.next_texture = t_db[1];
+        }
     }        
-    texture_save(last_t, options.image_output_filename);
+    texture_save(ec.current_texture, options.image_output_filename);
 
     m->exit();
     return 0;

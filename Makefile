@@ -21,7 +21,7 @@ prog: $(OBJS)
 	$(LINK) $(OBJS) $(LINKFLAGS) -o prog
 
 blah: prog
-	./prog -i images/IMG_1664.JPG --filter='glsl:intensity_from_rgb(0,1)' --filter='glsl:gauss_x9(1,2)' --filter='glsl:gauss_y9(2,1)' --filter='glsl:harris(1,2)' --filter='save:test.png(2)' --filter='find:a(2)' --filter='corr:correlation_copy_shader(0,3)' --filter='save:test2.png(3)' 
+	./prog -n 3 -i images/IMG_1664.JPG --filter='glsl:intensity_from_rgb(0,1)' --filter='glsl:gauss_x9(1,2)' --filter='glsl:gauss_y9(2,1)' --filter='glsl:harris(1,2)' --filter='save:test.png(2)' --filter='find:a(2)' --filter='corr:correlation_copy_shader(0,3)' --filter='save:test2.png(3)' 
 
 clean:
 	rm *.o prog

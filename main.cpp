@@ -863,26 +863,34 @@ c_main::create_window()
 */
 static struct option long_options[] =
 {
-    {"filter",  required_argument, 0, 'f'},
-    {"infile",  required_argument, 0, 'i'},
-    {"output",  required_argument, 0, 'o'},
+    {"filter",   required_argument, 0, 'f'},
+    {"infile",   required_argument, 0, 'i'},
+    {"textures", required_argument, 0, 'n'},
     {0, 0, 0, 0}
 };
+
+/*t t_option_list
+*/
+typedef struct
+{
+    int num;
+    const char *strings[256];
+} t_option_list;
 
 /*t t_options 
 */
 typedef struct
 {
-    const char *image_input_filename;
-    int num_filters;
-    const char *filter_filenames[256];
+    int num_textures;
+    t_option_list images;
+    t_option_list filters;
 } t_options;
 
-/*f add_filter
+/*f option_add_to_list
 */
-static void add_filter(t_options *options, const char *filename)
+static void option_add_to_list(t_option_list *option_list, const char *string)
 {
-    options->filter_filenames[options->num_filters++] = filename;
+    option_list->strings[option_list->num++] = string;
 }
 
 /*f get_options
@@ -890,21 +898,27 @@ static void add_filter(t_options *options, const char *filename)
 static int get_options(int argc, char **argv, t_options *options)
 {
     int c;
+    options->num_textures = 0;
+    options->images.num=0;
+    options->filters.num=0;
     while (1)
     {
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "f:i:",
+        c = getopt_long (argc, argv, "f:i:n:",
                          long_options, &option_index);
         if (c == -1)
             break;
 
         switch (c) {
         case 'f':
-            add_filter(options, optarg);
+            option_add_to_list(&options->filters, optarg);
             break;
         case 'i':
-            options->image_input_filename = optarg;
+            option_add_to_list(&options->images, optarg);
+            break;
+        case 'n':
+            options->num_textures = atoi(optarg);
             break;
         default:
             break;
@@ -919,10 +933,11 @@ static int get_options(int argc, char **argv, t_options *options)
  */
 int main(int argc,char *argv[])
 {
-
+    int i;
     c_main *m;
     c_filter *filters[256];
     t_options options;
+    t_exec_context ec;
 
     m = new c_main();
     if (m->init()==0) {
@@ -938,20 +953,18 @@ int main(int argc,char *argv[])
         return 4;
     }
 
-    if (!options.image_input_filename)  options.image_input_filename="images/IMG_1687.JPG";
-
-    for (int i=0; i<options.num_filters; i++) {
-        filters[i] = filter_from_string(options.filter_filenames[i]);
+    for (int i=0; i<options.filters.num; i++) {
+        filters[i] = filter_from_string(options.filters.strings[i]);
     }
 
     int failures=0;
-    for (int i=0; i<options.num_filters; i++) {
+    for (int i=0; i<options.filters.num; i++) {
         if (!filters[i]) {
             failures++;
             continue;
         }
         if (filters[i]->parse_error) {
-            fprintf(stderr, "Filter '%s' parse error: %s\n", options.filter_filenames[i], filters[i]->parse_error);
+            fprintf(stderr, "Filter '%s' parse error: %s\n", options.filters.strings[i], filters[i]->parse_error);
             failures++;
             continue;
         }
@@ -961,15 +974,17 @@ int main(int argc,char *argv[])
         exit(4);
     }
 
-    t_exec_context ec;
     texture_draw_init();
-    ec.textures[0] = texture_load(options.image_input_filename, GL_RGB);
-    for (int i=0; i<3; i++) {
-        ec.textures[i+1] = texture_create(GL_R16, 1024, 1024);
+    for (i=0; i<options.images.num; i++) {
+        ec.textures[i] = texture_load(options.images.strings[i], GL_RGB);
     }
+    for (i=options.images.num; i<options.images.num+options.num_textures; i++) {
+        ec.textures[i] = texture_create(GL_R16, 1024, 1024);
+    }
+    fprintf(stderr,"Made %d textures\n", i);
     ec.points = NULL;
 
-    for (int i=0; i<options.num_filters; i++) {
+    for (int i=0; i<options.filters.num; i++) {
         filters[i]->execute(&ec);
     }
 

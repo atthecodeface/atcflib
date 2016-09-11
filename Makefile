@@ -39,7 +39,7 @@ blah2: prog
 	                    --filter='glsl:sum_sq_pixel_diff(6,8,11)' --filter='save:test_bda.png(11)'  --filter='find:a(5)' 
 
 blah2b: prog
-	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG --filter='glsl:intensity_from_rgb(0,2)' --filter='glsl:intensity_from_rgb(1,8)' \
+	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG --filter='glsl:intensity_from_rgb(0,2)&-DNUM_WEIGHTS=3&fred=1&joe=2' --filter='glsl:intensity_from_rgb(1,8)' \
 						--filter='glsl:intensity_from_rgb(0,4)' --filter='glsl:intensity_from_rgb(1,10)' \
 	                    --filter='glsl:harris(4,5)'   --filter='save:test_h.png(5)'  --filter='find:a(5)' --filter='corr:correlation_copy_shader(2,6)'  --filter='save:test_corr.png(6)' \
 	                    --filter='glsl:sum_sq_pixel_diff(6,2,11)' --filter='save:test_bdb.png(11)'  --filter='find:a(5)'  \

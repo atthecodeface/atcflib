@@ -99,18 +99,46 @@ int gl_get_errors(const char *msg)
 
 /*f key_value_parse
  */
-typedef struct
+typedef struct t_key_value_entry
 {
-    int a;
+    struct t_key_value_entry *next;
+    char *key;
+    char *value;
 } t_key_value_entry;
 typedef struct
 {
-    int a;
+    t_key_value_entry *kv_head;
+    t_key_value_entry *kv_tail;
+    size_t extra_room;
 } t_key_values;
 static void key_value_add(t_key_values *kv, const char *key, int key_len, const char *value, int value_len)
 {
+    void *ptr;
+    t_key_value_entry *kve;
+    char *text_ptr;
+    int kve_len;
+    kve_len = sizeof(t_key_value_entry)+kv->extra_room;
+    //fprintf(stderr,"add key value %s:%d %s:%d\n",key,key_len,value,value_len);
+    ptr = malloc(kve_len + key_len+1 + value_len+1);
+    kve = (t_key_value_entry *)ptr;
+    text_ptr = ((char *)kve+kve_len);
+    kve->key = text_ptr;
+    strncpy(kve->key, key, key_len);
+    kve->key[key_len]=0;
+    text_ptr = text_ptr+key_len+1;
+    kve->value = text_ptr;
+    strncpy(kve->value, value, value_len);
+    kve->value[value_len]=0;
+
+    if (kv->kv_tail) {
+        kv->kv_tail->next = kve;
+    } else {
+        kv->kv_head = kve;
+    }
+    kv->kv_tail = kve;
+    kve->next = NULL;
 }
-static const char *key_value_parse(const char *string, t_key_values *kv)
+static const char *key_value_parse(const char *string, const char *string_end, t_key_values *kv)
 {
     const char *end;
     const char *equals;
@@ -118,15 +146,29 @@ static const char *key_value_parse(const char *string, t_key_values *kv)
     while (string[0]=='&') string++;
     end = strchr(string,'&');
     if (!end) {
-        end = string+strlen(end);
+        end = string_end;
     }
+    if (end>string_end) end=string_end;
     equals = strchr(string,'=');
+    if (equals>end) equals=NULL;
     if (!equals) {
         key_value_add(kv, string, end-string, NULL, 0);
     } else {
         key_value_add(kv, string, equals-string, equals+1, end-equals-1);
     }
     return end;
+}
+static t_key_value_entry *key_value_iter(t_key_values *kv, t_key_value_entry *kve)
+{
+    if (kve)
+        return kve->next;
+    return kv->kv_head;
+}
+static void key_value_init(t_key_values *kv, size_t extra_room)
+{
+    kv->kv_head = NULL;
+    kv->kv_tail = NULL;
+    kv->extra_room = extra_room;
 }
 
 /*f key_value_find
@@ -161,7 +203,7 @@ const char *file_read(const char *filename)
     return ptr;
 }
 static const char *shader_base_functions_code;
-GLuint shader_load(const char *shader_filename, GLenum shader_type)
+GLuint shader_load(const char *shader_filename, GLenum shader_type, const char *shader_defines)
 {
     static const char *shader_base_functions_filename="shaders/base_functions.glsl";
     const char *shader_code_files[3];
@@ -178,7 +220,10 @@ GLuint shader_load(const char *shader_filename, GLenum shader_type)
     if (!shader_code) return 0;
 
     shader_id = glCreateShader(shader_type);
-    shader_code_files[0] = "#version 330\n#define NUM_WEIGHTS 9\n";
+    shader_code_files[0] = "#version 330\n";
+    shader_code_files[1] = "";
+    if (shader_defines) 
+        shader_code_files[1] = shader_defines;
     shader_code_files[1] = shader_base_functions_code;
     shader_code_files[2] = shader_code;
     glShaderSource(shader_id, 3, shader_code_files, NULL);
@@ -198,7 +243,7 @@ GLuint shader_load(const char *shader_filename, GLenum shader_type)
 
 /*f shader_load_and_link
  */
-GLuint shader_load_and_link(GLuint program_id, const char *vertex_shader, const char *fragment_shader)
+GLuint shader_load_and_link(GLuint program_id, const char *vertex_shader, const char *fragment_shader, const char *shader_defines)
 {
     GLuint vertex_shader_id;
     GLuint fragment_shader_id;
@@ -207,10 +252,10 @@ GLuint shader_load_and_link(GLuint program_id, const char *vertex_shader, const 
     if (program_id==0) {
         program_id = glCreateProgram();
     }
-    if ((vertex_shader_id=shader_load(vertex_shader, GL_VERTEX_SHADER))==0) {
+    if ((vertex_shader_id=shader_load(vertex_shader, GL_VERTEX_SHADER, shader_defines))==0) {
         return 0;
     }
-    if ((fragment_shader_id=shader_load(fragment_shader, GL_FRAGMENT_SHADER))==0) {
+    if ((fragment_shader_id=shader_load(fragment_shader, GL_FRAGMENT_SHADER, shader_defines))==0) {
         return 0;
     }
 
@@ -509,9 +554,12 @@ public:
     c_filter(void);
     ~c_filter();
     void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);
+    void set_uniforms(t_len_string *uniforms);
+    void get_shader_defines(char **shader_defines);
     virtual int compile(void) {return 0;};
     virtual int execute(t_exec_context *ec) {return 0;};
     const char *parse_error;
+    t_key_values uniform_key_values;
 };
 
 /*t c_filter_save
@@ -533,16 +581,15 @@ class c_filter_glsl : public c_filter
 public:
     c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
     char *filter_filename;
-    char *uniform_names[16];
     GLuint filter_pid;
     GLuint uniform_texture_src_id;
     GLuint uniform_texture_base_id;
     GLuint uniform_texture_base_x;
     GLuint uniform_texture_base_y;
-    GLuint uniform_ids[16];
     int texture_src;
     int texture_dest;
     int texture_base;
+    char *shader_defines;
 
     virtual int compile(void);
     virtual int execute(t_exec_context *ec);
@@ -555,7 +602,6 @@ class c_filter_correlate : public c_filter
 public:
     c_filter_correlate(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
     char *filter_filename;
-    char *uniform_names[16];
     int texture_src;
     int texture_dest;
     GLuint filter_pid;
@@ -563,11 +609,17 @@ public:
     GLuint uniform_out_xy_id;
     GLuint uniform_out_size_id;
     GLuint uniform_src_xy_id;
-    GLuint uniform_ids[16];
+    char *shader_defines;
 
     virtual int compile(void);
     virtual int execute(t_exec_context *ec);
 };
+typedef struct
+{
+    int    value_int;
+    float  value_float;
+    GLuint gl_id;
+} t_filter_key_value_data;
 
 /*t c_filter_find
  */
@@ -593,6 +645,7 @@ public:
 c_filter::c_filter(void)
 {
     parse_error = NULL;
+    key_value_init(&uniform_key_values, sizeof(t_filter_key_value_data));
     return;
 }
 
@@ -614,6 +667,36 @@ void c_filter::set_filename(const char *dirname, const char *suffix, t_len_strin
     }
 }
 
+/*f c_filter::set_uniforms
+ */
+void c_filter::set_uniforms(t_len_string *uniforms)
+{
+    const char *ptr;
+    fprintf(stderr,"Uniforms %s\n",uniforms->ptr);
+    ptr = uniforms->ptr;
+    while (ptr && ((ptr-uniforms->ptr)<uniforms->len)) {
+        ptr = key_value_parse(ptr, uniforms->ptr+uniforms->len, &uniform_key_values);
+    }
+}
+
+/*f c_filter::get_shader_defines
+ */
+void c_filter::get_shader_defines(char **shader_defines)
+{
+    t_key_value_entry *kve;
+    (*shader_defines) = (char *)malloc(1024);
+    (*shader_defines)[0] = 0;
+    kve = key_value_iter(&uniform_key_values, NULL);
+    while (kve) {
+        if (!strncmp("-D", kve->key, 2)) {
+            sprintf((*shader_defines)+strlen((*shader_defines)),
+                    "#define %s %s\n",
+                    kve->key+2, kve->value);
+        }
+        kve = key_value_iter(&uniform_key_values, kve);
+    }
+}
+
 /*f c_filter destructor
  */
 c_filter::~c_filter(void)
@@ -626,11 +709,9 @@ c_filter::~c_filter(void)
 c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     set_filename("shaders/", ".glsl", filename, &filter_filename);
+    set_uniforms(uniforms);
     filter_pid = 0;
     uniform_texture_src_id = 0;
-    for (int i=0; i<16; i++) {
-        uniform_ids[i] = 0;
-    }
     if (sscanf(options_list->ptr,"%d,%d,%d",&texture_base,&texture_src,&texture_dest)==3) {
     } else {
         texture_base = 0;
@@ -644,7 +725,8 @@ c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list,
  */
 int c_filter_glsl::compile(void)
 {
-    filter_pid = shader_load_and_link(0, "shaders/vertex_shader.glsl", filter_filename);
+    get_shader_defines(&shader_defines);
+    filter_pid = shader_load_and_link(0, "shaders/vertex_shader.glsl", filter_filename, shader_defines);
     if (filter_pid==0) {
         return 1;
     }
@@ -699,9 +781,6 @@ c_filter_correlate::c_filter_correlate(t_len_string *filename, t_len_string *opt
     set_filename("shaders/", ".glsl", filename, &filter_filename);
     filter_pid = 0;
     uniform_texture_src_id = 0;
-    for (int i=0; i<16; i++) {
-        uniform_ids[i] = 0;
-    }
     if (sscanf(options_list->ptr,"%d,%d",&texture_src,&texture_dest)!=2) {
         parse_error = "Failed to parse GLSL texture options - need '(<src>,<dst>)' texture numbers";
     }
@@ -711,7 +790,8 @@ c_filter_correlate::c_filter_correlate(t_len_string *filename, t_len_string *opt
  */
 int c_filter_correlate::compile(void)
 {
-    filter_pid = shader_load_and_link(0, "shaders/vertex_correlation_shader.glsl", filter_filename);
+    get_shader_defines(&shader_defines);
+    filter_pid = shader_load_and_link(0, "shaders/vertex_correlation_shader.glsl", filter_filename, shader_defines);
     if (filter_pid==0) {
         return 1;
     }

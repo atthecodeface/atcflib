@@ -1,11 +1,10 @@
-#version 330
 out float color;
 in vec2 uv_to_frag;
-uniform sampler2D texture_to_draw;
+uniform sampler2D texture_src;
 
 float intensity_at(in float x, in float y)
 {
-     return texture(texture_to_draw, vec2(x,y)).r;
+     return texture(texture_src, vec2(x,y)).r;
 }
 
 const vec3 offset_weights[9] = vec3[](

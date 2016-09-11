@@ -1,9 +1,9 @@
 out float color;
 in vec2 uv_to_frag;
-uniform sampler2D texture_to_draw;
+uniform sampler2D texture_src;
 
 void main()
 {
-     color = hue_at(texture_to_draw, uv_to_frag.x, uv_to_frag.y);
+     color = hue_at(texture_src, uv_to_frag.x, uv_to_frag.y);
 }
 

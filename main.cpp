@@ -648,7 +648,7 @@ int c_filter_glsl::compile(void)
     if (filter_pid==0) {
         return 1;
     }
-    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_to_draw");
+    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_src");
     uniform_texture_base_id = 0;
     uniform_texture_base_x = 0;
     uniform_texture_base_y = 0;

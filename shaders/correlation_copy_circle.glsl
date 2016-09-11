@@ -16,9 +16,13 @@ void main(){
      //     texture_xy.x = (src_xy.x + offset_xy.x)/1024.0;
      //     texture_xy.y = (src_xy.y + offset_xy.y)/1024.0;
      //     color = texture(texture_src, texture_xy).r;
-     texture_circle(texture_src, src_xy/1024.0, circle_offsets_8, colors);
+     texture_circle(texture_src, src_xy/1024.0, offset_xy.y+8, circle_offsets_8, colors);
      i = int(offset_xy.x);
      color = colors[i];
      //     color = i/32.0;
+          vec2 texture_xy;
+          texture_xy.x = (src_xy.x + offset_xy.x)/1024.0;
+          texture_xy.y = (src_xy.y + offset_xy.y)/1024.0;
+          //color = texture(texture_src, texture_xy).r;
 }
 

@@ -876,14 +876,9 @@ int c_filter_correlate::execute(t_exec_context *ec)
     glUniform2f(uniform_out_size_id,32,32);
     texture_draw_prepare(ec->textures[texture_src], uniform_texture_src_id);
 
-    float xsc, ysc;
-    xsc = 1024.0 / (ec->textures[texture_src]->width);
-    ysc = 1024.0 / (ec->textures[texture_src]->height);
-    xsc = 1.0;
-    ysc = 1.0;
     for (int i=0; i<ec->num_points; i++) {
         glUniform2f(uniform_out_xy_id,i*32,0);
-        glUniform2f(uniform_src_xy_id,(ec->points[i].x-16)*xsc,(ec->points[i].y-16)*ysc);
+        glUniform2f(uniform_src_xy_id,ec->points[i].x,ec->points[i].y);
         texture_draw_do();
     }
 

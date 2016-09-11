@@ -11,8 +11,8 @@ uniform vec2 src_xy;
 
 void main(){
      vec2 texture_xy;
-     texture_xy.x = (src_xy.x + offset_xy.x)/1024.0;
-     texture_xy.y = (src_xy.y + offset_xy.y)/1024.0;
+     texture_xy.x = (src_xy.x + offset_xy.x-16)/1024.0;
+     texture_xy.y = (src_xy.y + offset_xy.y-16)/1024.0;
 
      color = texture(texture_src, texture_xy).r;
 }

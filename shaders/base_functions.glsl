@@ -13,7 +13,7 @@
 #endif
 
 #ifndef CIRCLE_RADIUS
-#define CIRCLE_RADIUS 12
+#define CIRCLE_RADIUS 1
 #endif
 
 const vec2 gauss_offset_weights9[9] = vec2[](
@@ -27,7 +27,19 @@ vec2( 2*STEP, 0.060598f),
 vec2( 3*STEP, 0.005977f),
 vec2( 4*STEP, 0.000229f)
 );
-      
+
+const vec3 sobel_weights[9] = vec3[](
+       vec3(-1*STEP, -1*STEP, -1.0f),
+       vec3(-1*STEP,  0*STEP, -1.0f),
+       vec3(-1*STEP,  1*STEP, -1.0f),
+       vec3( 0*STEP, -1*STEP, -1.0f),
+       vec3( 0*STEP,  0*STEP,  8.0f),
+       vec3( 0*STEP,  1*STEP, -1.0f),
+       vec3( 1*STEP, -1*STEP, -1.0f),
+       vec3( 1*STEP,  0*STEP, -1.0f),
+       vec3( 1*STEP,  1*STEP, -1.0f)
+);
+     
 const vec2 circle_offsets_8[8] = vec2[](
     STEP*CIRCLE_RADIUS*vec2(1.0, 0.0),
     STEP*CIRCLE_RADIUS*vec2(0.980785280447, 0.195090321796),
@@ -174,16 +186,22 @@ vec3 intensity_at(in sampler2D texture_in, in float x, in float y)
      return yuv;
 }
 
-void texture_circle(in sampler2D texture_in, in vec2 centre_xy, in vec2[NUM_CIRCLE_STEPS] circle_offsets, out float[NUM_CIRCLE_STEPS*4] colors)
+void texture_circle(in sampler2D texture_in, in vec2 centre_xy, in float radius, in vec2[NUM_CIRCLE_STEPS] circle_offsets, out float[NUM_CIRCLE_STEPS*4] colors)
 {
     for (int i=0; i<NUM_CIRCLE_STEPS; i++) {
-        colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, centre_xy+circle_offsets[i]).r;
-        colors[NUM_CIRCLE_STEPS*1+i] = texture(texture_in, vec2(centre_xy.x-circle_offsets[i].y,
-                                                                centre_xy.y+circle_offsets[i].x)
+        colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, vec2(centre_xy.x+radius*circle_offsets[i].x,
+                                                                centre_xy.y+radius*circle_offsets[i].y)
                                                    ).r;
-        colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, centre_xy+circle_offsets[i]).r;
-        colors[NUM_CIRCLE_STEPS*3+i] = texture(texture_in, vec2(centre_xy.x+circle_offsets[i].y,
-                                                                centre_xy.y-circle_offsets[i].x)
+        //colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, centre_xy+radius*circle_offsets[i]).r;
+        colors[NUM_CIRCLE_STEPS*1+i] = texture(texture_in, vec2(centre_xy.x-radius*circle_offsets[i].y,
+                                                                centre_xy.y+radius*circle_offsets[i].x)
+                                                   ).r;
+        colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, vec2(centre_xy.x-radius*circle_offsets[i].x,
+                                                                centre_xy.y-radius*circle_offsets[i].y)
+                                                   ).r;
+        //colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, centre_xy-radius*circle_offsets[i]).r;
+        colors[NUM_CIRCLE_STEPS*3+i] = texture(texture_in, vec2(centre_xy.x+radius*circle_offsets[i].y,
+                                                                centre_xy.y-radius*circle_offsets[i].x)
                                                    ).r;
     }
 }

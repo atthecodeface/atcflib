@@ -163,17 +163,15 @@ const vec2 offsets_2d_81[81] = vec2[](
        vec2( 4*STEP,  4*STEP)
 );
 
-float hue_at(in sampler2D texture_in, in float x, in float y)
-{
-    vec3 t=texture(texture_in, vec2(x,y)).rgb;
-    return (-0.1247*t.r -0.289*t.g + 0.436*t.b)+0.54;
-}
- 
-float intensity_at(in sampler2D texture_in, in float x, in float y)
+// from wikipedia, ITU-R YUV from RGB
+vec3 intensity_at(in sampler2D texture_in, in float x, in float y)
 {
      vec3 t=texture(texture_in, vec2(x,y)).rgb;
-     return 0.299*t.r + 0.587*t.g + 0.114*t.b;
-     return sqrt(t.r*t.r + t.g*t.g + t.b*t.b)*0.8;
+     vec3 yuv;
+     yuv.r = 0.299*t.r + 0.587*t.g + 0.114*t.b;
+     yuv.g = (-0.169*t.r -0.331*t.g + 0.499*t.b)+0.5;
+     yuv.b = ( 0.499*t.r -0.418*t.g - 0.0813*t.b)+0.5;
+     return yuv;
 }
 
 void texture_circle(in sampler2D texture_in, in vec2 centre_xy, in vec2[NUM_CIRCLE_STEPS] circle_offsets, out float[NUM_CIRCLE_STEPS*4] colors)

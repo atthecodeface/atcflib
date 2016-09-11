@@ -104,6 +104,7 @@ typedef struct t_key_value_entry
     struct t_key_value_entry *next;
     char *key;
     char *value;
+    void *data;
 } t_key_value_entry;
 typedef struct
 {
@@ -559,6 +560,8 @@ public:
     void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);
     void set_uniforms(t_len_string *uniforms);
     void get_shader_defines(char **shader_defines);
+    int  get_shader_uniform_ids(GLuint filter_pid);
+    int  get_value_from_key_value(t_key_value_entry *kve);
     virtual int compile(void) {return 0;};
     virtual int execute(t_exec_context *ec) {return 0;};
     const char *parse_error;
@@ -617,11 +620,17 @@ public:
     virtual int compile(void);
     virtual int execute(t_exec_context *ec);
 };
+enum
+{
+    uniform_value_type_int,
+    uniform_value_type_float
+};
 typedef struct
 {
+    int    value_type;
     int    value_int;
     float  value_float;
-    GLuint gl_id;
+    GLint  gl_id;
 } t_filter_key_value_data;
 
 /*t c_filter_find
@@ -700,6 +709,52 @@ void c_filter::get_shader_defines(char **shader_defines)
     }
 }
 
+/*f c_filter::get_value_from_key_value
+ */
+int c_filter::get_value_from_key_value(t_key_value_entry *kve)
+{
+    t_filter_key_value_data *kvd;
+    int value_len;
+    kvd = (t_filter_key_value_data *)(&kve->data);
+    value_len = strlen(kve->value);
+    if (value_len<1) return 1;
+    if (kve->value[value_len-1]=='f') {
+        if (sscanf(kve->value, "%ff", &kvd->value_float)!=1) return 1;
+        kvd->value_type = uniform_value_type_float;
+        return 0;
+    }
+    if (sscanf(kve->value, "%d", &kvd->value_int)!=1) return 1;
+    kvd->value_type = uniform_value_type_int;
+    return 0;
+}
+
+/*f c_filter::get_shader_uniform_ids
+ */
+int c_filter::get_shader_uniform_ids(GLuint filter_pid)
+{
+    t_key_value_entry *kve;
+    int failures;
+    failures = 0;
+    kve = key_value_iter(&uniform_key_values, NULL);
+    while (kve) {
+        if (!strncmp("-U", kve->key, 2)) {
+            t_filter_key_value_data *kvd;
+            kvd = (t_filter_key_value_data *)(&kve->data);
+            kvd->gl_id = glGetUniformLocation(filter_pid, kve->key+2);
+            if (kvd->gl_id<=0) {
+                fprintf(stderr, "Failed to find uniform '%s' in shader\n", kve->key+2);
+                failures++;
+            }
+            if (get_value_from_key_value(kve)) {
+                fprintf(stderr, "Failed to parse uniform value '%s' in shader\n", kve->value);
+                failures++;
+            }
+        }
+        kve = key_value_iter(&uniform_key_values, kve);
+    }
+    return failures;
+}
+
 /*f c_filter destructor
  */
 c_filter::~c_filter(void)
@@ -733,6 +788,8 @@ int c_filter_glsl::compile(void)
     if (filter_pid==0) {
         return 1;
     }
+    if (get_shader_uniform_ids(filter_pid))
+        return 1;
     uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_src");
     uniform_texture_base_id = 0;
     uniform_texture_base_x = 0;
@@ -798,6 +855,8 @@ int c_filter_correlate::compile(void)
     if (filter_pid==0) {
         return 1;
     }
+    if (get_shader_uniform_ids(filter_pid))
+        return 1;
     uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_src");
     uniform_out_xy_id      = glGetUniformLocation(filter_pid, "out_xy");
     uniform_out_size_id    = glGetUniformLocation(filter_pid, "out_size");

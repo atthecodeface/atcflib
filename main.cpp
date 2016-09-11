@@ -678,7 +678,7 @@ int c_filter_glsl::execute(t_exec_context *ec)
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, ec->textures[texture_base]->gl_id);
         glUniform1i(uniform_texture_base_id, 1);
-        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,(15.5+32*0)/1024.0);}
+        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,(15.5+32*2)/1024.0);}
         if (uniform_texture_base_y) {glUniform1f(uniform_texture_base_y,15.5/1024.0);}
         GL_GET_ERRORS;
     }

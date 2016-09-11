@@ -51,6 +51,18 @@ blah3: prog
 	                    --filter='glsl:gauss_x9(8,9)' --filter='glsl:gauss_y9(9,10)' --filter='save:test_b.png(10)'  \
 	                    --filter='glsl:harris(4,5)'   --filter='save:test_h.png(5)'  --filter='find:a(5)' --filter='corr:correlation_copy_circle(2,6)'  --filter='save:test_corr.png(6)'
 
+test: gauss harris
+
+gauss: prog
+	./prog -n 4 -i images/IMG_1854.JPG --filter='glsl:intensity_from_rgb(0,1)' \
+	                    --filter='glsl:gauss(1,2)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
+	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
+						--filter='save:test_a.png(3)'
+
+harris: prog
+	./prog -n 4 -i images/IMG_1854.JPG --filter='glsl:intensity_from_rgb(0,1)' \
+	                    --filter='glsl:harris(1,2)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
+						--filter='save:test_a.png(2)'
 
 clean:
 	rm *.o prog

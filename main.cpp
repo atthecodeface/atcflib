@@ -206,7 +206,7 @@ static const char *shader_base_functions_code;
 GLuint shader_load(const char *shader_filename, GLenum shader_type, const char *shader_defines)
 {
     static const char *shader_base_functions_filename="shaders/base_functions.glsl";
-    const char *shader_code_files[3];
+    const char *shader_code_files[4];
     const char *shader_code;
     GLuint shader_id;
     GLint compile_result;
@@ -224,17 +224,20 @@ GLuint shader_load(const char *shader_filename, GLenum shader_type, const char *
     shader_code_files[1] = "";
     if (shader_defines) 
         shader_code_files[1] = shader_defines;
-    shader_code_files[1] = shader_base_functions_code;
-    shader_code_files[2] = shader_code;
-    glShaderSource(shader_id, 3, shader_code_files, NULL);
+    shader_code_files[2] = shader_base_functions_code;
+    shader_code_files[3] = shader_code;
+    glShaderSource(shader_id, 4, shader_code_files, NULL);
     glCompileShader(shader_id);
     free((void *)shader_code);
 
     glGetShaderiv(shader_id,GL_COMPILE_STATUS, &compile_result);
     if (compile_result==GL_FALSE) {
         char error_buf[256];
+        int line=1;
         glGetShaderInfoLog(shader_id, sizeof(error_buf), NULL, error_buf);
-        fprintf(stderr," Failure to compile shader '%s'\n%s\n", shader_filename, error_buf);
+        fprintf(stderr," Failed to compile shader '%s'\n%s\n", shader_filename, error_buf);
+        for (int i=0; i<4; i++) {
+        }
         return 0;
     }
 

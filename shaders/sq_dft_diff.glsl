@@ -17,22 +17,20 @@ void main(){
      float[NUM_CIRCLE_STEPS*4] colors;
      vec2[NUM_CIRCLE_STEPS*4] dft;
      float[NUM_CIRCLE_STEPS*4] dft_power;
-     float[32]diffs;
+     float[16]diffs;
      int i;
      texture_circle(texture_src, uv_to_frag, 8, circle_offsets_8, colors);
      dft32(colors, dft);
      dft32_power(dft, dft_power);
-     for (int i=0; i<32; i++) {
+     for (int i=0; i<16; i++) {
           float diff;
           diff = dft_power[i]-texture(texture_base, vec2(src_xy.x + i/1024.0, src_xy.y)).r;
           diffs[i] = diff*diff;
      }
      sum = 0.0;
-     for (int i=0; i<32; i++) {
-          sum += diffs[i]*diffs[i];
+     for (int i=0; i<16; i++) {
+          sum += diffs[i];
      }
-     color = 1.0 - sqrt(sum);
-     color = color * color * color;
-     color = color * color * color;
-     color = color * color * color;
+     //color = 1.0 - sqrt(sum);
+     color = 1.0 - 100*sum;
 }

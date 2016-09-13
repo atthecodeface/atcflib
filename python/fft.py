@@ -172,3 +172,47 @@ fft = a.fft2(data,1.0/8,8)
 print "\n\n","*"*80,"DFT"
 ifft = a.dft(data,1.0/8,8)
 
+data = [0x54, 0x2f, 0x23, 0x1e, 0x1e, 0x1f, 0x21, 0x2c,
+        0x4b, 0x66, 0x72, 0x69, 0x53, 0x6b, 0x77, 0x33,
+        0x23, 0x2e, 0x34, 0x3d, 0x40, 0x45, 0x71, 0xad,
+        0xa1, 0x8c, 0x6e, 0x69, 0x79, 0x75, 0x87, 0x82]
+fft_0 = a.fft(data,1.0/32.0)
+data2 = data[30:]+data[:30]
+fft_1 = a.fft(data2,1.0/32.0)
+
+print "\n\n"
+print fft_0
+print fft_1
+
+def psd(d):
+    r = []
+    for i in d:
+        r.append(i[0]*i[0]+i[1]*i[1])
+        pass
+    return r
+print
+
+print psd(fft_0)
+print psd(fft_1)
+
+print
+
+def cmult(c0, c1):
+    return (c0[0]*c1[0] - c0[1]*c1[1],
+            c0[0]*c1[1] + c0[1]*c1[0])
+
+Xa1 = fft_0[1]
+Xb1 = fft_1[1]
+Xa2 = fft_0[2]
+Xb2 = fft_1[2]
+Xa3 = fft_0[3]
+Xb3 = fft_1[3]
+x0 = cmult(cmult(Xa1,Xa1),Xb2)
+x1 = cmult(cmult(Xb1,Xb1),Xa2)
+print x0
+print x1
+
+x0 = cmult(cmult(Xa1,cmult(Xa1,Xa1)),Xb3)
+x1 = cmult(cmult(Xb1,cmult(Xb1,Xb1)),Xa3)
+print x0
+print x1

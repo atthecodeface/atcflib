@@ -91,8 +91,8 @@ blah4: prog
 	                    --filter='glsl:harris(2,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
 						--filter='save:test_h.png(5)' \
 						--filter='find:a(5)' \
-						--filter='corr:correlation_dft_circle(2,6)'  --filter='save:test_corr.png(6)' \
-						--filter='glsl:sq_dft_diff(6,2,7)'  --filter='save:test_bdb.png(7)' \
+						--filter='corr:correlation_dft_circle(4,6)'  --filter='save:test_corr.png(6)' \
+						--filter='glsl:sq_dft_diff(6,4,7)'  --filter='save:test_bdb.png(7)' \
 						--filter='find:a(7)' \
 						--filter='glsl:sq_dft_diff(6,10,7)'  --filter='save:test_bda.png(7)' \
 						--filter='find:a(7)' \

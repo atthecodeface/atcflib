@@ -228,72 +228,58 @@ vec2 complex_mult(vec2 a, vec2 b)
 // fd[k] = Sum(n=0..N-1)(td[n]*e^(2i.pi.k.n/N))
 void dft32(in float[32] time_domain, out vec2[32]freq_domain)
 {
-    float[32] fd_0;
     vec2[32]   fd_1;
     vec2[32]   fd_2;
     vec2[32]   fd_3;
     vec2[32]   fd_4;
     vec2 wk;
-    for (int i=0; i<16; i++) {
-        // Note that we could use 
-        // wi=vec2(cos(PI),sin(PI));
-        // but that is -1...
-        fd_0[ 0+i] = time_domain[0+i] + time_domain[16+i];
-        fd_0[16+i] = time_domain[0+i] - time_domain[16+i];
+    // handle fft.py:fft2 when j=1 and 2 by simple mapping (dft4's, effectively)
+    for (int i=0; i<8; i++) {
+        int bri;
+        bri = i+(((i&1)!=0)?3:0) - (((i&4)!=0)?3:0);
+        fd_1[4*i+0]  = vec2(time_domain[bri+0]+time_domain[bri+8]+time_domain[bri+16]+time_domain[bri+24],0.0);
+        fd_1[4*i+1]  = vec2(time_domain[bri+0]-time_domain[bri+16],-time_domain[bri+8]+time_domain[bri+24]);
+        fd_1[4*i+2]  = vec2(time_domain[bri+0]-time_domain[bri+8]+time_domain[bri+16]-time_domain[bri+24],0.0);
+        fd_1[4*i+3]  = vec2(time_domain[bri+0]-time_domain[bri+16],+time_domain[bri+8]-time_domain[bri+24]);
     }
-    for (int k=0; k<2; k+=2) {
-        for (int i=0; i<8; i++) {
-            fd_1[0+i]  = vec2(fd_0[ 0+i]+fd_0[8+i],0);
-            fd_1[8+i]  = vec2(fd_0[ 0+i]-fd_0[8+i],0);
-            fd_1[16+i] = vec2(fd_0[16+i],-fd_0[24+i]);
-            fd_1[24+i] = vec2(fd_0[16+i], fd_0[24+i]);
-        }
-    }
+    // handle fft.py:fft2 when j=4
+    wk = vec2(1.0,0.0);
     for (int k=0; k<4; k++) {
-        const int[4] bitrev4=int[4](0,2,1,3);
-        float ak = -bitrev4[k]*2*PI/8.0;
-        wk = vec2(cos(ak),sin(ak));
+        const vec2 wm = vec2(cos(-2*PI/8.0),sin(-2*PI/8.0));
         for (int i=0; i<4; i++) {
             vec2 fdm;
-            fdm = complex_mult(wk,fd_1[4+i+8*k]);
-            fd_2[0+i+8*k] = fd_1[0+i+8*k]+fdm;
-            fd_2[4+i+8*k] = fd_1[0+i+8*k]-fdm;
+            fdm = complex_mult(wk,fd_1[4+k+i*8]);
+            fd_2[  k+i*8] = fd_1[k+i*8]+fdm;
+            fd_2[4+k+i*8] = fd_1[k+i*8]-fdm;
         }
+        wk = complex_mult(wk,wm);
     }
+    // handle fft.py:fft2 when j=8
+    wk = vec2(1.0,0.0);
     for (int k=0; k<8; k++) {
-        const int[8] bitrev8=int[8](0,4,2,6,1,5,3,7);
-        float ak = -bitrev8[k]*2*PI/16.0;
-        wk = vec2(cos(ak),sin(ak));
+        const vec2 wm = vec2(cos(-2*PI/16.0),sin(-2*PI/16.0));
         for (int i=0; i<2; i++) {
             vec2 fdm;
-            fdm = complex_mult(wk,fd_2[2+i+4*k]);
-            fd_3[0+i+4*k] = fd_2[0+i+4*k]+fdm;
-            fd_3[2+i+4*k] = fd_2[0+i+4*k]-fdm;
+            fdm = complex_mult(wk, fd_2[8+k+i*16]);
+            fd_3[  k+i*16] = fd_2[k+i*16]+fdm;
+            fd_3[8+k+i*16] = fd_2[k+i*16]-fdm;
         }
+        wk = complex_mult(wk,wm);
     }
+    // handle fft.py:fft2 when j=16
+    wk = vec2(1.0,0.0);
     for (int k=0; k<16; k++) {
-        const int[16] bitrev16=int[16](0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15);
-        float ak = -bitrev16[k]*2*PI/32.0;
+        const vec2 wm = vec2(cos(-2*PI/32.0),sin(-2*PI/32.0));
         vec2 fdm;
-        wk = vec2(cos(ak),sin(ak));
-#if 0
-        for (int i=0; i<1; i++) { // actually i=0
-            vec2 fdm;
-            fdm = complex_mult(wk,fd_3[1+2*k]);
-            fd_4[0+2*k] = fd_3[0+2*k]+fdm;
-            fd_4[1+2*k] = fd_3[0+2*k]-fdm;
-        }
-        fdm = complex_mult(wk,fd_3[1+2*k]);
-#endif
-#if 0
-        fdm = complex_mult(wk,fd_3[1+2*k]);
-#endif
-        fd_4[0+2*k] = fd_3[0+2*k];
-        fd_4[1+2*k] = fd_3[1+2*k];
+        fdm = complex_mult(wk, fd_3[16+k]);
+        fd_4[k]    = fd_3[k]+fdm;
+        fd_4[k+16] = fd_3[k]-fdm;
+        wk = complex_mult(wk,wm);
     }
     for (int j=0; j<32; j++) {
         freq_domain[j] = fd_4[j];
     }
+    freq_domain[0] = vec2(0.0,0.0);
 }
 
 void dft32_power(in vec2[32] dft, out float[32] dft_power)

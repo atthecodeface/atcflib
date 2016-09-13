@@ -218,3 +218,95 @@ void gauss(in sampler2D texture_in, in vec2 xy, in bool x_not_y, in vec2[NUM_WEI
                                                    vec2(xy.x+offset_weights[i].x*mx, xy.y+offset_weights[i].x*my)).r;
                                                    }
 }
+
+vec2 complex_mult(vec2 a, vec2 b)
+{
+    return vec2(a.r*b.r-a.g*b.g, a.r*b.g+a.g*b.r);
+}
+
+#define PI 3.1415926535897932384626433832795
+// fd[k] = Sum(n=0..N-1)(td[n]*e^(2i.pi.k.n/N))
+void dft32(in float[32] time_domain, out vec2[32]freq_domain)
+{
+    float[32] fd_0;
+    vec2[32]   fd_1;
+    vec2[32]   fd_2;
+    vec2[32]   fd_3;
+    vec2[32]   fd_4;
+    vec2 wk;
+    for (int i=0; i<16; i++) {
+        // Note that we could use 
+        // wi=vec2(cos(PI),sin(PI));
+        // but that is -1...
+        fd_0[ 0+i] = time_domain[0+i] + time_domain[16+i];
+        fd_0[16+i] = time_domain[0+i] - time_domain[16+i];
+    }
+    for (int k=0; k<2; k+=2) {
+        for (int i=0; i<8; i++) {
+            fd_1[0+i]  = vec2(fd_0[ 0+i]+fd_0[8+i],0);
+            fd_1[8+i]  = vec2(fd_0[ 0+i]-fd_0[8+i],0);
+            fd_1[16+i] = vec2(fd_0[16+i],-fd_0[24+i]);
+            fd_1[24+i] = vec2(fd_0[16+i], fd_0[24+i]);
+        }
+    }
+    for (int k=0; k<4; k++) {
+        const int[4] bitrev4=int[4](0,2,1,3);
+        float ak = -bitrev4[k]*2*PI/8.0;
+        wk = vec2(cos(ak),sin(ak));
+        for (int i=0; i<4; i++) {
+            vec2 fdm;
+            fdm = complex_mult(wk,fd_1[4+i+8*k]);
+            fd_2[0+i+8*k] = fd_1[0+i+8*k]+fdm;
+            fd_2[4+i+8*k] = fd_1[0+i+8*k]-fdm;
+        }
+    }
+    for (int k=0; k<8; k++) {
+        const int[8] bitrev8=int[8](0,4,2,6,1,5,3,7);
+        float ak = -bitrev8[k]*2*PI/16.0;
+        wk = vec2(cos(ak),sin(ak));
+        for (int i=0; i<2; i++) {
+            vec2 fdm;
+            fdm = complex_mult(wk,fd_2[2+i+4*k]);
+            fd_3[0+i+4*k] = fd_2[0+i+4*k]+fdm;
+            fd_3[2+i+4*k] = fd_2[0+i+4*k]-fdm;
+        }
+    }
+    for (int k=0; k<16; k++) {
+        const int[16] bitrev16=int[16](0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15);
+        float ak = -bitrev16[k]*2*PI/32.0;
+        vec2 fdm;
+        wk = vec2(cos(ak),sin(ak));
+#if 0
+        for (int i=0; i<1; i++) { // actually i=0
+            vec2 fdm;
+            fdm = complex_mult(wk,fd_3[1+2*k]);
+            fd_4[0+2*k] = fd_3[0+2*k]+fdm;
+            fd_4[1+2*k] = fd_3[0+2*k]-fdm;
+        }
+        fdm = complex_mult(wk,fd_3[1+2*k]);
+#endif
+#if 0
+        fdm = complex_mult(wk,fd_3[1+2*k]);
+#endif
+        fd_4[0+2*k] = fd_3[0+2*k];
+        fd_4[1+2*k] = fd_3[1+2*k];
+    }
+    for (int j=0; j<32; j++) {
+        freq_domain[j] = fd_4[j];
+    }
+}
+
+void dft32_power(in vec2[32] dft, out float[32] dft_power)
+{
+    float[32] dft_power_raw;
+    float max;
+    max = 0.1;
+    for (int i=0; i<32; i++) {
+        dft_power_raw[i] = dft[i].x*dft[i].x+dft[i].y*dft[i].y;
+        if (dft_power_raw[i]>max) max=dft_power_raw[i];
+    }
+    for (int i=0; i<32; i++) {
+        dft_power[i] = dft_power_raw[i]/max;
+    }
+}
+

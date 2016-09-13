@@ -78,6 +78,25 @@ blah3: prog
 						--filter='find:a(5)' \
 						--filter='corr:correlation_copy_circle(2,6)'  --filter='save:test_corr.png(6)'
 
+blah4: prog
+	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \
+						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r' \
+						--filter='glsl:intensity_from_rgb(1,8)&-DSELECTED_VALUE=r' \
+	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
+	                    --filter='glsl:gauss(3,4)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
+						--filter='save:test_a.png(2)'  \
+	                    --filter='glsl:gauss(8,9)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
+	                    --filter='glsl:gauss(9,10)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
+						--filter='save:test_b.png(8)'  \
+	                    --filter='glsl:harris(2,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
+						--filter='save:test_h.png(5)' \
+						--filter='find:a(5)' \
+						--filter='corr:correlation_dft_circle(2,6)'  --filter='save:test_corr.png(6)' \
+						--filter='glsl:sq_dft_diff(6,2,7)'  --filter='save:test_bdb.png(7)' \
+						--filter='find:a(7)' \
+						--filter='glsl:sq_dft_diff(6,10,7)'  --filter='save:test_bda.png(7)' \
+						--filter='find:a(7)' \
+
 test: gauss harris windowed_equalization sobel
 
 windowed_equalization: prog

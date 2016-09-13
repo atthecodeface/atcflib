@@ -820,8 +820,8 @@ int c_filter_glsl::execute(t_exec_context *ec)
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, ec->textures[texture_base]->gl_id);
         glUniform1i(uniform_texture_base_id, 1);
-        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,(15.5+32*2)/1024.0);}
-        if (uniform_texture_base_y) {glUniform1f(uniform_texture_base_y,15.5/1024.0);}
+        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,40*2);}
+        if (uniform_texture_base_y) {glUniform1f(uniform_texture_base_y,0);}
         GL_GET_ERRORS;
     }
 
@@ -870,14 +870,14 @@ int c_filter_correlate::execute(t_exec_context *ec)
 {
     texture_target_as_framebuffer(ec->textures[texture_dest]);
 
-    glClearColor(0.1,0,0,1);
+    glClearColor(0.2,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(filter_pid);
     glUniform2f(uniform_out_size_id,32,32);
     texture_draw_prepare(ec->textures[texture_src], uniform_texture_src_id);
 
     for (int i=0; i<ec->num_points; i++) {
-        glUniform2f(uniform_out_xy_id,i*32,0);
+        glUniform2f(uniform_out_xy_id,i*40,0);
         glUniform2f(uniform_src_xy_id,ec->points[i].x,ec->points[i].y);
         texture_draw_do();
     }

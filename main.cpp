@@ -892,7 +892,7 @@ c_filter_find::c_filter_find(t_len_string *filename, t_len_string *options_list,
 {
     perimeter = 10;
     minimum = 0.0;
-    max_elements = 512;
+    max_elements = 320;
     min_distance = 10.0;
     if (sscanf(options_list->ptr,"%d",&texture_src)!=1) {
         parse_error = "Failed to parse find texture options - need '(<src>)' texture number";
@@ -1243,7 +1243,7 @@ int main(int argc,char *argv[])
         ec.textures[i] = texture_load(options.images.strings[i], GL_RGB);
     }
     for (i=options.images.num; i<options.images.num+options.num_textures; i++) {
-        ec.textures[i] = texture_create(GL_R16, 1024, 1024);
+        ec.textures[i] = texture_create(GL_R32F, 1024, 1024);
     }
     fprintf(stderr,"Made %d textures\n", i);
     ec.points = NULL;

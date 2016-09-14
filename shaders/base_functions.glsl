@@ -235,7 +235,7 @@ void dft32(in float[32] time_domain, out vec2[32]freq_domain)
     vec2 wk;
     // handle fft.py:fft2 when j=1 and 2 by simple mapping (dft4's, effectively)
     for (int i=0; i<8; i++) {
-        int bri;
+        int bri; // 0 4 2 6 1 5 3 7
         bri = i+(((i&1)!=0)?3:0) - (((i&4)!=0)?3:0);
         fd_1[4*i+0]  = vec2(time_domain[bri+0]+time_domain[bri+8]+time_domain[bri+16]+time_domain[bri+24],0.0);
         fd_1[4*i+1]  = vec2(time_domain[bri+0]-time_domain[bri+16],-time_domain[bri+8]+time_domain[bri+24]);
@@ -278,21 +278,59 @@ void dft32(in float[32] time_domain, out vec2[32]freq_domain)
     }
     for (int j=0; j<32; j++) {
         freq_domain[j] = fd_4[j];
+        //freq_domain[j] = vec2(-fd_4[j].r,-fd_4[j].g);
     }
     freq_domain[0] = vec2(0.0,0.0);
 }
 
-void dft32_power(in vec2[32] dft, out float[32] dft_power)
+void dft32_normalize(in vec2[32] dft, out float[32] dft_power, out vec2[16]dft_normalized)
 {
     float[32] dft_power_raw;
-    float max;
-    max = 0.1;
-    for (int i=0; i<32; i++) {
+    float max, sqrt_max;
+    max = 1.0;
+    for (int i=1; i<32; i++) {
         dft_power_raw[i] = dft[i].x*dft[i].x+dft[i].y*dft[i].y;
-        if (dft_power_raw[i]>max) max=dft_power_raw[i];
+        if (dft_power_raw[i]>max) {
+            max=dft_power_raw[i];
+        }
     }
+    dft_power_raw[0] = 0;
+    sqrt_max = sqrt(max);
     for (int i=0; i<32; i++) {
-        dft_power[i] = dft_power_raw[i]/max;
+        dft_power[i] = dft_power_raw[i] / max;
+        //dft_normalized[i] = dft[i] / sqrt_max;
+        dft_normalized[i] = vec2(dft[i].x / sqrt_max, dft[i].y / sqrt_max);
     }
 }
+
+float dft_rotation_error(in vec2[8] src_dft, in vec2[16] dft)
+{
+    vec2 Xa1_Xa1, Xb1_Xb1;
+    vec2 Xa1_Xa1_Xb2, Xb1_Xb1_Xa2, X12_err;
+    vec2 Xa1_Xa1_Xa1, Xb1_Xb1_Xb1;
+    vec2 Xa1_Xa1_Xa1_Xb3, Xb1_Xb1_Xb1_Xa3, X13_err;
+    float diff;
+    float Xa1_m, Xb1_m;
+    vec2 X_a1, X_b1;
+    diff = 0.0;
+    X_a1 = src_dft[1];
+    X_b1 = dft[1];
+    Xa1_Xa1 = complex_mult(X_a1,X_a1);
+    Xb1_Xb1 = complex_mult(X_b1,X_b1);
+#if 0
+    Xa1_Xa1_Xb2 = complex_mult(Xa1_Xa1,dft[2]);
+    Xb1_Xb1_Xa2 = complex_mult(Xb1_Xb1,src_dft[2]);
+    X12_err = Xa1_Xa1_Xb2 - Xb1_Xb1_Xa2;
+    diff += (X12_err.x*X12_err.x + X12_err.y*X12_err.y);
+#else
+    Xa1_Xa1_Xa1 = complex_mult(Xa1_Xa1,X_a1);
+    Xb1_Xb1_Xb1 = complex_mult(Xb1_Xb1,X_b1);
+    Xa1_Xa1_Xa1_Xb3 = complex_mult(Xa1_Xa1_Xa1,dft[3]);
+    Xb1_Xb1_Xb1_Xa3 = complex_mult(Xb1_Xb1_Xb1,src_dft[3]);
+    X13_err = Xa1_Xa1_Xa1_Xb3 - Xb1_Xb1_Xb1_Xa3;
+    diff += (X13_err.x*X13_err.x + X13_err.y*X13_err.y);
+#endif
+    return diff;
+}
+
 

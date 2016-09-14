@@ -34,7 +34,7 @@ blah2: prog
 						--filter='save:test_h.png(5)' \
 						--filter='find:a(5)' \
 						--filter='corr:correlation_copy_shader(2,6)'  --filter='save:test_corr.png(6)' \
-	                    --filter='glsl:sum_sq_pixel_diff(6,2,11)' --filter='save:test_bdb.png(11)'  --filter='find:a(11)'  \
+	                    --filter='glsl:sum_sq_pixel_diff(6,2,11)' --filter='save:test_ada.png(11)'  --filter='find:a(11)'  \
 	                    --filter='glsl:sum_sq_pixel_diff(6,8,11)' --filter='save:test_bda.png(11)'  --filter='find:a(11)' 
 
 blah2b: prog
@@ -45,7 +45,7 @@ blah2b: prog
 						--filter='save:test_h.png(5)' \
 						--filter='find:a(5)' \
 						--filter='corr:correlation_copy_shader(4,6)'  --filter='save:test_corr.png(6)' \
-	                    --filter='glsl:sum_sq_pixel_diff(6,4,11)' --filter='save:test_bdb.png(11)'  --filter='find:a(11)'  \
+	                    --filter='glsl:sum_sq_pixel_diff(6,4,11)' --filter='save:test_ada.png(11)'  --filter='find:a(11)'  \
 	                    --filter='glsl:sum_sq_pixel_diff(6,10,11)' --filter='save:test_bda.png(11)' --filter='find:a(11)' 
 
 blah2c: prog
@@ -60,7 +60,7 @@ blah2c: prog
 						--filter='save:test_h.png(5)' \
 						--filter='find:a(5)' \
 						--filter='corr:correlation_copy_shader(4,6)'  --filter='save:test_corr.png(6)' \
-	                    --filter='glsl:sum_sq_pixel_diff(6,4,11)' --filter='save:test_bdb.png(11)'  --filter='find:a(11)'  \
+	                    --filter='glsl:sum_sq_pixel_diff(6,4,11)' --filter='save:test_ada.png(11)'  --filter='find:a(11)'  \
 	                    --filter='glsl:sum_sq_pixel_diff(6,10,11)' --filter='save:test_bda.png(11)' --filter='find:a(11)' 
 
 blah3: prog
@@ -88,11 +88,11 @@ blah4: prog
 	                    --filter='glsl:gauss(8,9)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 	                    --filter='glsl:gauss(9,10)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 						--filter='save:test_b.png(8)'  \
-	                    --filter='glsl:harris(2,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
+	                    --filter='glsl:harris(4,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
 						--filter='save:test_h.png(5)' \
 						--filter='find:a(5)' \
-						--filter='corr:correlation_dft_circle(4,6)'  --filter='save:test_corr.png(6)' \
-						--filter='glsl:sq_dft_diff(6,4,7)'  --filter='save:test_bdb.png(7)' \
+						--filter='corr:correlation_dft_circle(2,6)'  --filter='save:test_corr.png(6)' \
+						--filter='glsl:sq_dft_diff(6,2,7)'  --filter='save:test_ada.png(7)' \
 						--filter='find:a(7)' \
 						--filter='glsl:sq_dft_diff(6,10,7)'  --filter='save:test_bda.png(7)' \
 						--filter='find:a(7)' \

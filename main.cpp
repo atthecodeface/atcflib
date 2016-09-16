@@ -18,6 +18,7 @@ Example
 #define STR(x) #x
 #define STRINGIFY(x) STR(x)
 #define GL_GET_ERRORS do {} while (0);
+#define VERBOSE
 #ifdef VERBOSE
 #undef GL_GET_ERRORS
 #define GL_GET_ERRORS do { \
@@ -372,7 +373,6 @@ t_texture *texture_load(const char *image_filename, GLuint image_type)
     //Generate an OpenGL texture to return
     glGenTextures(1,&texture->gl_id);
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
-    fprintf(stderr,"%s",SDL_GetError());
 
     //glPixelStorei(GL_UNPACK_ALIGNMENT,4);	
     //glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,16/*surface->w*/,16/*surface->h*/,0,GL_RGB,GL_UNSIGNED_BYTE,surface->pixels);
@@ -495,9 +495,9 @@ static void texture_draw_init(void)
 
 /*t texture_draw_prepare
  */
-static void texture_draw_prepare(t_texture *texture, GLuint t_u)
+static void texture_draw_prepare(t_texture *texture, GLint t_u)
 {
-    gl_get_errors("draw_prepare in");
+    GL_GET_ERRORS;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,texture->gl_id);
     glUniform1i(t_u,0);
@@ -532,7 +532,11 @@ static void texture_draw_tidy(void)
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
 
-    GL_GET_ERRORS;
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D,0);
+    glActiveTexture(GL_TEXTURE0);
 }
 
 /*t texture_draw
@@ -588,10 +592,10 @@ public:
     c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
     char *filter_filename;
     GLuint filter_pid;
-    GLuint uniform_texture_src_id;
-    GLuint uniform_texture_base_id;
-    GLuint uniform_texture_base_x;
-    GLuint uniform_texture_base_y;
+    GLint uniform_texture_src_id;
+    GLint uniform_texture_base_id;
+    GLint uniform_texture_base_x;
+    GLint uniform_texture_base_y;
     int texture_src;
     int texture_dest;
     int texture_base;
@@ -611,10 +615,10 @@ public:
     int texture_src;
     int texture_dest;
     GLuint filter_pid;
-    GLuint uniform_texture_src_id;
-    GLuint uniform_out_xy_id;
-    GLuint uniform_out_size_id;
-    GLuint uniform_src_xy_id;
+    GLint uniform_texture_src_id;
+    GLint uniform_out_xy_id;
+    GLint uniform_out_size_id;
+    GLint uniform_src_xy_id;
     char *shader_defines;
 
     virtual int compile(void);
@@ -791,14 +795,18 @@ int c_filter_glsl::compile(void)
     if (get_shader_uniform_ids(filter_pid))
         return 1;
     uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_src");
-    uniform_texture_base_id = 0;
-    uniform_texture_base_x = 0;
-    uniform_texture_base_y = 0;
+    uniform_texture_base_id = -1;
+    uniform_texture_base_x = -1;
+    uniform_texture_base_y = -1;
     if (texture_base!=0) {
         gl_get_errors("before get uniforms");
         uniform_texture_base_id = glGetUniformLocation(filter_pid, "texture_base");
         uniform_texture_base_x = glGetUniformLocation(filter_pid, "uv_base_x");
         uniform_texture_base_y = glGetUniformLocation(filter_pid, "uv_base_y");
+        fprintf(stderr,"Got %d.%d.%d.%d\n", uniform_texture_src_id,
+                uniform_texture_base_id,
+                uniform_texture_base_x,
+                uniform_texture_base_y);
         gl_get_errors("after get uniforms");
     }
     return 0;
@@ -814,14 +822,19 @@ int c_filter_glsl::execute(t_exec_context *ec)
 
     GL_GET_ERRORS;
 
-    if (uniform_texture_base_id!=0) {
+    fprintf(stderr,"Use %d.%d.%d.%d\n", uniform_texture_src_id,
+                uniform_texture_base_id,
+                uniform_texture_base_x,
+                uniform_texture_base_y);
+    if (uniform_texture_base_id>=0) {
         GL_GET_ERRORS;
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, ec->textures[texture_base]->gl_id);
         glUniform1i(uniform_texture_base_id, 1);
-        if (uniform_texture_base_x) {glUniform1f(uniform_texture_base_x,40*2);}
-        if (uniform_texture_base_y) {glUniform1f(uniform_texture_base_y,0);}
+        if (uniform_texture_base_x>=0) {glUniform1f(uniform_texture_base_x,40*2);}
+        if (uniform_texture_base_y>=0) {glUniform1f(uniform_texture_base_y,0);}
+        glActiveTexture(GL_TEXTURE0);
         GL_GET_ERRORS;
     }
 
@@ -868,12 +881,14 @@ int c_filter_correlate::compile(void)
  */
 int c_filter_correlate::execute(t_exec_context *ec)
 {
+    GL_GET_ERRORS;
     texture_target_as_framebuffer(ec->textures[texture_dest]);
 
     glClearColor(0.2,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(filter_pid);
     glUniform2f(uniform_out_size_id,32,32);
+    GL_GET_ERRORS;
     texture_draw_prepare(ec->textures[texture_src], uniform_texture_src_id);
 
     for (int i=0; i<ec->num_points; i++) {
@@ -917,6 +932,8 @@ int c_filter_find::execute(t_exec_context *ec)
 
     texture = ec->textures[texture_src];
     raw_img = (float *)texture->raw_buffer;
+    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, texture->raw_buffer);
 
     elements_minimum = -1.0;

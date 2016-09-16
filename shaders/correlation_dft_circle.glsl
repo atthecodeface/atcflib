@@ -21,7 +21,7 @@ void main()
      vec2[NUM_CIRCLE_STEPS*4] dft;
      float[NUM_CIRCLE_STEPS*4] dft_power;
      vec2[NUM_CIRCLE_STEPS*2] dft_normalized;
-     texture_circle(texture_src, (src_xy+vec2(0.5f,0.5f))/1024.0, 8, circle_offsets_8, colors);
+     texture_circle(texture_src, (src_xy+vec2(0.5f,0.5f))/1024.0, CORR_CIRCLE_RADIUS, circle_offsets_8, colors);
      dft32(colors, dft);
      dft32_normalize(dft, dft_power, dft_normalized);
      color = dft_power[ox&31];
@@ -31,5 +31,6 @@ void main()
      } else if (oy>1) {
          color = dft_normalized[ox&15].r;
      }
+     if (color<0) color=0;
 }
 

@@ -225,6 +225,7 @@ def normalize_fft(d):
         x=math.sqrt(x)
         if x>max: max=x
         pass
+    max = 1.0
     r = []
     for i in d:
         r.append((i[0]/max, i[1]/max))

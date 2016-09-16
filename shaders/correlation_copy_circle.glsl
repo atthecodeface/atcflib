@@ -16,7 +16,7 @@ void main()
 {
      float[NUM_CIRCLE_STEPS*4] colors;
      int i;
-     texture_circle(texture_src, (src_xy+vec2(0.5f,0.5f))/1024.0, 8, circle_offsets_8, colors);
+     texture_circle(texture_src, (src_xy+vec2(0.5f,0.5f))/1024.0, CORR_CIRCLE_RADIUS, circle_offsets_8, colors);
      i = int(offset_xy.x);
      color = colors[i];
 }

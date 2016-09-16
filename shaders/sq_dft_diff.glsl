@@ -52,7 +52,7 @@ void main(){
      // 8: (290,734) = 0.814591
      // 9: (171,743) = 0.807550
      // 10: (684,864) = 0.807008
-     src_xy = vec2( ((4*40)+0.5)/1024.0, 0.5/1024.0);
+     src_xy = vec2( ((0*40)+0.5)/1024.0, 0.5/1024.0);
 
      src_dft[1] = vec2(texture(texture_base, vec2(src_xy.x + 1.0/1024.0, src_xy.y + 2.0/1024)).r, 
                        texture(texture_base, vec2(src_xy.x + 1.0/1024.0, src_xy.y + 4.0/1024)).r );

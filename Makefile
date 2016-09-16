@@ -15,7 +15,7 @@ LINKFLAGS = -g -iframework /Library/Frameworks -framework SDL2 -framework SDL2_i
 CPPFLAGS  = -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers
 endif
 
-OBJS = main.o key_value.o texture.o shader.o
+OBJS = main.o key_value.o texture.o shader.o filter.o
 
 prog: $(OBJS)
 	$(LINK) $(OBJS) $(LINKFLAGS) -o prog

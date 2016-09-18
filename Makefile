@@ -1,5 +1,5 @@
 
-all: prog
+all: prog batch
 
 
 OS := $(shell uname)
@@ -15,10 +15,17 @@ LINKFLAGS = -g -iframework /Library/Frameworks -framework SDL2 -framework SDL2_i
 CPPFLAGS  = -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers
 endif
 
-OBJS = main.o key_value.o texture.o shader.o filter.o
+PROG_OBJS = main.o key_value.o texture.o shader.o filter.o
+BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o
 
-prog: $(OBJS)
-	$(LINK) $(OBJS) $(LINKFLAGS) -o prog
+prog: $(PROG_OBJS)
+	$(LINK) $(PROG_OBJS) $(LINKFLAGS) -o prog
+
+batch: $(BATCH_OBJS)
+	$(LINK) $(BATCH_OBJS) $(LINKFLAGS) -o batch
+
+batch_test: batch
+	./batch -i images/IMG_1900.JPG -i images/IMG_1901.JPG
 
 blah2: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \

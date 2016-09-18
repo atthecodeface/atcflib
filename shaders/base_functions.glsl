@@ -187,7 +187,7 @@ const vec2 offsets_2d_81[81] = vec2[](
 );
 
 // from wikipedia, ITU-R YUV from RGB
-vec3 intensity_at(in sampler2D texture_in, in float x, in float y)
+vec3 yuv_at(in sampler2D texture_in, in float x, in float y)
 {
     vec2 texture_xy;
     texture_xy = vec2( (x*INTENSITY_XSCALE)+INTENSITY_XOFS, (y*INTENSITY_YSCALE)+INTENSITY_YOFS);
@@ -202,17 +202,11 @@ vec3 intensity_at(in sampler2D texture_in, in float x, in float y)
 void texture_circle(in sampler2D texture_in, in vec2 centre_xy, in float radius, in vec2[NUM_CIRCLE_STEPS] circle_offsets, out float[NUM_CIRCLE_STEPS*4] colors)
 {
     for (int i=0; i<NUM_CIRCLE_STEPS; i++) {
-        colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, vec2(centre_xy.x+radius*circle_offsets[i].x,
-                                                                centre_xy.y+radius*circle_offsets[i].y)
-                                                   ).r;
-        //colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, centre_xy+radius*circle_offsets[i]).r;
+        colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, centre_xy+radius*circle_offsets[i]).r;
         colors[NUM_CIRCLE_STEPS*1+i] = texture(texture_in, vec2(centre_xy.x-radius*circle_offsets[i].y,
                                                                 centre_xy.y+radius*circle_offsets[i].x)
                                                    ).r;
-        colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, vec2(centre_xy.x-radius*circle_offsets[i].x,
-                                                                centre_xy.y-radius*circle_offsets[i].y)
-                                                   ).r;
-        //colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, centre_xy-radius*circle_offsets[i]).r;
+        colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, centre_xy-radius*circle_offsets[i]).r;
         colors[NUM_CIRCLE_STEPS*3+i] = texture(texture_in, vec2(centre_xy.x+radius*circle_offsets[i].y,
                                                                 centre_xy.y-radius*circle_offsets[i].x)
                                                    ).r;

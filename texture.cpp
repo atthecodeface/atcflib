@@ -31,7 +31,7 @@ typedef struct t_texture
 static void
 texture_buffers(t_texture *texture)
 {
-    texture->raw_buffer = malloc(texture->hdr.width * texture->hdr.height * 8); //sizeof(float));
+    texture->raw_buffer = malloc(texture->hdr.width * texture->hdr.height * 4*sizeof(float));
 }
 
 /*a External functions
@@ -63,16 +63,16 @@ texture_save(t_texture_ptr texture, const char *png_filename)
             }
         }
     } else {
-        char *raw_img = (char *)texture->raw_buffer;
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture->raw_buffer);
+        float *raw_img = (float *)texture->raw_buffer;
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
         for (int j=0;j<texture->hdr.height;j++){
             for (int i=0;i<texture->hdr.width; i++){
                 int p_in = (j*texture->hdr.width+i)*4;
                 int p_out = (j*texture->hdr.width+i)*4;
-                image_pixels[p_out+0]=raw_img[p_in+1];
-                image_pixels[p_out+1]=raw_img[p_in+2];
-                image_pixels[p_out+2]=raw_img[p_in+3];
-                image_pixels[p_out+3]=1;
+                image_pixels[p_out+0] = raw_img[p_in+1];
+                image_pixels[p_out+1] = raw_img[p_in+2];
+                image_pixels[p_out+2] = raw_img[p_in+3];
+                image_pixels[p_out+3] = 1;
             }
         }
     }

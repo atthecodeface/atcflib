@@ -268,7 +268,7 @@ int main(int argc,char *argv[])
         ec.textures[i] = texture_load(options.images.strings[i], GL_RGB);
     }
     for (i=options.images.num; i<options.images.num+options.num_textures; i++) {
-        ec.textures[i] = texture_create(GL_R32F, 1024, 1024);
+        ec.textures[i] = texture_create(1024, 1024);
     }
     fprintf(stderr,"Made %d textures\n", i);
     ec.points = NULL;

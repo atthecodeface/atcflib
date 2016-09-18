@@ -5,7 +5,7 @@
 // -DNUM_OFFSETS=81
 // -DOFFSETS=offsets_2d_81
 
-out float color;
+out vec4 color;
 in vec2 uv_to_frag;
 uniform sampler2D texture_src;
 
@@ -22,7 +22,8 @@ void main()
      }
      mean = sum/NUM_OFFSETS;
      variance = sum*sum - sum_sq;
-     //color = 0.5 + 5*(intensity_at(uv_to_frag.x, uv_to_frag.y) - mean) / sqrt(variance);
-     color = abs(NUM_OFFSETS*(texture(texture_src, vec2(uv_to_frag.x, uv_to_frag.y)).r - mean) / sqrt(variance) );
+
+     color   = texture(texture_src, uv_to_frag);
+     color.r = abs(NUM_OFFSETS*(color.r - mean) / sqrt(variance) );
 }
 

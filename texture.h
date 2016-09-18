@@ -111,7 +111,7 @@ texture_load(const char *image_filename, GLuint image_type);
 /*f texture_create
  */
 extern t_texture_ptr 
-texture_create(GLuint format, int width, int height);
+texture_create(int width, int height);
 
 /*a Wrapper
  */

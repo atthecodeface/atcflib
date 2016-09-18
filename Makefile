@@ -29,8 +29,8 @@ batch_test: batch
 
 blah2: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \
-						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r' \
-						--filter='glsl:intensity_from_rgb(1,8)&-DSELECTED_VALUE=r' \
+						--filter='glsl:yuv_from_rgb(0,2)&-DSELECTED_VALUE=r' \
+						--filter='glsl:yuv_from_rgb(1,8)&-DSELECTED_VALUE=r' \
 	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 	                    --filter='glsl:gauss(3,4)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 						--filter='save:test_a.png(4)'  \
@@ -46,8 +46,8 @@ blah2: prog
 
 blah2b: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \
-						--filter='glsl:intensity_from_rgb(0,4)&-DSELECTED_VALUE=r' \
-						--filter='glsl:intensity_from_rgb(1,10)&-DSELECTED_VALUE=r' \
+						--filter='glsl:yuv_from_rgb(0,4)&-DSELECTED_VALUE=r' \
+						--filter='glsl:yuv_from_rgb(1,10)&-DSELECTED_VALUE=r' \
 	                    --filter='glsl:harris(4,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
 						--filter='save:test_h.png(5)' \
 						--filter='find:a(5)' \
@@ -57,9 +57,9 @@ blah2b: prog
 
 blah2c: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \
-						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r' \
+						--filter='glsl:yuv_from_rgb(0,2)&-DSELECTED_VALUE=r' \
 	                    --filter='glsl:windowed_equalization(2,4)&-DNUM_OFFSETS=81&-DOFFSETS=offsets_2d_81' \
-						--filter='glsl:intensity_from_rgb(1,8)&-DSELECTED_VALUE=r' \
+						--filter='glsl:yuv_from_rgb(1,8)&-DSELECTED_VALUE=r' \
 	                    --filter='glsl:windowed_equalization(8,10)&-DNUM_OFFSETS=81&-DOFFSETS=offsets_2d_81' \
 	                    --filter='glsl:harris(4,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
 						--filter='save:test_a.png(4)'  \
@@ -72,8 +72,8 @@ blah2c: prog
 
 blah3: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \
-						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
-						--filter='glsl:intensity_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
 	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 	                    --filter='glsl:gauss(3,4)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 						--filter='save:test_a.png(2)'  \
@@ -87,8 +87,8 @@ blah3: prog
 
 blah4: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \
-						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
-						--filter='glsl:intensity_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
 	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 	                    --filter='glsl:gauss(3,4)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 						--filter='save:test_a.png(2)'  \
@@ -106,8 +106,8 @@ blah4: prog
 
 blah5: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \
-						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
-						--filter='glsl:intensity_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
 	                    --filter='glsl:harris(2,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
 						--filter='save:test_a.png(2)'  \
 						--filter='save:test_b.png(8)'  \
@@ -123,8 +123,8 @@ blah5: prog
 
 blah6: prog
 	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1901.JPG \
-						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
-						--filter='glsl:intensity_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,8)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
 						--filter='save:test_a.png(2)'  \
 						--filter='save:test_b.png(8)'  \
 	                    --filter='glsl:harris(2,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
@@ -160,30 +160,34 @@ alu_mult: prog
 		--filter='glsl:alu_buffers(1,0,2)&-DOP=(1-4*src_a*src_b)' --filter='save:test_xymult.png(2)'
 
 windowed_equalization: prog
-	./prog -n 4 -i images/IMG_1854.JPG --filter='glsl:intensity_from_rgb(0,1)&-DSELECTED_VALUE=r' \
-	                    --filter='glsl:windowed_equalization(1,3)&-DNUM_OFFSETS=81&-DOFFSETS=offsets_2d_81' \
-						--filter='save:test_a.png(3)'
+	./prog -n 4 -i images/IMG_1854.JPG \
+						--filter='glsl:yuv_from_rgb(0,1)' \
+	                    --filter='glsl:windowed_equalization(1,2)&-DNUM_OFFSETS=81&-DOFFSETS=offsets_2d_81' \
+						--filter='save:test_a.png(2)'
 
 sobel: prog
-	./prog -n 4 -i images/IMG_1854.JPG --filter='glsl:intensity_from_rgb(0,1)&-DSELECTED_VALUE=r' \
+	./prog -n 4 -i images/IMG_1854.JPG \
+					    --filter='glsl:yuv_from_rgb(0,1)' \
 	                    --filter='glsl:convolve_2d(1,3)&-DNUM_WEIGHTS=9&-DOFFSET_WEIGHTS=sobel_weights' \
 						--filter='save:test_a.png(3)'
 
 
 gauss: prog
-	./prog -n 4 -i images/IMG_1854.JPG --filter='glsl:intensity_from_rgb(0,1)&-DSELECTED_VALUE=r' \
+	./prog -n 4 -i images/IMG_1854.JPG \
+						--filter='glsl:yuv_from_rgb(0,1)' \
 	                    --filter='glsl:gauss(1,2)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 						--filter='save:test_a.png(3)'
 
 harris: prog
-	./prog -n 4 -i images/IMG_1854.JPG --filter='glsl:intensity_from_rgb(0,1)&-DSELECTED_VALUE=r' \
+	./prog -n 4 -i images/IMG_1854.JPG \
+						--filter='glsl:yuv_from_rgb(0,1)' \
 	                    --filter='glsl:harris(1,2)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
 						--filter='save:test_a.png(2)'
 
 fft: prog
 	./prog -n 12 -i images/IMG_1900.JPG \
-						--filter='glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r' \
+						--filter='glsl:yuv_from_rgb(0,2)&-DSELECTED_VALUE=r' \
 	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 	                    --filter='glsl:gauss(3,2)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 						--filter='save:test_a.png(2)'  \

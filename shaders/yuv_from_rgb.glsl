@@ -1,5 +1,3 @@
-// Requires
-// -DSELECTED_VALUE=r|g|b
 out vec3 color;
 in vec2 uv_to_frag;
 uniform sampler2D texture_src;

@@ -213,7 +213,7 @@ void texture_circle(in sampler2D texture_in, in vec2 centre_xy, in float radius,
     }
 }
 
-void gauss(in sampler2D texture_in, in vec2 xy, in bool x_not_y, in vec2[NUM_WEIGHTS] offset_weights, out float[NUM_WEIGHTS] colors)
+void gauss(in sampler2D texture_in, in vec2 xy, in bool x_not_y, in vec2[NUM_WEIGHTS] offset_weights, out vec4[NUM_WEIGHTS] colors)
 {
     float mx, my;
     mx = 0.0; my=1.0;
@@ -222,7 +222,7 @@ void gauss(in sampler2D texture_in, in vec2 xy, in bool x_not_y, in vec2[NUM_WEI
     }
     for (int i=0; i<NUM_WEIGHTS; i++) {
         colors[i] = offset_weights[i].y * texture( texture_in,
-                                                   vec2(xy.x+offset_weights[i].x*mx, xy.y+offset_weights[i].x*my)).r;
+                                                   vec2(xy.x+offset_weights[i].x*mx, xy.y+offset_weights[i].x*my));
                                                    }
 }
 

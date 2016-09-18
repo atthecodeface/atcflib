@@ -234,8 +234,8 @@ int main(int argc,char *argv[])
     int corr_filter_start, corr_filter_end;
     int match_filter_start;
     num_filters = 0;
-    filters[num_filters++] = filter_from_string("glsl:intensity_from_rgb(0,2)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
-    filters[num_filters++] = filter_from_string("glsl:intensity_from_rgb(1,3)&-DSELECTED_VALUE=r&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
+    filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
+    filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
     filters[num_filters++] = filter_from_string("glsl:harris(2,4)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25");
     filters[num_filters++] = filter_from_string("find:a(4)");
     init_filter_end = num_filters;
@@ -285,7 +285,7 @@ int main(int argc,char *argv[])
     }
     fprintf(stderr,"Read %d images\n", i);
     for (i=options.images.num; i<16; i++) {
-        ec.textures[i] = texture_create(GL_R32F, 1024, 1024);
+        ec.textures[i] = texture_create(1024, 1024);
     }
     fprintf(stderr,"Made %d textures\n", i);
     ec.points = NULL;

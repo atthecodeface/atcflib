@@ -50,32 +50,20 @@ texture_save(t_texture_ptr texture, const char *png_filename)
 
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    if (0) {
-        float *raw_img;
-        raw_img = (float*)texture->raw_buffer;
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, texture->raw_buffer);
-        for (int j=0;j<texture->hdr.height;j++){
-            for (int i=0;i<texture->hdr.width; i++){
-                image_pixels[4*(j*texture->hdr.width+i)+0]=255*raw_img[j*texture->hdr.width+i];            
-                image_pixels[4*(j*texture->hdr.width+i)+1]=255*raw_img[j*texture->hdr.width+i];            
-                image_pixels[4*(j*texture->hdr.width+i)+2]=255*raw_img[j*texture->hdr.width+i];            
-                image_pixels[4*(j*texture->hdr.width+i)+3]=255*raw_img[j*texture->hdr.width+i];
-            }
-        }
-    } else {
-        float *raw_img = (float *)texture->raw_buffer;
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
-        for (int j=0;j<texture->hdr.height;j++){
-            for (int i=0;i<texture->hdr.width; i++){
-                int p_in = (j*texture->hdr.width+i)*4;
-                int p_out = (j*texture->hdr.width+i)*4;
-                image_pixels[p_out+0] = raw_img[p_in+1];
-                image_pixels[p_out+1] = raw_img[p_in+2];
-                image_pixels[p_out+2] = raw_img[p_in+3];
-                image_pixels[p_out+3] = 1;
-            }
+
+    float *raw_img = (float *)texture->raw_buffer;
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
+    for (int j=0; j<texture->hdr.height; j++){
+        for (int i=0; i<texture->hdr.width; i++){
+            int p_in = (j*texture->hdr.width+i)*4;
+            int p_out = (j*texture->hdr.width+i)*4;
+            image_pixels[p_out+0] = 255.9*raw_img[p_in+2];
+            image_pixels[p_out+1] = 255.9*raw_img[p_in+1];
+            image_pixels[p_out+2] = 255.9*raw_img[p_in+0];
+            image_pixels[p_out+3] = 255.9*raw_img[p_in+3];
         }
     }
+
     ret = IMG_SavePNG(image, png_filename);
     free(image);
     return ret;
@@ -136,7 +124,7 @@ texture_load(const char *image_filename, GLuint image_type)
 /*f texture_create
  */
 t_texture_ptr 
-texture_create(GLuint format, int width, int height)
+texture_create(int width, int height)
 {
     t_texture *texture;
 
@@ -148,7 +136,7 @@ texture_create(GLuint format, int width, int height)
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
 
     glTexImage2D(GL_TEXTURE_2D, 0,
-                 format, width, height, 0, // Texture is RGB with this width and height
+                 GL_RGB32F, width, height, 0, // Texture is RGB with this width and height
                  GL_RGB, GL_UNSIGNED_BYTE, NULL); // data source type - NULL means no initial data
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);

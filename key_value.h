@@ -70,6 +70,12 @@ key_value_parse(const char *string, const char *string_end, t_key_values *kv);
 extern t_key_value_entry_ptr
 key_value_iter(t_key_values *kv, t_key_value_entry_ptr kve);
 
+/*f key_value_find
+ * iterate over all the key/value pairs in the t_key_values
+ */
+extern t_key_value_entry_ptr
+key_value_find(t_key_values *kv, const char *key);
+
 /*f key_value_init
  * Initialize a t_key_values structure
  */

@@ -46,6 +46,8 @@ typedef struct
     int x;
     int y;
     float value;
+    float vec_x;
+    float vec_y;
 } t_point_value;
 
 /*t t_exec_context
@@ -65,10 +67,11 @@ public:
     c_filter(void);
     ~c_filter();
     void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);
-    void set_uniforms(t_len_string *uniforms);
+    void set_key_values(t_len_string *ls, t_key_values *kvs);
     int uniform_set(const char *uniform, float value);
     void get_shader_defines(char **shader_defines);
     int  get_shader_uniform_ids(void);
+    int  set_shader_uniforms(void);
     int  get_value_from_key_value(t_key_value_entry_ptr kve);
     virtual int compile(void) {return 0;};
     virtual int execute(t_exec_context *ec) {return 0;};

@@ -96,12 +96,17 @@ texture_draw(void);
 /*f texture_get_buffer
  */
 extern void *
-texture_get_buffer(t_texture_ptr t_texture);
+texture_get_buffer(t_texture_ptr t_texture, int components);
+
+/*f texture_get_buffer_uint
+ */
+extern void *
+texture_get_buffer_uint(t_texture_ptr texture, int components);
 
 /*f texture_save
  */
 extern int
-texture_save(t_texture_ptr texture, const char *png_filename);
+texture_save(t_texture_ptr texture, const char *png_filename, int components, int conversion);
 
 /*f texture_load
  */

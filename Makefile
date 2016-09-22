@@ -143,6 +143,19 @@ blah6: prog
 						--filter='glsl:alu_buffers(3,7,4)&-DOP=src_b*src_a'  --filter='save:test_mult_4.png(4)' \
 						--filter='find:a(4)'
 
+blah7: prog
+	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1901.JPG \
+						--filter='glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0/2.0)&-DINTENSITY_XOFS=0.2&-DINTENSITY_YSCALE=(1.0/2.0)&-DINTENSITY_YOFS=0.43' \
+						--filter='glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0/2.0)&-DINTENSITY_XOFS=0.2&-DINTENSITY_YSCALE=(1.0/2.0)&-DINTENSITY_YOFS=0.43' \
+						--filter='save:test_a.png(2)'  \
+						--filter='save:test_b.png(3)'  \
+	                    --filter='glsl:harris(2,5)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25' \
+						--filter='save:test_h.png(5)' \
+						--filter='find:a(5)' \
+						--filter='corr:correlation_dft_circle(2,6)&-DCORR_CIRCLE_RADIUS=8&-Usrc_x_ofs=0.0f&-Usrc_y_ofs=-4.0f'  --filter='save:test_corr_8.png(6)' \
+						--filter='glsl:sq_dft_diff(6,3,7)&-DCORR_CIRCLE_RADIUS=8'           --filter='save:test_bda_8.png(7)' \
+						--filter='find:a(7)'
+
 
 
 test: gauss harris windowed_equalization sobel
@@ -196,6 +209,63 @@ fft: prog
 						--filter='find:a(5)' \
 						--filter='corr:correlation_dft_circle(2,6)&-DCORR_CIRCLE_RADIUS=8'  --filter='save:test_corr_8.png(6)' \
 						--filter='find:a(6)'
+
+fft2: prog
+	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1901_r90.JPG \
+						--filter='glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='save:test_a.png(2)'  \
+						--filter='save:test_b.png(3)'  \
+	                    --filter='glsl:circle_dft(2,4)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
+	                    --filter='glsl:circle_dft(3,5)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
+						--filter='save:test_c0.png(4)' \
+						--filter='save:test_c2.png(4)&conv=fred&green=1' \
+						--filter='save:test_c2.png(4)&conv=fred&green=1' \
+						--filter='find:a(4)' \
+	                    --filter='glsl:circle_dft_diff(4,5,6)&-Uuv_base_x=413f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=409f&-Uuv_base_y=652f' \
+	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=405f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=409f&-Uuv_base_y=644f' \
+						--filter='save:test_d.png(6)' \
+						--filter='fndf:a(6,7,8,9)' \
+
+fft3: prog
+	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1901_r90.JPG \
+						--filter='glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='save:test_a.png(2)'  \
+						--filter='save:test_b.png(3)'  \
+	                    --filter='glsl:circle_dft(2,4)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
+	                    --filter='glsl:circle_dft(3,5)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
+						--filter='save:test_c0.png(4)' \
+						--filter='save:test_c2.png(4)&conv=fred&green=1' \
+						--filter='save:test_c2.png(4)&conv=fred&green=1' \
+						--filter='find:a(4)' \
+	                    --filter='glsl:circle_dft_diff(4,5,6)&-Uuv_base_x=417f&-Uuv_base_y=618f' \
+	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=413f&-Uuv_base_y=622f' \
+	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=409f&-Uuv_base_y=618f' \
+	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=413f&-Uuv_base_y=614f' \
+						--filter='save:test_d.png(6)' \
+						--filter='fndf:a(6,7,8,9)' \
+
+fft4: prog
+	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1902.JPG \
+						--filter='glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='save:test_a.png(2)'  \
+						--filter='save:test_b.png(3)'  \
+	                    --filter='glsl:circle_dft(2,4)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
+	                    --filter='glsl:circle_dft(3,5)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
+						--filter='save:test_c0.png(4)' \
+						--filter='save:test_c2.png(4)&conv=fred&green=1' \
+						--filter='save:test_c2.png(4)&conv=fred&green=1' \
+						--filter='find:a(4)' \
+	                    --filter='glsl:circle_dft_diff(4,5,6)&-Uuv_base_x=413f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=409f&-Uuv_base_y=652f' \
+	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=405f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=409f&-Uuv_base_y=644f' \
+						--filter='save:test_d.png(6)' \
+						--filter='fndf:a(6,7,8,9)' \
 
 clean:
 	rm *.o prog

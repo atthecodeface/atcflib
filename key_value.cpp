@@ -10,7 +10,7 @@
  */
 /*a Static functions
  */
-/*f key_value_parse
+/*f key_value_add
  */
 static void 
 key_value_add(t_key_values *kv, const char *key, int key_len, const char *value, int value_len)
@@ -76,6 +76,20 @@ key_value_iter(t_key_values *kv, t_key_value_entry_ptr kve)
     return kv->kv_head;
 }
 
+/*f key_value_find
+ */
+t_key_value_entry_ptr 
+key_value_find(t_key_values *kv, const char *key)
+{
+    t_key_value_entry_ptr kve;
+    for (kve=kv->kv_head; kve; kve=kve->next) {
+        if (!strcmp(kve->key,key)) {
+            return kve;
+        }
+    }
+    return NULL;
+}
+
 /*f key_value_init
  */
 void
@@ -84,13 +98,5 @@ key_value_init(t_key_values *kv, size_t extra_room)
     kv->kv_head = NULL;
     kv->kv_tail = NULL;
     kv->extra_room = extra_room;
-}
-
-/*f key_value_find
- */
-t_key_value_entry_ptr 
-key_value_find(const char *key)
-{
-    return NULL;
 }
 

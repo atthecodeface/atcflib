@@ -231,6 +231,102 @@ vec2 complex_mult(vec2 a, vec2 b)
     return vec2(a.r*b.r-a.g*b.g, a.r*b.g+a.g*b.r);
 }
 
+float flt_angle(in vec2 cs)
+{
+    // Octants   0   1   2   3   4   5   6   7
+    //     cos   +>  +<  -<  ->  ->  -<  +<  +>
+    //     sin   +<  +>  +>  +<  -<  ->  ->  -<
+    // (ac>as)?(as/ac):(2.0-ac/as)
+    //           0-1 1-2 2-1 1-0 0-1 1-2 2-1 1-0 
+    // ac<0?4-:  0-1 1-2 2-3 3-4 4-3 3-2 2-1 1-0
+    // as<0?8-:  0-1 1-2 2-3 3-4 4-5 5-6 6-7 7-8
+    float ac, as;
+    float angle;
+    ac = abs(cs.x);
+    as = abs(cs.y);
+    angle = (ac>as)?(as/ac):(2.0-ac/as);
+    angle = (cs.x<0)?4-angle:angle;
+    angle = (cs.y<0)?8-angle:angle;
+    return angle;
+}
+
+vec2 flt_angle_cs(in float a)
+{
+    // fract(angle) is s/c = tan
+    // tan^2 = s^2/c^2 = 1/c^2-1
+    // c^2 = 1/(1+t^2)
+    // Octants   0   1   2   3   4   5   6   7
+    //     cos  +ac  +<  -<  ->  ->  -<  +<  +>
+    //     sin  +as  +>  +>  +<  -<  ->  ->  -<
+    // (ac>as)?(as/ac):(2.0-ac/as)
+    //           0-1 1-2 2-1 1-0 0-1 1-2 2-1 1-0 
+    // ac<0?4-:  0-1 1-2 2-3 3-4 4-3 3-2 2-1 1-0
+    // as<0?8-:  0-1 1-2 2-3 3-4 4-5 5-6 6-7 7-8
+    float ac, as;
+    float a_i, a_f;
+    float ac2;
+    int octant;
+    vec2 cs;
+
+    a_i = floor(a);
+    octant = int(a_i);
+    a_f = a - a_i;
+    a_f = ((octant&1)!=0) ? (1-a_f) : a_f;
+    ac2 = 1/(1+a_f*a_f);
+    as = sqrt(1-ac2);
+    ac = sqrt(ac2);
+
+    if ((octant&4)!=0) { as=-as; ac=-ac; }
+    cs = vec2(ac, as);
+    if ((octant&1)!=0) { cs = vec2(cs.y,cs.x); }
+    if ((octant&2)!=0) { cs = vec2(cs.y,-cs.x); }
+
+    return cs;
+}
+
+float flt_angle_diff(in float a, in float b)
+{
+    a = a-b;
+    a = (a<0)?(a+8):a;
+    return a;
+}
+
+float flt_angle_diff_scaled(in float a, in float b, in float scale)
+{
+    a = (a-b)*scale;
+    if (a<0) a+=32.0;
+    if (a>=32.0) a-=32.0;
+    if (a>=24.0) a-=24.0;
+    if (a>=16.0) a-=16.0;
+    if (a>=8.0) a-=8.0;
+    return a;
+}
+
+float flt_angle_diff_abs(in float a, in float b)
+{
+    // difference is 0 <= a-b <=4
+    // can do abs(a-b)
+    // but if abs(a-b)>4, then use 8.0-abs(a-b) as a=7.99, b=0.01 should give 0.02
+    float r;
+    r = abs(a-b);
+    r = (r>=4)?(8-r):r;
+    return r;
+}
+
+float flt_angle_diff_scale_abs(in float a, in float scale, in float b)
+{
+    // difference is 0 <= a-b <=4
+    // can do abs(a-b)
+    // but if abs(a-b)>4, then use 8.0-abs(a-b) as a=7.99, b=0.01 should give 0.02
+    float r;
+    r = abs(a*scale-b);
+    r = (r>=32)?(r-32):r;
+    r = (r>=16)?(r-16):r;
+    r = (r>=8)?(r-8):r;
+    r = (r>=4)?(8-r):r;
+    return r;
+}
+
 #define PI 3.1415926535897932384626433832795
 // fd[k] = Sum(n=0..N-1)(td[n]*e^(2i.pi.k.n/N))
 void dft32(in float[32] time_domain, out vec2[32]freq_domain)
@@ -342,7 +438,7 @@ void dft32_8(in float[32] time_domain, out vec2[8]freq_domain)
     for (int j=0; j<8; j++) {
         freq_domain[j] = fd_4[j];
     }
-    freq_domain[0] = vec2(0.0,0.0);
+    freq_domain[0] = fd_4[0]/32.0;
 }
 
 void dft32_normalize(in vec2[32] dft, out float[32] dft_power, out vec2[16]dft_normalized)
@@ -386,6 +482,54 @@ void dft32_normalize_8(in vec2[8] dft, out float[8] dft_power, out vec2[8]dft_no
         dft_power[i] = dft_power_raw[i] / max;
         dft_normalized[i] = vec2(dft[i].x / sqrt_max, dft[i].y / sqrt_max);
     }
+}
+
+void dft8_power_angle(in vec2[8] dft, out float[8] dft_power, out float[8]dft_angle)
+{
+    for (int i=0; i<8; i++) {
+        dft_power[i] = sqrt(dft[i].x*dft[i].x+dft[i].y*dft[i].y);
+        dft_angle[i] = flt_angle(dft[i]);
+    }
+}
+
+uint pack_power_angle(float power, float angle)
+{
+    // power is 0 -> 1
+    // angle is 0 -> 8
+    // output is 24 bits power, 8 bits angle, packed as 32 bits
+    uint p, a;
+    p = uint(power*4096*4096);
+    a = uint(angle*(256/8));
+    if (power>=1.0) { p=uint((1<<24)-1); }
+    return (p<<8)|(a&uint(0xff));
+}
+
+void unpack_power_angle(uint pa, out float power, out float angle)
+{
+    uint p, a;
+    a = pa&uint(0xff);
+    p = pa>>8;
+    power = (float(p))/(4096.0*4096.0);
+    angle = float(a)/32.0;
+}
+
+float power_diff(float p0, float p1)
+{
+    // make pu,pl = max(p0,p1),min(p0,p1)
+    // Then 0<pl/pu<1, and indicates the match
+    // And 0.5 < (1+pu)/2  < 1.0
+    // hence 0 < (1+pu)/2 * pl/pu <1,
+    // and pu=1.0 => result = pl
+    // pu=0.1, pl=0.1  => result = 0.55
+    // pu=0.1, pl=0.02 => result = 0.11
+    // pu=0.02, pl=0.01 => result = 0.11
+    float pl, pu;
+    pl = p0; pu = p1;
+    if (p1<p0) { pl=p1; pu=p0; }
+    pu = (pu==0)?1:pu;
+    return (1+pu)/2*pl/pu;
+    return (1+1*sqrt(pu))/2*pl/pu;
+    return (1+20*sqrt(pu))/21*pl/pu;
 }
 
 float dft_rotation_error(in vec2 X_a1,in vec2 X_a2,in vec2 X_a3, in vec2 X_b1, in vec2 X_b2, in vec2 X_b3)

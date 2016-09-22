@@ -39,7 +39,7 @@ texture_buffers(t_texture *texture)
 /*f texture_save
  */
 int
-texture_save(t_texture_ptr texture, const char *png_filename)
+texture_save(t_texture_ptr texture, const char *png_filename, int components, int conversion)
 {
     SDL_Surface *image;
     unsigned char *image_pixels;
@@ -51,16 +51,31 @@ texture_save(t_texture_ptr texture, const char *png_filename)
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-    float *raw_img = (float *)texture->raw_buffer;
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
-    for (int j=0; j<texture->hdr.height; j++){
-        for (int i=0; i<texture->hdr.width; i++){
-            int p_in = (j*texture->hdr.width+i)*4;
-            int p_out = (j*texture->hdr.width+i)*4;
-            image_pixels[p_out+0] = 255.9*raw_img[p_in+2];
-            image_pixels[p_out+1] = 255.9*raw_img[p_in+1];
-            image_pixels[p_out+2] = 255.9*raw_img[p_in+0];
-            image_pixels[p_out+3] = 255.9*raw_img[p_in+3];
+    if (conversion==0) {
+        float *raw_img = (float *)texture->raw_buffer;
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
+        for (int j=0; j<texture->hdr.height; j++){
+            for (int i=0; i<texture->hdr.width; i++){
+                int p_in = (j*texture->hdr.width+i)*4;
+                int p_out = (j*texture->hdr.width+i)*4;
+                image_pixels[p_out+0] = 255.9*raw_img[p_in+2];
+                image_pixels[p_out+1] = 255.9*raw_img[p_in+1];
+                image_pixels[p_out+2] = 255.9*raw_img[p_in+0];
+                image_pixels[p_out+3] = 255.9*raw_img[p_in+3];
+            }
+        }
+    } else {
+        unsigned int*raw_img = (unsigned int *)texture->raw_buffer;
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
+        for (int j=0; j<texture->hdr.height; j++){
+            for (int i=0; i<texture->hdr.width; i++){
+                int p_in = (j*texture->hdr.width+i)*4+components;
+                int p_out = (j*texture->hdr.width+i)*4;
+                image_pixels[p_out+0] = (raw_img[p_in+0]>>0)&0xff; // B
+                image_pixels[p_out+1] = (raw_img[p_in+0]>>16)&0xff; // G
+                image_pixels[p_out+2] = (raw_img[p_in+0]>>24)&0xff; // R
+                image_pixels[p_out+3] = (raw_img[p_in+0]>>8)&0xff; // A
+            }
         }
     }
 
@@ -136,7 +151,7 @@ texture_create(int width, int height)
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
 
     glTexImage2D(GL_TEXTURE_2D, 0,
-                 GL_RGB32F, width, height, 0, // Texture is RGB with this width and height
+                 GL_RGBA32F, width, height, 0, // Texture is RGB with this width and height
                  GL_RGB, GL_UNSIGNED_BYTE, NULL); // data source type - NULL means no initial data
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
@@ -301,10 +316,27 @@ texture_draw(void)
 /*f texture_get_buffer
  */
 void *
-texture_get_buffer(t_texture_ptr texture)
+texture_get_buffer(t_texture_ptr texture, int components)
 {
+    int a;
+    a = GL_RGBA;
+    if (components>=0) a=components;
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, texture->raw_buffer);
+    glGetTexImage(GL_TEXTURE_2D, 0, a, GL_FLOAT, texture->raw_buffer);
+    return texture->raw_buffer;
+}
+
+/*f texture_get_buffer_uint
+ */
+void *
+texture_get_buffer_uint(t_texture_ptr texture, int components)
+{
+    int a;
+    a = GL_RGBA;
+    if (components>=0) a=components;
+    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTexImage(GL_TEXTURE_2D, 0, a, GL_UNSIGNED_INT, texture->raw_buffer);
     return texture->raw_buffer;
 }

@@ -8,12 +8,14 @@
 #include <SDL_opengl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "filter.h"
+#define PI 3.1415926538
 
 /*a Types
  */
 
-/*a c_filter methods
+/*a c_filter class and subclasses
  */
 /*t c_filter_save
  */
@@ -97,6 +99,26 @@ public:
     virtual int execute(t_exec_context *ec);
 };
 
+/*t c_filter_find4
+ */
+class c_filter_find4 : public c_filter
+{
+public:
+    c_filter_find4(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    int textures[4];
+    int perimeter;
+    float minimum;
+    float min_distance;
+    int max_elements;
+    int num_elements;
+    t_point_value *points;
+
+    virtual int compile(void);
+    virtual int execute(t_exec_context *ec);
+};
+
+/*a c_filter methods
+ */
 /*f c_filter constructor
  */
 c_filter::c_filter(void)
@@ -125,16 +147,25 @@ void c_filter::set_filename(const char *dirname, const char *suffix, t_len_strin
     }
 }
 
-/*f c_filter::set_uniforms
+/*f c_filter::set_key_values
  */
-void c_filter::set_uniforms(t_len_string *uniforms)
+void c_filter::set_key_values(t_len_string *ls, t_key_values *kvs)
 {
     const char *ptr;
-    fprintf(stderr,"Uniforms %s\n",uniforms->ptr);
-    ptr = uniforms->ptr;
-    while (ptr && ((ptr-uniforms->ptr)<uniforms->len)) {
-        ptr = key_value_parse(ptr, uniforms->ptr+uniforms->len, &uniform_key_values);
+
+    ptr = ls->ptr;
+    while (ptr && ((ptr-ls->ptr)<ls->len)) {
+        ptr = key_value_parse(ptr, ls->ptr+ls->len, kvs);
     }
+
+    t_key_value_entry_ptr kve;
+    kve = key_value_iter(kvs, NULL);
+    while (kve) {
+        t_filter_key_value_data *kvd;
+        kvd = key_value_entry_data(kve, t_filter_key_value_data);
+        kvd->gl_id = -1;
+        kve = key_value_iter(kvs, kve);
+   }
 }
 
 /*f c_filter::get_shader_defines
@@ -187,7 +218,7 @@ int c_filter::get_shader_uniform_ids(void)
             t_filter_key_value_data *kvd;
             kvd = key_value_entry_data(kve, t_filter_key_value_data);
             kvd->gl_id = glGetUniformLocation(filter_pid, kve->key+2);
-            if (kvd->gl_id<=0) {
+            if (kvd->gl_id<0) {
                 fprintf(stderr, "Failed to find uniform '%s' in shader\n", kve->key+2);
                 failures++;
             }
@@ -195,6 +226,26 @@ int c_filter::get_shader_uniform_ids(void)
                 fprintf(stderr, "Failed to parse uniform value '%s' in shader\n", key_value_entry_value(kve));
                 failures++;
             }
+        }
+        kve = key_value_iter(&uniform_key_values, kve);
+    }
+    return failures;
+}
+
+/*f c_filter::set_shader_uniforms
+ */
+int c_filter::set_shader_uniforms(void)
+{
+    t_key_value_entry_ptr kve;
+    int failures;
+    failures = 0;
+    kve = key_value_iter(&uniform_key_values, NULL);
+    while (kve) {
+        t_filter_key_value_data *kvd;
+        kvd = key_value_entry_data(kve, t_filter_key_value_data);
+        if (kvd->gl_id>=0) {
+            glUniform1f(kvd->gl_id, kvd->value_float);
+            fprintf(stderr,"Set shader id %d to %f\n",kvd->gl_id, kvd->value_float); 
         }
         kve = key_value_iter(&uniform_key_values, kve);
     }
@@ -227,12 +278,14 @@ c_filter::~c_filter(void)
     return;
 }
 
+/*a c_filter_glsl methods
+ */
 /*f c_filter_glsl constructor
  */
 c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     set_filename("shaders/", ".glsl", filename, &filter_filename);
-    set_uniforms(uniforms);
+    set_key_values(uniforms, &uniform_key_values);
     filter_pid = 0;
     uniform_texture_src_id = 0;
     if (sscanf(options_list->ptr,"%d,%d,%d",&texture_base,&texture_src,&texture_dest)==3) {
@@ -277,6 +330,8 @@ int c_filter_glsl::execute(t_exec_context *ec)
     texture_target_as_framebuffer(ec->textures[texture_dest]);
     glUseProgram(filter_pid);
 
+    set_shader_uniforms();
+
     GL_GET_ERRORS;
 
     if (uniform_texture_base_id>=0) {
@@ -298,11 +353,14 @@ int c_filter_glsl::execute(t_exec_context *ec)
     return 0;
 }
 
+/*a c_filter_correlate methods
+ */
 /*f c_filter_correlate constructor
  */
 c_filter_correlate::c_filter_correlate(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     set_filename("shaders/", ".glsl", filename, &filter_filename);
+    set_key_values(uniforms, &uniform_key_values);
     filter_pid = 0;
     uniform_texture_src_id = 0;
     if (sscanf(options_list->ptr,"%d,%d",&texture_src,&texture_dest)!=2) {
@@ -339,6 +397,9 @@ int c_filter_correlate::execute(t_exec_context *ec)
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(filter_pid);
     glUniform2f(uniform_out_size_id,32,32);
+
+    set_shader_uniforms();
+
     GL_GET_ERRORS;
     texture_attach_to_shader(ec->textures[texture_src], 0, uniform_texture_src_id);
     texture_draw_prepare();
@@ -353,6 +414,8 @@ int c_filter_correlate::execute(t_exec_context *ec)
     return 0;
 }
 
+/*a c_filter_find methods
+ */
 /*f c_filter_find constructor
  */
 c_filter_find::c_filter_find(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
@@ -384,7 +447,7 @@ int c_filter_find::execute(t_exec_context *ec)
     const void *raw_buffer;
     const t_texture_header *texture_hdr;
 
-    raw_buffer = texture_get_buffer(ec->textures[texture_src]);
+    raw_buffer = texture_get_buffer(ec->textures[texture_src], GL_RED);
     texture = ec->textures[texture_src];
     texture_hdr = texture_header(texture);
     raw_img = (float *)raw_buffer;
@@ -444,11 +507,14 @@ int c_filter_find::execute(t_exec_context *ec)
     return 0;
 }
 
+/*a c_filter_save methods
+ */
 /*f c_filter_save constructor
  */
 c_filter_save::c_filter_save(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     set_filename(NULL, NULL, filename, &save_filename);
+    set_key_values(uniforms, &uniform_key_values);
     if (sscanf(options_list->ptr,"%d",&texture_to_save)!=1) {
         parse_error = "Failed to parse save texture - need '(<src>)' texture number";
     }
@@ -458,7 +524,145 @@ c_filter_save::c_filter_save(t_len_string *filename, t_len_string *options_list,
  */
 int c_filter_save::execute(t_exec_context *ec)
 {
-    return texture_save(ec->textures[texture_to_save], save_filename);
+    int components=0;
+    int conversion=0;
+    t_key_value_entry_ptr kve;
+    if ((kve=key_value_find(&uniform_key_values, "conv"))!=NULL) {
+        conversion=1;
+    }
+    if ((kve=key_value_find(&uniform_key_values, "green"))!=NULL) {
+        components=1;
+    }
+    return texture_save(ec->textures[texture_to_save], save_filename, components, conversion);
+}
+
+/*a c_filter_find4 methods
+ */
+/*f c_filter_find4 constructor
+ */
+c_filter_find4::c_filter_find4(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
+{
+    perimeter = 10;
+    minimum = 0.0;
+    max_elements = 320;
+    min_distance = 4.0;
+    if (sscanf(options_list->ptr,"%d,%d,%d,%d",&textures[0],&textures[1],&textures[2],&textures[3])!=4) {
+        parse_error = "Failed to parse find texture options - need '(<src>*4)' texture number";
+    }
+}
+
+/*f c_filter_find4::compile
+ */
+int c_filter_find4::compile(void)
+{
+    return 0;
+}
+
+/*f c_filter_find4::execute
+ */
+int c_filter_find4::execute(t_exec_context *ec)
+{
+    float elements_minimum;
+    int   n;
+    const t_texture_header *texture_hdr[4];
+    float *raw_img[4];
+    int w, h;
+
+    for (int i=0; i<4; i++) {
+        const void *raw_buffer;
+        t_texture *t;
+        t = ec->textures[textures[i]];
+        raw_buffer = texture_get_buffer(t, GL_RGBA);
+        texture_hdr[i] = texture_header(t);
+        w = texture_hdr[i]->width;
+        h = texture_hdr[i]->height;
+        raw_img[i] = (float *)raw_buffer;
+    }
+
+    elements_minimum = -1.0;
+    n=0;
+    points = (t_point_value *)malloc(sizeof(t_point_value)*max_elements);
+    for (int y=perimeter; y<h-perimeter; y++) {
+        for (int x=perimeter; x<w-perimeter; x++) {
+            float value_xy, value;
+            float vec_xy[2];
+            value_xy = 0;
+            for (int a=0; a<16; a++) {
+                float vecx, vecy;
+                float dx, dy;
+                vecx = 0;
+                vecy = 0;
+                dx = 4*cos(2*PI*a/16);
+                dy = 4*sin(2*PI*a/16);
+                for (int i=0; i<4; i++) {
+                    int xi, yi;
+                    float tmp;
+                    xi = x + dx;
+                    yi = y + dy;
+                    vecx += raw_img[i][(yi*w+xi)*4+0]; // is this +0 for red?
+                    vecy += raw_img[i][(yi*w+xi)*4+1];
+                    tmp = dy;
+                    dy = dx;
+                    dx = -tmp;
+                }
+                value = vecx*vecx+vecy*vecy;
+                if (value>value_xy) {
+                    value_xy=value;
+                    vec_xy[0] = vecx;
+                    vec_xy[1] = vecy;
+                }
+            }
+            int i;
+            if (value_xy<=elements_minimum) continue;
+            if (value_xy<minimum) continue;
+            for (i=0; i<n; i++) {
+                if (points[i].value<value_xy) break;
+            }
+            if (n==max_elements) n--;
+            if (i<n) {
+                memmove(&points[i+1], &points[i], sizeof(t_point_value)*(n-i));
+            }
+            n++;
+            points[i].x=x;
+            points[i].y=y;
+            points[i].value = value_xy;
+            points[i].vec_x = vec_xy[0];
+            points[i].vec_y = vec_xy[1];
+            if (n==max_elements) {
+                elements_minimum = points[n-1].value;
+            }
+        }
+    }
+    float min_distance_sq;
+    min_distance_sq = min_distance * min_distance;
+    for (int i=0; i<n; i++) {
+        int j;
+        j = i+1;
+        while (j<n) {
+            float dx, dy, d_sq;
+            dx = points[i].x-points[j].x;
+            dy = points[i].y-points[j].y;
+            d_sq = dx*dx+dy*dy;
+            if (d_sq>min_distance_sq) {
+                j++;
+                continue;
+            }
+            n--;
+            if (j<n) {
+                memmove(&points[j], &points[j+1], sizeof(t_point_value)*(n-j));
+            }
+        }
+    }
+    for (int i=0; (i<n) && (i<20); i++) {
+        fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f)\n", i, points[i].x, points[i].y, points[i].value,
+                -360*atan2(points[i].vec_y, points[i].vec_x)/2/PI,
+                points[i].vec_x,
+                points[i].vec_y );
+    }
+    if (ec->points) free(ec->points);
+    ec->points = points;
+    ec->num_points = n;
+    return 0;
 }
 
 /*a External functions
@@ -495,6 +699,8 @@ filter_from_string(const char *optarg)
         return new c_filter_glsl(&filename, &options_list, &uniforms);
     } else if (!strncmp(filter_type.ptr, "find", 4)) {
         return new c_filter_find(&filename, &options_list, &uniforms);
+    } else if (!strncmp(filter_type.ptr, "fndf", 4)) {
+        return new c_filter_find4(&filename, &options_list, &uniforms);
     } else if (!strncmp(filter_type.ptr, "corr", 4)) {
         return new c_filter_correlate(&filename, &options_list, &uniforms);
     } else if (!strncmp(filter_type.ptr, "save", 4)) {

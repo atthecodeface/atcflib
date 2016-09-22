@@ -231,36 +231,22 @@ int main(int argc,char *argv[])
     }
 
     int init_filter_end;
-    int corr_filter_start, corr_filter_end;
     int match_filter_start;
     num_filters = 0;
     filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
     filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
     filters[num_filters++] = filter_from_string("glsl:harris(2,4)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25");
     filters[num_filters++] = filter_from_string("find:a(4)");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft(2,5)&-DDFT_CIRCLE_RADIUS=8");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft(3,6)&-DDFT_CIRCLE_RADIUS=8");
+    filters[num_filters++] = filter_from_string("save:test_c.png(5)");
     init_filter_end = num_filters;
-    corr_filter_start = num_filters;
-    filters[num_filters++] = filter_from_string("corr:correlation_dft_circle(2,5)&-DCORR_CIRCLE_RADIUS=4");
-    filters[num_filters++] = filter_from_string("corr:correlation_dft_circle(2,6)&-DCORR_CIRCLE_RADIUS=5");
-    filters[num_filters++] = filter_from_string("corr:correlation_dft_circle(2,7)&-DCORR_CIRCLE_RADIUS=8");
-    filters[num_filters++] = filter_from_string("corr:correlation_dft_circle(2,8)&-DCORR_CIRCLE_RADIUS=8");
-    corr_filter_end = num_filters;
     match_filter_start = num_filters;
-    filters[num_filters++] = filter_from_string("glsl:sq_dft_diff(7,3,11)&-DCORR_CIRCLE_RADIUS=8");
-    filters[num_filters++] = filter_from_string("glsl:sum_circle(11,10)&-DCOPY_CIRCLE_RADIUS=4"); // copy radius should match point offset
-    filters[num_filters++] = filter_from_string("save:test_diff.png(11)");
-    filters[num_filters++] = filter_from_string("save:test_circle.png(10)");
-    filters[num_filters++] = filter_from_string("find:a(11)");
-    /*
-    filters[num_filters++] = filter_from_string("glsl:sq_dft_diff(5,3,9)&-DCORR_CIRCLE_RADIUS=4");
-    filters[num_filters++] = filter_from_string("glsl:sq_dft_diff(6,3,10)&-DCORR_CIRCLE_RADIUS=5");
-    filters[num_filters++] = filter_from_string("glsl:sq_dft_diff(7,3,11)&-DCORR_CIRCLE_RADIUS=6");
-    filters[num_filters++] = filter_from_string("glsl:sq_dft_diff(8,3,12)&-DCORR_CIRCLE_RADIUS=8");
-    filters[num_filters++] = filter_from_string("glsl:alu_buffers(9,10,13)&-DOP=(src_a*src_b)");
-    filters[num_filters++] = filter_from_string("glsl:alu_buffers(11,12,14)&-DOP=(src_a*src_b)");
-    filters[num_filters++] = filter_from_string("glsl:alu_buffers(13,14,15)&-DOP=(src_a*src_b)");
-    filters[num_filters++] = filter_from_string("find:a(15)");
-    */
+    filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,7)");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,8)");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,9)");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,10)");
+    filters[num_filters++] = filter_from_string("fndf:a(7,8,9,10)");
 
     int failures=0;
     for (int i=0; i<num_filters; i++) {
@@ -301,25 +287,23 @@ int main(int argc,char *argv[])
         pts[j++] = ec.points[i];
     }
     for (int i=0; i<80; i+=4) {
-        pts[i+0].x -= 4;
-        pts[i+1].x += 4;
-        pts[i+2].y -= 4;
-        pts[i+3].y += 4;
+        pts[i+0].x += 4;
+        pts[i+1].y += 4;
+        pts[i+2].x -= 4;
+        pts[i+3].y -= 4;
     }
-    for (int i=0; (i<ec.num_points) && (i<80); i++) {
-        ec.points[i] = pts[i];
-    }
-    for (int i=corr_filter_start; i<corr_filter_end; i++) {
-        filters[i]->execute(&ec);
-    }
-    for (int p=0; p<3; p++)
+    for (int p=0; p<30; p++)
     {
-        fprintf(stderr,"Point %d (%d,%d)\n",p,pts[p].x,pts[p].y);
-        for (int i=match_filter_start; i<num_filters; i++) {
-            filters[i]->uniform_set("uv_base_x",p*40);//pts[p].x);
-            filters[i]->uniform_set("uv_base_y",0);//pts[p].y);
-            filters[i]->execute(&ec);
+        int f;
+        fprintf(stderr,"Point %d (%d,%d)\n",p,pts[p*4].x,pts[p*4].y);
+        f = match_filter_start;
+        for (int i=0; i<4; i++) {
+            filters[f]->uniform_set("uv_base_x",pts[p*4+i].x);
+            filters[f]->uniform_set("uv_base_y",pts[p*4+i].y);
+            filters[f]->execute(&ec);
+            f++;
         }
+        filters[f]->execute(&ec);
     }
 
     m->exit();

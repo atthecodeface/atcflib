@@ -254,8 +254,8 @@ fft4: prog
 						--filter='glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0' \
 						--filter='save:test_a.png(2)'  \
 						--filter='save:test_b.png(3)'  \
-	                    --filter='glsl:circle_dft(2,4)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
-	                    --filter='glsl:circle_dft(3,5)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6' \
+	                    --filter='glsl:circle_dft(2,4)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6&-DCIRCLE_COMPONENT=r' \
+	                    --filter='glsl:circle_dft(3,5)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=6&-DCIRCLE_COMPONENT=r' \
 						--filter='save:test_c0.png(4)' \
 						--filter='save:test_c2.png(4)&conv=fred&green=1' \
 						--filter='save:test_c2.png(4)&conv=fred&green=1' \

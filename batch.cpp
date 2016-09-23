@@ -21,6 +21,26 @@ Example
 
 /*a Types
  */
+/*t t_proposition
+ */
+typedef struct
+{
+    float center[2];
+    float rotation;
+    float scale;
+} t_proposition;
+class c_mapping
+{
+public:
+    c_mapping(void *src_pt, void *tgt_pt, float strength);
+    float map_strength(t_proposition *proposition);
+    float position_map_strength(t_proposition *proposition);
+    void repr(char *buffer, int buf_size);
+    void *src_pt;
+    void *tgt_pt;
+    t_proposition proposition;
+};
+
 /*t c_main
  */
 class c_main
@@ -237,9 +257,10 @@ int main(int argc,char *argv[])
     filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
     filters[num_filters++] = filter_from_string("glsl:harris(2,4)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25");
     filters[num_filters++] = filter_from_string("find:a(4)");
-    filters[num_filters++] = filter_from_string("glsl:circle_dft(2,5)&-DDFT_CIRCLE_RADIUS=8");
-    filters[num_filters++] = filter_from_string("glsl:circle_dft(3,6)&-DDFT_CIRCLE_RADIUS=8");
-    filters[num_filters++] = filter_from_string("save:test_c.png(5)");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft(2,5)&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft(3,6)&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g");
+    filters[num_filters++] = filter_from_string("save:test_a.png(2)");
+    filters[num_filters++] = filter_from_string("save:test_b.png(3)");
     init_filter_end = num_filters;
     match_filter_start = num_filters;
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,7)");
@@ -287,7 +308,7 @@ int main(int argc,char *argv[])
         pts[j++] = ec.points[i];
     }
     for (int i=0; i<80; i+=4) {
-        pts[i+0].x += 4;
+        pts[i+0].x += 4; // 4 is magic to match c_filter_find4
         pts[i+1].y += 4;
         pts[i+2].x -= 4;
         pts[i+3].y -= 4;

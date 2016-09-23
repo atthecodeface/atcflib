@@ -1,5 +1,9 @@
 #define STEP (1.0/1024)
 
+#ifndef CIRCLE_COMPONENT
+#define CIRCLE_COMPONENT r
+#endif
+
 #ifndef NUM_WEIGHTS
 #define NUM_WEIGHTS 9
 #endif
@@ -202,14 +206,14 @@ vec3 yuv_at(in sampler2D texture_in, in float x, in float y)
 void texture_circle(in sampler2D texture_in, in vec2 centre_xy, in float radius, in vec2[NUM_CIRCLE_STEPS] circle_offsets, out float[NUM_CIRCLE_STEPS*4] colors)
 {
     for (int i=0; i<NUM_CIRCLE_STEPS; i++) {
-        colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, centre_xy+radius*circle_offsets[i]).r;
+        colors[NUM_CIRCLE_STEPS*0+i] = texture(texture_in, centre_xy+radius*circle_offsets[i]).CIRCLE_COMPONENT;
         colors[NUM_CIRCLE_STEPS*1+i] = texture(texture_in, vec2(centre_xy.x-radius*circle_offsets[i].y,
                                                                 centre_xy.y+radius*circle_offsets[i].x)
-                                                   ).r;
-        colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, centre_xy-radius*circle_offsets[i]).r;
+                                                   ).CIRCLE_COMPONENT;;
+        colors[NUM_CIRCLE_STEPS*2+i] = texture(texture_in, centre_xy-radius*circle_offsets[i]).CIRCLE_COMPONENT;;
         colors[NUM_CIRCLE_STEPS*3+i] = texture(texture_in, vec2(centre_xy.x+radius*circle_offsets[i].y,
                                                                 centre_xy.y-radius*circle_offsets[i].x)
-                                                   ).r;
+                                                   ).CIRCLE_COMPONENT;;
     }
 }
 

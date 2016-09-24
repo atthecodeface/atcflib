@@ -123,7 +123,7 @@ float c_mapping::map_strength(t_proposition *proposition)
     dy = tp->translation[1] - proposition->translation[1];
     translation_dist = sqrt(dx*dx + dy*dy);
     strength *= DIST_FACTOR / (DIST_FACTOR + translation_dist);
-    strength *= cos(2*2*PI/360 * (tp->rotation - proposition->rotation));
+    strength *= cos(0.25*2*PI/360 * (tp->rotation - proposition->rotation));
     return strength;
 }
 
@@ -146,7 +146,7 @@ float c_mapping::position_map_strength(t_proposition *proposition)
     dy = dtgt_y - this->tgt_pv.y;
     dist = sqrt(dx*dx+dy*dy);
     strength = this->strength * (4.0/(4.0+dist));
-    strength *= cos(2*2*PI/360*(this->proposition.rotation - proposition->rotation));
+    strength *= cos(0.25*2*PI/360*(this->proposition.rotation - proposition->rotation));
     return strength;
 }
 

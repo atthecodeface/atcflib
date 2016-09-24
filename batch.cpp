@@ -138,8 +138,8 @@ float c_mapping::position_map_strength(t_proposition *proposition)
     float dx, dy, dist;
     dsrc_x = this->src_pt->coords[0];
     dsrc_y = this->src_pt->coords[1];
-    cosang = -cos(-proposition->rotation);
-    sinang = -sin(-proposition->rotation);
+    cosang = -cos(PI-proposition->rotation);
+    sinang = -sin(PI-proposition->rotation);
     dtgt_x = proposition->translation[0] + proposition->scale*(cosang*dsrc_x - sinang*dsrc_y);
     dtgt_y = proposition->translation[1] + proposition->scale*(cosang*dsrc_y + sinang*dsrc_x);
     dx = dtgt_x - this->tgt_pv.x;
@@ -173,7 +173,7 @@ c_pv_match::c_pv_match(t_point_value *pv)
 {
     this->next_in_list = NULL;
     this->pv = *pv;
-    this->rotation = atan2(pv->vec_y, pv->vec_x);
+    this->rotation = PI+atan2(pv->vec_y, pv->vec_x);
 }
 
 /*f c_mapping_point::c_mapping_point
@@ -640,7 +640,7 @@ int main(int argc,char *argv[])
             t_point_value *pv;
             float fft_rotation;
             pv = &(ec.points[i]);
-            fft_rotation = atan2(pv->vec_y,pv->vec_x);
+            fft_rotation = PI+atan2(pv->vec_y,pv->vec_x);
             mappings[p]->add_match(pv);
 
             for (int pp=0; pp<p; pp++) {
@@ -665,9 +665,9 @@ int main(int argc,char *argv[])
                     src_l = sqrt(src_dx*src_dx + src_dy*src_dy);
 
                     scale = tgt_l / src_l;
-                    rotation = PI - (atan2(tgt_dy, tgt_dx) - atan2(src_dy, src_dx));
-                    rotation = (rotation<0) ? (rotation+2*PI) : rotation;
-                    rotation = (rotation>=2*PI) ? (rotation-2*PI) : rotation;
+                    rotation = atan2(src_dy, src_dx) - atan2(tgt_dy, tgt_dx) ;
+                    rotation = (rotation<PI) ? (rotation+2*PI) : rotation;
+                    rotation = (rotation>PI) ? (rotation-2*PI) : rotation;
 
                     /* There is a mapping src -> tgt that is tgt = scale*rotation*src + translation
                        Hence (m.tgt - pm.tgt) = scale * rotation * (m.src-pm.src)
@@ -702,8 +702,8 @@ int main(int argc,char *argv[])
                           tgt_pt = scale*rotation*src_pt + translation
                           Hence translation = tgt_pt - scale*rotation*src_pt
                         */
-                        cos_rot = -cos(-rotation);
-                        sin_rot = -sin(-rotation);
+                        cos_rot = -cos(PI-rotation);
+                        sin_rot = -sin(PI-rotation);
                         translation_x = pv->x - scale*(cos_rot*mappings[p]->coords[0] - sin_rot*mappings[p]->coords[1]);
                         translation_y = pv->y - scale*(cos_rot*mappings[p]->coords[1] + sin_rot*mappings[p]->coords[0]);
 
@@ -727,8 +727,7 @@ int main(int argc,char *argv[])
         prop.translation[0]=168;
         prop.translation[1]=-126;
         prop.scale=1;
-        prop.rotation=180+13;
-        prop.rotation=180-13;
+        prop.rotation=-13.0/360*2*PI;
         for (int p=0; p<NUM_MAPPINGS; p++) {
             fprintf(stderr,"Mapping point %p\n",mappings[p]);
             if (mappings[p]) {

@@ -18,17 +18,19 @@ Example
 
 /*a Defines
  */
-//#define NUM_MAPPINGS 30
-//#define MAX_POINTS_PER_MAPPING 30
+#define NUM_MAPPINGS 30
+    #define MAX_POINTS_PER_MAPPING 30
 
-#define NUM_MAPPINGS 5
-#define MAX_POINTS_PER_MAPPING 10
+//#define NUM_MAPPINGS 5
+//#define MAX_POINTS_PER_MAPPING 10
+
 // a, b are -PI to PI.
 // a-b is -2*PI, -PI, 0, PI, to 2*PI
 // Want       1,   0, 1,  0,   1
 // cos(a-b) is 1, -1, 1,  -1,  1
 // 1+cos(a-b) is 2, 0, 2,  0,  2
 #define ROTATION_DIFF_STRENGTH(a,b) ( (1+cos((a)-(b))) / 2 )
+#define FFT_ROTATION(dy,dx) (atan2((dy),-(dx)))
 
 #define PI 3.1415926538
 
@@ -179,7 +181,7 @@ c_pv_match::c_pv_match(t_point_value *pv)
 {
     this->next_in_list = NULL;
     this->pv = *pv;
-    this->rotation = PI - atan2(pv->vec_y, pv->vec_x);
+    this->rotation = FFT_ROTATION(pv->vec_y, pv->vec_x);
 }
 
 /*f c_mapping_point::c_mapping_point
@@ -560,7 +562,11 @@ int main(int argc,char *argv[])
     int match_filter_start;
     num_filters = 0;
     filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
-    filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
+    if (1) {
+        filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
+    } else {
+        filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0");
+    }
     filters[num_filters++] = filter_from_string("glsl:harris(2,4)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25");
     filters[num_filters++] = filter_from_string("find:a(4)");
     filters[num_filters++] = filter_from_string("glsl:circle_dft(2,5)&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g");
@@ -646,7 +652,7 @@ int main(int argc,char *argv[])
             t_point_value *pv;
             float fft_rotation;
             pv = &(ec.points[i]);
-            fft_rotation = PI - atan2(pv->vec_y,pv->vec_x);
+            fft_rotation = FFT_ROTATION(pv->vec_y,pv->vec_x);
             mappings[p]->add_match(pv);
 
             for (int pp=0; pp<p; pp++) {
@@ -672,7 +678,7 @@ int main(int argc,char *argv[])
 
                     scale = tgt_l / src_l;
                     rotation = atan2(tgt_dy, tgt_dx) - atan2(src_dy, src_dx);
-                    rotation = (rotation<PI) ? (rotation+2*PI) : rotation;
+                    rotation = (rotation<-PI) ? (rotation+2*PI) : rotation;
                     rotation = (rotation>PI) ? (rotation-2*PI) : rotation;
 
                     /* There is a mapping src -> tgt that is tgt = scale*rotation*src + translation
@@ -727,7 +733,7 @@ int main(int argc,char *argv[])
         }
     }
 
-    if (1) {
+    if (0) {
         fprintf(stderr,"********************************************************************************\n");
         t_proposition prop;
         prop.translation[0]=168;
@@ -749,21 +755,24 @@ int main(int argc,char *argv[])
         fprintf(stderr,"********************************************************************************\n");
     }
 
-    for (int p=0; p<NUM_MAPPINGS; p++) {
-        fprintf(stderr,"Mapping point %p\n",mappings[p]);
-        if (mappings[p]) {
-            char buf[256];
-            float strength;
-            c_mapping *m = mappings[p]->find_strongest_belief(NULL, &strength);
-            fprintf(stderr,"  Mapping %p %f\n",m,strength);
-            if (m) {
-                m->repr(buf,sizeof(buf));
-                fprintf(stderr, "%f, %s\n", strength, buf);
+    if (0) {
+        for (int p=0; p<NUM_MAPPINGS; p++) {
+            fprintf(stderr,"Mapping point %p\n",mappings[p]);
+            if (mappings[p]) {
+                char buf[256];
+                float strength;
+                c_mapping *m = mappings[p]->find_strongest_belief(NULL, &strength);
+                fprintf(stderr,"  Mapping %p %f\n",m,strength);
+                if (m) {
+                    m->repr(buf,sizeof(buf));
+                    fprintf(stderr, "%f, %s\n", strength, buf);
+                }
             }
         }
+        fprintf(stderr,"********************************************************************************\n");
     }
 
-    for (int i=0; i<100; i++) {
+    for (int i=0; i<40; i++) {
         t_proposition best_proposition;
         float strength;
         strength = find_best_mapping(mappings, NUM_MAPPINGS, &best_proposition);

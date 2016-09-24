@@ -18,6 +18,13 @@ Example
 
 /*a Defines
  */
+#define NUM_MAPPINGS 30
+#define MAX_POINTS_PER_MAPPING 30
+
+//#define NUM_MAPPINGS 5
+//#define MAX_POINTS_PER_MAPPING 10
+
+#define PI 3.1415926538
 
 /*a Types
  */
@@ -29,18 +36,307 @@ typedef struct
     float rotation;
     float scale;
 } t_proposition;
+
+/*c c_mapping
+ */
 class c_mapping
 {
 public:
-    c_mapping(void *src_pt, void *tgt_pt, float strength);
+    c_mapping(class c_mapping_point *src_pt, t_point_value *tgt_pv, t_proposition *proposition, float strength);
     float map_strength(t_proposition *proposition);
     float position_map_strength(t_proposition *proposition);
     void repr(char *buffer, int buf_size);
-    void *src_pt;
-    void *tgt_pt;
+    class c_mapping *next_in_list;
+    class c_mapping_point *src_pt;
+    t_point_value tgt_pv;
     t_proposition proposition;
+    float strength;
 };
 
+/*c c_mapping_point
+    A point on the source image has a set of mapping beliefs, each with a concept of 'strength'
+    These can be its ideas that it maps to particular points on the target with an image rotation,
+    or it can be its ideas that the mapping for an image is centered on (cx,cy) with a rotation and scale
+    This latter is built up from pairs of points, and is purer in our application as the rotation is derived
+    from the pair of points rather than the phase of the FFT (which is more of a clue than a calculation)
+
+    The point can be asked for its most-trusted proposition that it has not been told to ignore. It may have none.
+    The main algorithm can combine these propositions from all source points to come up with a 'consensus proposition'
+    Each point is then asked to use the consensus proposition to produce a new most-trusted proposition (even using data it has been told to ignore I think)
+    The points may have none.
+    A consensus propositino is again reached - and we repeat to get a most-agreed consensus.
+    At this point the main algorithm outputs the most-agreed consensus, and informs each
+    point to ignore propositions that support this consensus
+    Repeat from the beginning until we have enough consensus propositions or there are no propositions
+
+*/
+class c_pv_match
+{
+public:
+    c_pv_match(t_point_value *pv);
+    class c_pv_match *next_in_list;
+    t_point_value pv;
+    float rotation;
+};
+class c_mapping_point
+{
+public:
+    c_mapping_point(float x, float y);
+    void add_match(t_point_value *pv);
+    void add_mapping(c_mapping *mapping);
+    c_mapping *find_strongest_belief(t_proposition *proposition, float *best_strength);
+    float strength_in_belief(t_proposition *proposition);
+    void diminish_belief_in_proposition(t_proposition *proposition);
+    void repr(char *buffer, int buf_size);
+    c_pv_match *matches;
+    c_mapping *mappings;
+    float coords[2];
+};
+
+/*f c_mapping::c_mapping
+ */
+c_mapping::c_mapping(class c_mapping_point *src_pt, t_point_value *tgt_pv, t_proposition *proposition, float strength)
+{
+    this->next_in_list = NULL;
+    this->src_pt = src_pt;
+    this->tgt_pv = *tgt_pv;
+    this->proposition = *proposition;
+    this->strength = strength;
+}
+
+/*f c_mapping::map_strength
+ */
+#define DIST_FACTOR (25.0)
+float c_mapping::map_strength(t_proposition *proposition)
+{
+    float strength;
+    float dx, dy, center_dist;
+    t_proposition *tp;
+    tp = &(this->proposition);
+    strength = this->strength;
+    if (proposition->scale < tp->scale) {
+        strength *= proposition->scale / tp->scale;
+    } else {
+        strength *= tp->scale / proposition->scale;
+    }
+    dx = tp->center[0] - proposition->center[0];
+    dy = tp->center[1] - proposition->center[1];
+    center_dist = sqrt(dx*dx + dy*dy);
+    strength *= DIST_FACTOR / (DIST_FACTOR + center_dist);
+    strength *= cos(2*2*PI/360 * (tp->rotation - proposition->rotation));
+    return strength;
+}
+
+/*f c_mapping::position_map_strength
+ */
+float c_mapping::position_map_strength(t_proposition *proposition)
+{
+    float strength;
+    float dsrc_x, dsrc_y;
+    float cosang, sinang;
+    float dtgt_x, dtgt_y;
+    float dx, dy, dist;
+    dsrc_x = this->src_pt->coords[0] - proposition->center[0];
+    dsrc_y = this->src_pt->coords[1] - proposition->center[1];
+    cosang = -cos(-2*PI/360*proposition->rotation);
+    sinang = -sin(-2*PI/360*proposition->rotation);
+    dtgt_x = proposition->center[0] + proposition->scale*(cosang*dsrc_x - sinang*dsrc_y);
+    dtgt_y = proposition->center[1] + proposition->scale*(cosang*dsrc_y + sinang*dsrc_x);
+    dx = dtgt_x - this->tgt_pv.x;
+    dy = dtgt_y - this->tgt_pv.y;
+    dist = sqrt(dx*dx+dy*dy);
+    strength = this->strength * (4.0/(4.0+dist));
+    strength *= cos(2*2*PI/360*(this->proposition.rotation - proposition->rotation));
+    return strength;
+}
+
+/*f c_mapping::repr
+ */
+void c_mapping::repr(char *buffer, int buf_size)
+{
+    snprintf(buffer, buf_size, "(%4d,%4d) -> (%4d,%4d) : (%8.2f,%8.2f) %6.2f %5.3f    %8.5f",
+             (int) this->src_pt->coords[0],
+             (int) this->src_pt->coords[1],
+             (int) this->tgt_pv.x,
+             (int) this->tgt_pv.y,
+             this->proposition.center[0],
+             this->proposition.center[1],
+             this->proposition.rotation,
+             this->proposition.scale,
+             this->strength);
+    buffer[buf_size-1] = 0;
+}
+
+/*f c_pv_match::c_pv_match
+ */
+c_pv_match::c_pv_match(t_point_value *pv)
+{
+    this->next_in_list = NULL;
+    this->pv = *pv;
+    this->rotation = 360/(2*PI)*atan2(pv->vec_y, pv->vec_x);
+}
+
+/*f c_mapping_point::c_mapping_point
+ */
+c_mapping_point::c_mapping_point(float x, float y)
+{
+    this->coords[0] = x;
+    this->coords[1] = y;
+    this->matches = NULL;
+    this->mappings = NULL;
+}
+
+/*f c_mapping_point::add_match
+ */
+void c_mapping_point::add_match(t_point_value *pv)
+{
+    c_pv_match *pvm;
+    pvm = new c_pv_match(pv);
+    pvm->next_in_list = this->matches;
+    this->matches = pvm;
+}
+
+/*f c_mapping_point::add_mapping
+ */
+void c_mapping_point::add_mapping(c_mapping *mapping)
+{
+    mapping->next_in_list = mappings;
+    mappings = mapping;
+}
+
+/*f c_mapping_point::find_strongest_belief
+ */
+c_mapping *c_mapping_point::find_strongest_belief(t_proposition *proposition, float *best_strength)
+{
+    
+    c_mapping *best_mapping;
+    float max_strength;
+    max_strength = 0;
+    best_mapping = NULL;
+    for (c_mapping *m=mappings; m; m=m->next_in_list) {
+        float s;
+        if (proposition) {
+            s = m->position_map_strength(proposition);
+        } else {
+            s = m->strength;
+        }
+        if (s>max_strength) {
+            max_strength = s;
+            best_mapping = m;
+        }
+    }
+    *best_strength = max_strength;
+    return best_mapping;
+}
+
+/*f c_mapping_point::strength_in_belief
+ */
+float c_mapping_point::strength_in_belief(t_proposition *proposition)
+{
+    float strength = 0;
+    for (c_mapping *m=mappings; m; m=m->next_in_list) {
+        strength += m->position_map_strength(proposition);
+    }
+    return strength;
+}
+    
+/*f c_mapping_point::diminish_belief_in_proposition
+ */
+void c_mapping_point::diminish_belief_in_proposition(t_proposition *proposition)
+{
+    for (c_mapping *m=mappings; m; m=m->next_in_list) {
+        float s;
+        s = m->position_map_strength(proposition);
+        //fprintf(stderr,"Diminish %p %f %f\n", m, s, m->strength);
+        if (s>0) {
+            m->strength *= (1-s)*(1-s);
+        }
+    }
+}
+
+/*f diminish_mappings_by_proposition
+ */
+static void diminish_mappings_by_proposition(c_mapping_point *mappings[], int num_mappings, t_proposition *proposition)
+{
+    for (int p=0; p<NUM_MAPPINGS; p++) {
+        if (mappings[p]) {
+            mappings[p]->diminish_belief_in_proposition(proposition);
+        }
+    }
+}
+
+/*f find_best_mapping
+ */
+static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_proposition *best_proposition)
+{
+    float best_mapping_strength;
+    c_mapping *best_mapping;
+    t_proposition cp;
+    float total_strength;
+
+    /*b Find best mapping to start with
+     */
+    best_mapping_strength = 0;
+    for (int p=0; p<NUM_MAPPINGS; p++) {
+        if (mappings[p]) {
+            float strength;
+            c_mapping *m = mappings[p]->find_strongest_belief(NULL, &strength);
+            if (m && (strength>best_mapping_strength)) {
+                best_mapping_strength = strength;
+                best_mapping = m;
+
+            }
+        }
+    }
+    if (!best_mapping) return 0;
+
+    /*b Starting with best mapping, iterate to improve
+     */
+    cp = best_mapping->proposition;
+    total_strength = 0;
+    for (int i=0; i<10; i++) {
+        t_proposition np;
+        np.center[0] = 0;
+        np.center[1] = 0;
+        np.rotation = 0;
+        np.scale = 0;
+        total_strength = 0;
+        for (int p=0; p<NUM_MAPPINGS; p++) {
+            if (mappings[p]) {
+                float s_in_b;
+                float s_in_m;
+                c_mapping *m;
+                s_in_b = mappings[p]->strength_in_belief(&cp);
+                m = mappings[p]->find_strongest_belief(&cp, &s_in_m);
+                if (m) {
+                    float s;
+                    s = s_in_m;
+                    np.center[0] += s*m->proposition.center[0];
+                    np.center[1] += s*m->proposition.center[1];
+                    np.scale     += s*m->proposition.scale;
+                    np.rotation  += s*m->proposition.rotation; // BUG here
+                    total_strength += s;
+                    if (0) {
+                        char buf[256];
+                        m->repr(buf, sizeof(buf));
+                        fprintf(stderr, "%f %f %s\n", s_in_b, s_in_m, buf);
+                    }
+                }
+            }
+        }
+        if (total_strength==0) return 0;
+        cp.center[0] = np.center[0]/total_strength;
+        cp.center[1] = np.center[1]/total_strength;
+        cp.scale     = np.scale/total_strength;
+        cp.rotation  = np.rotation/total_strength;
+    }
+    *best_proposition = cp;
+    return total_strength;
+
+}
+
+/*a Types
+ */
 /*t c_main
  */
 class c_main
@@ -300,23 +596,28 @@ int main(int argc,char *argv[])
     for (int i=0; i<init_filter_end; i++) {
         filters[i]->execute(&ec);
     }
-    t_point_value pts[80];
-    for (int i=0, j=0; (i<ec.num_points) && (i<20); i++) {
+
+    t_point_value pts[NUM_MAPPINGS*4];
+    for (int i=0, j=0; (i<ec.num_points) && (i<NUM_MAPPINGS); i++) {
         pts[j++] = ec.points[i];
         pts[j++] = ec.points[i];
         pts[j++] = ec.points[i];
         pts[j++] = ec.points[i];
     }
-    for (int i=0; i<80; i+=4) {
+    for (int i=0; i<NUM_MAPPINGS*4; i+=4) {
         pts[i+0].x += 4; // 4 is magic to match c_filter_find4
         pts[i+1].y += 4;
         pts[i+2].x -= 4;
         pts[i+3].y -= 4;
     }
-    for (int p=0; p<30; p++)
+    c_mapping_point *mappings[NUM_MAPPINGS];
+    for (int p=0; p<NUM_MAPPINGS; p++) {
+        mappings[p] = NULL;
+    }
+    for (int p=0; p<NUM_MAPPINGS; p++)
     {
         int f;
-        fprintf(stderr,"Point %d (%d,%d)\n",p,pts[p*4].x,pts[p*4].y);
+        fprintf(stderr,"Point %d (%d,%d)\n",p,pts[p*4].x-4,pts[p*4].y);
         f = match_filter_start;
         for (int i=0; i<4; i++) {
             filters[f]->uniform_set("uv_base_x",pts[p*4+i].x);
@@ -325,8 +626,149 @@ int main(int argc,char *argv[])
             f++;
         }
         filters[f]->execute(&ec);
+        mappings[p] = new c_mapping_point(pts[p*4].x-4,pts[p*4].y);
+
+        for (int i=0; (i<ec.num_points) && (i<MAX_POINTS_PER_MAPPING); i++) {
+            t_point_value *pv;
+            float fft_rotation;
+            pv = &(ec.points[i]);
+            fft_rotation = 360/2/PI*atan2(pv->vec_y,pv->vec_x);
+            mappings[p]->add_match(pv);
+
+            for (int pp=0; pp<p; pp++) {
+                c_mapping_point *pm = mappings[pp];
+
+                for (c_pv_match *pmpv=pm->matches; pmpv; pmpv=pmpv->next_in_list) {
+                    float tgt_dx, tgt_dy, tgt_l;
+                    float src_dx, src_dy, src_l;
+                    float scale, rotation;
+                    float cos_rot_diff;
+
+                    cos_rot_diff = cos((fft_rotation - pmpv->rotation)*2*PI/360);
+                    if (cos_rot_diff<0.90)
+                        continue;
+
+                    tgt_dx = pv->x - pmpv->pv.x;
+                    tgt_dy = pv->y - pmpv->pv.y;
+                    src_dx = mappings[p]->coords[0] - pm->coords[0];
+                    src_dy = mappings[p]->coords[1] - pm->coords[1];
+
+                    tgt_l = sqrt(tgt_dx*tgt_dx + tgt_dy*tgt_dy);
+                    src_l = sqrt(src_dx*src_dx + src_dy*src_dy);
+
+                    scale = tgt_l / src_l;
+                    rotation = 180 - 360/2/PI*(atan2(tgt_dy, tgt_dx) - atan2(src_dy, src_dx));
+                    rotation = (rotation<0) ? (rotation+360) : rotation;
+                    rotation = (rotation>=360) ? (rotation-360) : rotation;
+
+                    /* There is a mapping src -> tgt that is tgt = scale*rotation*src + offset
+                       Hence (m.tgt - pm.tgt) = scale * rotation * (m.src-pm.src)
+                       or tgt_dxy = scale*rotation*(src_dxy)
+                       Hence (tgt.dxy).(src.dxy) = (scale*rotation*(src.dxy)) . (src.dxy)
+                       Hence (tgt.dxy).(src.dxy) = scale*cos(rotation)*((src.dxy).(src.dxy))
+                       Hence scale*cos(rotation) = (tgt.dxy).(src.dxy) / (src_l^2)
+                       Hence scale*cos(rotation) = (tgt_l * src_l * cosang) / (src_l^2)
+                       Hence scale*cos(rotation) = tgt_l/src_l * cosang
+                       Hence cos(rotation) should match cosang, and scale is tgt_l/src_l
+                       Note that if two angles are approximately equal, then cos(diff) is near 1.0
+                       angdiff should be about rotation
+                    */
+                    cos_rot_diff = cos((fft_rotation - rotation)*2*PI/360);
+                    if ((cos_rot_diff>0.90) && (scale>0.95) && (scale<1.05)) {
+                        float cos_rot, sin_rot;
+                        float offset_x, offset_y;
+
+                        if (0) {
+                            fprintf(stderr," (%d,%d) -> (%d,%d)  and   (%d,%d) -> (%d,%d)\n",
+                                    (int)mappings[p]->coords[0], (int)mappings[p]->coords[1], pv->x, pv->y,
+                                    (int)pm->coords[0], (int)pm->coords[1], pmpv->pv.x, pmpv->pv.y);
+                            fprintf(stderr,"   src_dxy (%f,%f) tgt_dxy (%f,%f) src_l %f tgt_l %f\n",
+                                    src_dx, src_dy, tgt_dx, tgt_dy, src_l, tgt_l );
+                            fprintf(stderr,"   scale %f rotation %f fft_rotation %f pm_fft_rotation %f\n",
+                                    scale, rotation, fft_rotation, pmpv->rotation );
+                            fprintf(stderr,"   cos_rot_diff %f\n",
+                                    cos_rot_diff );
+                        }
+
+                        /*
+                          Now, there must be a stable point that is the center of rotation - call it c
+                          Here we have c = scale*rotation*c + offset
+                          i.e. offset = c * (I-scale*rotation)
+                          hence c = Inverse(I-scale*rotation) . offset
+                          First, find offset, then the inverse matrix
+                          tgt_pt = scale*rotation*src_pt + offset
+                          Hence offset = tgt_pt - scale*rotation*src_pt
+                        */
+                        cos_rot = -cos((-rotation)*2*PI/360);
+                        sin_rot = -sin((-rotation)*2*PI/360);
+                        offset_x = pv->x - scale*(cos_rot*mappings[p]->coords[0] - sin_rot*mappings[p]->coords[1]);
+                        offset_y = pv->y - scale*(cos_rot*mappings[p]->coords[1] + sin_rot*mappings[p]->coords[0]);
+
+                        /* Now, if scale*rotation is (sc.c -sc.s, sc.s sc.c) then
+                           (I-scale*rotation) = (1-sc.c  sc.s,  -sc.s   1-sc.c)
+                           Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/((1-sc.c)^2+(sc.s)^2)
+                           Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+(sc.c)^2-2sc.c+(sc.s)^2)
+                           Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+sc^2-2sc.c)
+                           Hence center of rotation c = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+sc^2-2sc.c) * offset
+                        */
+                        float det_inv, inv_ad, inv_bc;
+                        t_proposition proposition;
+                        det_inv = (1+scale*scale-2*scale*cos_rot);
+                        inv_ad = (1-scale*cos_rot)/det_inv;
+                        inv_bc = sin_rot/det_inv;
+                        proposition.center[0] = inv_ad * offset_x - inv_bc*offset_y;
+                        proposition.center[1] = inv_ad * offset_y + inv_bc*offset_x;
+                        proposition.rotation = rotation;
+                        proposition.scale = scale;
+                        mappings[p]->add_mapping( new c_mapping(mappings[p], pv, &proposition, 1.0 ) );
+                    }
+                }
+            }
+        }
+    }
+
+    if (0) {
+        fprintf(stderr,"********************************************************************************\n");
+        for (int p=0; p<NUM_MAPPINGS; p++) {
+            fprintf(stderr,"Mapping point %p\n",mappings[p]);
+            if (mappings[p]) {
+                char buf[256];
+                for (c_mapping *m = mappings[p]->mappings; m; m=m->next_in_list) {
+                    m->repr(buf,sizeof(buf));
+                    fprintf(stderr, "%s\n", buf);
+                }
+            }
+        }
+        fprintf(stderr,"********************************************************************************\n");
+    }
+
+    for (int p=0; p<NUM_MAPPINGS; p++) {
+        fprintf(stderr,"Mapping point %p\n",mappings[p]);
+        if (mappings[p]) {
+            char buf[256];
+            float strength;
+            c_mapping *m = mappings[p]->find_strongest_belief(NULL, &strength);
+            fprintf(stderr,"  Mapping %p %f\n",m,strength);
+            if (m) {
+                m->repr(buf,sizeof(buf));
+                fprintf(stderr, "%f, %s\n", strength, buf);
+            }
+        }
+    }
+
+    for (int i=0; i<100; i++) {
+        t_proposition best_proposition;
+        float strength;
+        strength = find_best_mapping(mappings, NUM_MAPPINGS, &best_proposition);
+        if (strength==0) break;
+        fprintf(stderr,"Strength %8.4f: Center (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
+                strength,
+                best_proposition.center[0], best_proposition.center[1],
+                best_proposition.rotation, best_proposition.scale );
+        diminish_mappings_by_proposition(mappings, NUM_MAPPINGS, &best_proposition);
     }
 
     m->exit();
     return 0;
 }
+

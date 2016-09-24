@@ -536,6 +536,7 @@ matches[(118,1011)] = [ ((238,964), 0.467828, 136.63),
 #a Toplevel
 print "*"*80
 print "\n"*5
+print matches.keys()
 points_passed = []
 correlations = []    
 for src_pt in matches.keys():
@@ -561,7 +562,27 @@ for src_pt in matches.keys():
                 if (angdiff>=360): angdiff -= 360
                 cosmatch2 = math.cos((angdiff-angle)*2*PI/360)
                 scale = l0/l1
+                if False:
+                    print " (%d,%d) -> (%d,%d)  and   (%d,%d) -> (%d,%d)"%(
+                                src_pt[0], src_pt[1], tgt_pt[0], tgt_pt[1],
+                                p[0], p[1], tgt_pt_p[0], tgt_pt_p[1] )
+                    print "   src_dxy (%f,%f) tgt_dxy (%f,%f) src_l %f tgt_l %f"%(
+                                dx1, dy1, dx0, dy0, l1, l0 )
+                    print "   scale %f rotation %f fft_rotation %f pm_fft_rotation %f"%(
+                                scale, angdiff, angle, angle_p )
+                    print "   cos_rot_diff %f"%(cosmatch2)
+                    pass
                 if (cosang2>0.90) and (cosmatch2>0.90) and (scale>0.95) and (scale<1.05):
+                    if True:
+                        print " (%d,%d) -> (%d,%d)  and   (%d,%d) -> (%d,%d)"%(
+                            src_pt[0], src_pt[1], tgt_pt[0], tgt_pt[1],
+                            p[0], p[1], tgt_pt_p[0], tgt_pt_p[1] )
+                        print "   src_dxy (%f,%f) tgt_dxy (%f,%f) src_l %f tgt_l %f"%(
+                            dx1, dy1, dx0, dy0, l1, l0 )
+                        print "   scale %f rotation %f fft_rotation %f pm_fft_rotation %f"%(
+                            scale, angdiff, angle, angle_p )
+                        print "   cos_rot_diff %f"%(cosmatch2)
+                        pass
                     # There is a mapping src -> tgt that is tgt = scale*rotation*src + offset
                     # Hence (tgt_pt - tgt_pt_p) = scale * rotation * (src_pt-p)
                     # or (dx0,dy0) = scale*rotation*(dx1,dy1)
@@ -617,7 +638,10 @@ for c in correlations:
     pass
 print "*"*80
 for m in mapping_beliefs:
-    print mapping_beliefs[m].find_strongest_belief()
+    print
+    #print mapping_beliefs[m].find_strongest_belief()
+    for mm in mapping_beliefs[m].mappings:
+        print mm
     pass
 
 # with 1.0/(1.0+dist):
@@ -661,7 +685,7 @@ d = {'rotation': 203.1, 'scale': 0.98, 'center': (382.0,750.0)}
 # 9 {'strength': 3.4803947588426305, 'rotation': 174.47885550463516, 'scale': 1.0136993040961235, 'center': (742.6218161876659, 665.75457721717885)}
 
 print "*"*80
-for j in range(10):
+for j in range(1):
     best_mapping = (None,0)
     for m in mapping_beliefs:
         (mapping, s_in_m) = mapping_beliefs[m].find_strongest_belief()
@@ -672,6 +696,7 @@ for j in range(10):
     if best_mapping[0] is None:
         break
     d = {"center":mapping.center, "rotation":mapping.rotation, "scale":mapping.scale}
+    # d = {"center":(600,600), "rotation":180, "scale":1}
     for i in range(10):
         rotation = d["rotation"]
         scale    = d["scale"]
@@ -682,14 +707,14 @@ for j in range(10):
             s_in_b = mapping_beliefs[m].strength_in_belief( (center, rotation, scale) )
             (mapping,s_in_m) = mapping_beliefs[m].find_strongest_belief( (center, rotation, scale) )
             if mapping is not None:
-                s = s_in_b
+                s = s_in_m
                 next_data["center"] = (next_data["center"][0]+s*mapping.center[0],
                                        next_data["center"][1]+s*mapping.center[1])
                 next_data["rotation"] += s*mapping.rotation
                 next_data["scale"]    += s*mapping.scale
                 total_strength        += s
                 pass
-            #print s_in_b, s_in_m, mapping
+            print s_in_b, s_in_m, mapping
             pass
         next_data["center"] = (next_data["center"][0]/total_strength,
                                next_data["center"][1]/total_strength)

@@ -7,18 +7,18 @@ PI = 3.14159265
 #c c_mapping
 class c_mapping(object):
     dist_factor = 25.0
-    def __init__(self, src_pt, tgt_pt=None, center=(0,0), rotation=0.0, scale=1.0, strength=0.0, other=None ):
+    def __init__(self, src_pt, tgt_pt=None, translation=(0,0), rotation=0.0, scale=1.0, strength=0.0, other=None ):
         self.src_pt = src_pt
         self.tgt_pt = tgt_pt
-        self.center = center
+        self.translation = translation
         self.rotation = rotation
         self.scale = scale
         self.strength = strength
         self.other = other
         pass
-    def map_strength(self, center=[0,0], scale=1.0, rotation=0.0, proposition=None):
+    def map_strength(self, translation=[0,0], scale=1.0, rotation=0.0, proposition=None):
         if proposition is not None:
-            center = proposition[0]
+            translation = proposition[0]
             rotation = proposition[1]
             scale = proposition[2]
             pass
@@ -29,22 +29,22 @@ class c_mapping(object):
         else:
             strength *= self.scale/scale
             pass
-        (dx,dy) = (center[0]-self.center[0], center[1]-self.center[1])
-        center_dist = math.sqrt(dx*dx+dy*dy)
-        strength *= self.dist_factor/(self.dist_factor+center_dist)
+        (dx,dy) = (translation[0]-self.translation[0], translation[1]-self.translation[1])
+        translation_dist = math.sqrt(dx*dx+dy*dy)
+        strength *= self.dist_factor/(self.dist_factor+translation_dist)
         strength *= math.cos(2*2*PI/360*(rotation-self.rotation))
         return strength
-    def position_map_strength(self, center=[0,0], scale=1.0, rotation=0.0, proposition=None):
+    def position_map_strength(self, translation=[0,0], scale=1.0, rotation=0.0, proposition=None):
         if proposition is not None:
-            center = proposition[0]
+            translation = proposition[0]
             rotation = proposition[1]
             scale = proposition[2]
             pass
-        dsrc = ((self.src_pt[0]-center[0]), (self.src_pt[1]-center[1]))
+        dsrc = self.src_pt[0], self.src_pt[1]
         cosang = -math.cos(2*PI/360*rotation)
         sinang = -math.sin(2*PI/360*rotation)
-        dtgt = (center[0] + scale*(cosang*dsrc[0] - sinang*dsrc[1]),
-                center[1] + scale*(cosang*dsrc[1] + sinang*dsrc[0]))
+        dtgt = (translation[0] + scale*(cosang*dsrc[0] - sinang*dsrc[1]),
+                translation[1] + scale*(cosang*dsrc[1] + sinang*dsrc[0]))
         dx = dtgt[0]-self.tgt_pt[0]
         dy = dtgt[1]-self.tgt_pt[1]
         dist = math.sqrt(dx*dx+dy*dy)
@@ -53,11 +53,11 @@ class c_mapping(object):
         return strength
     def __repr__(self):
         r = "(%4d,%4d) -> (%4d,%4d) : (%8.2f,%8.2f) %6.2f %5.3f    %8.5f  %s"%(self.src_pt[0], self.src_pt[1],
-                                                                                self.tgt_pt[0], self.tgt_pt[1],
-                                                                                self.center[0], self.center[1],
-                                                                                self.rotation, self.scale,
-                                                                                self.strength,
-                                                                                str(self.other))
+                                                                               self.tgt_pt[0], self.tgt_pt[1],
+                                                                               self.translation[0], self.translation[1],
+                                                                               self.rotation, self.scale,
+                                                                               self.strength,
+                                                                               str(self.other))
         return r
 
 #c c_mapping_beliefs
@@ -65,7 +65,7 @@ class c_mapping_beliefs(object):
     """
     A point on the source image has a set of mapping beliefs, each with a concept of 'strength'
     These can be its ideas that it maps to particular points on the target with an image rotation,
-    or it can be its ideas that the mapping for an image is centered on (cx,cy) with a rotation and scale
+    or it can be its ideas that the mapping for an image is a rotation and scale followed by a translation (tx, ty)
     This latter is built up from pairs of points, and is purer in our application as the rotation is derived
     from the pair of points rather than the phase of the FFT (which is more of a clue than a calculation)
 
@@ -583,7 +583,7 @@ for src_pt in matches.keys():
                             scale, angdiff, angle, angle_p )
                         print "   cos_rot_diff %f"%(cosmatch2)
                         pass
-                    # There is a mapping src -> tgt that is tgt = scale*rotation*src + offset
+                    # There is a mapping src -> tgt that is tgt = scale*rotation*src + translation
                     # Hence (tgt_pt - tgt_pt_p) = scale * rotation * (src_pt-p)
                     # or (dx0,dy0) = scale*rotation*(dx1,dy1)
                     # Hence (dx0,dy0).(dx1.dy1) = (scale*rotation*(dx1,dy1)).(dx1,dy1)
@@ -591,32 +591,15 @@ for src_pt in matches.keys():
                     # Hence scale*cos(rotation) = (dx0,dy0).(dx1,dy1) / (l1^2)
                     # Hence scale*cos(rotation) = l0.l1.cosang / (l1^2)
                     # Hence cos(rotation) should match cosang, and scale is l0/l1
-                    # Now, there must be a stable point that is the center of rotation - call it c
-                    # Here we have c = scale*rotation*c + offset
-                    # i.e. offset = c * (I-scale*rotation)
-                    # hence c = Inverse(I-scale*rotation) . offset
-                    # First, find offset, then the inverse matrix
-                    # tgt_pt = scale*rotation*src_pt + offset
-                    # Hence offset = tgt_pt - scale*rotation*src_pt
+                    # tgt_pt = scale*rotation*src_pt + translation
+                    # Hence translation = tgt_pt - scale*rotation*src_pt
                     cosang3 = -math.cos((angdiff)*2*PI/360)
                     sinang3 = -math.sin((angdiff)*2*PI/360)
-                    offset = (tgt_pt[0] - scale*(src_pt[0]*cosang3 - src_pt[1]*sinang3),
-                               tgt_pt[1] - scale*(src_pt[1]*cosang3 + src_pt[0]*sinang3))
-                    # Now, if scale*rotation is (sc.c -sc.s, sc.s sc.c) then
-                    # (I-scale*rotation) = (1-sc.c  sc.s,  -sc.s   1-sc.c)
-                    # Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/((1-sc.c)^2+(sc.s)^2)
-                    # Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+(sc.c)^2-2sc.c+(sc.s)^2)
-                    # Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+sc^2-2sc.c)
-                    # Hence center of rotation c = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+sc^2-2sc.c) * offset
-                    det_inv = (1+scale*scale-2*scale*cosang3)
-                    inv_ad = (1-scale*cosang3)/det_inv
-                    inv_bc = sinang3/det_inv
-                    center = (inv_ad * offset[0] - inv_bc*offset[1], inv_ad * offset[1] + inv_bc*offset[0])
-                    center_rot = (offset[0] + scale*cosang3*center[0] - scale*sinang3*center[1], offset[1] + scale*cosang3*center[1] + scale*sinang3*center[0])
-                    map_512_512 = (offset[0] + scale*cosang3*512 - scale*sinang3*512 - 512, offset[1] + scale*cosang3*512 + scale*sinang3*512 - 512)
+                    translation = (tgt_pt[0] - scale*(src_pt[0]*cosang3 - src_pt[1]*sinang3),
+                                   tgt_pt[1] - scale*(src_pt[1]*cosang3 + src_pt[0]*sinang3))
                     mapping = c_mapping( src_pt = src_pt,
                                          tgt_pt = tgt_pt,
-                                         center = center,
+                                         translation = translation,
                                          rotation = angdiff,
                                          scale    = scale,
                                          strength = 1.0,
@@ -641,51 +624,15 @@ for m in mapping_beliefs:
     print
     #print mapping_beliefs[m].find_strongest_belief()
     for mm in mapping_beliefs[m].mappings:
-        print mm
+        #print mm, mm.position_map_strength(translation=(168,-126),scale=1.0,rotation=13.5)
+        #print mm, mm.position_map_strength(translation=(-168,126),scale=1.0,rotation=-13.5)
+        print mm, mm.position_map_strength(translation=(168,-126),scale=1.0,rotation=180+13.5)
+        #print mm, mm.position_map_strength(translation=(168,-126),scale=1.0,rotation=180-13.5)
     pass
 
-# with 1.0/(1.0+dist):
-d = {'rotation': 193.61361633546238, 'scale': 1.008448675049844, 'center': (598.56003091294167, 650.56401158053768)}
-# maps with s_in_m to {'strength': 7.2187074258819468, 'rotation': 193.65144284999843, 'scale': 1.0036888965308308, 'center': (599.87995240681823, 652.34844655463553)}
-# maps with s_in_b to {'strength': 183.21146308712514, 'rotation': 193.66698100158769, 'scale': 1.004030400780789, 'center': (601.69417614478573, 652.96874679548341)}
-d = {'rotation': 203.1, 'scale': 0.98, 'center': (382.0,750.0)}
-# maps with s_in_m to {'strength': 4.3572901560327129, 'rotation': 194.23084970371977, 'scale': 1.0042523540856807, 'center': (583.16243202001874, 655.58804911119091)}
-# maps with s_in_b to {'strength': 109.89526702569069, 'rotation': 194.61543423948564, 'scale': 1.0098904503454904, 'center': (589.61199302785678, 649.32014787965466)}
-
-# with 4.0/(4.0+dist):
-d = {'rotation': 193.61361633546238, 'scale': 1.008448675049844, 'center': (598.56003091294167, 650.56401158053768)}
-# maps with s_in_m to {'strength': 12.934360132377389, 'rotation': 193.62216779282187, 'scale': 1.0030622308691033, 'center': (601.63401990975296, 652.56736453887686)}
-# maps with s_in_b to {'strength': 387.94064454462932, 'rotation': 193.66508484472956, 'scale': 1.0036877666190247, 'center': (602.31379251958685, 653.16780933910013)}
-d = {'rotation': 203.1, 'scale': 0.98, 'center': (382.0,750.0)}
-# maps with s_in_m to {'strength': 9.5608316323348443, 'rotation': 194.2318040539993, 'scale': 1.0039073353118089, 'center': (585.3963976116969, 653.98626969662234)}
-# maps with s_in_b to {'strength': 285.04013828561699, 'rotation': 194.5905760210272, 'scale': 1.0102563821535582, 'center': (589.57416512260659, 649.90408119235133)}
-
-# Top ten propositions with s_in_m
-# 0 {'strength': 12.764875932003795, 'rotation': 193.52964831371108, 'scale': 1.0029248839652398, 'center': (604.75035580189865, 647.98824475715264)}
-# 1 {'strength': 0.071408201059570159, 'rotation': 154.42461819869649, 'scale': 0.97346243681670019, 'center': (334.51223093728817, 1045.2716023786211)}
-# 2 {'strength': 0.21582520809212905, 'rotation': 160.43934340282095, 'scale': 1.0067440106260606, 'center': (720.27845548015591, 925.80333989855421)}
-# 3 {'strength': 0.096930095453601692, 'rotation': 165.08433339680096, 'scale': 1.0023616387691388, 'center': (617.33026721797887, 1210.9334406251194)}
-# 4 {'strength': 0.1681175981454639, 'rotation': 153.99329952392796, 'scale': 1.0049196905387798, 'center': (747.54390705072558, 894.55661080759796)}
-# 5 {'strength': 0.053812874044260744, 'rotation': 132.82708725055591, 'scale': 0.98018819582748185, 'center': (314.03583489132677, 799.8380947634239)}
-# 6 {'strength': 0.275829820331357, 'rotation': 124.34725294226084, 'scale': 0.9765039437021954, 'center': (188.71513862449811, 983.86884422736284)}
-# 7 {'strength': 0.058339774959350985, 'rotation': 175.08473654584236, 'scale': 0.99794073735871103, 'center': (555.50309661585629, 1280.7068641241542)}
-# 8 {'strength': 0.43357249309387141, 'rotation': 174.53429017213611, 'scale': 1.0198487888927941, 'center': (661.94091819564926, 887.09522257695846)}
-# 9 {'strength': 0.096770403876512021, 'rotation': 141.51955651306716, 'scale': 1.0037103694264569, 'center': (658.41637141203353, 958.37720866917346)}
-#
-# Top ten propositions with s_in_b
-# 0 {'strength': 406.60804559120879, 'rotation': 193.45422207731463, 'scale': 1.0026357686422109, 'center': (610.24942746808301, 645.16792458725411)}
-# 1 {'strength': 28.394191906537195, 'rotation': 189.0287164443352, 'scale': 1.0228344243183796, 'center': (673.18527739361014, 730.52712360549538)}
-# 2 {'strength': 22.13639815991014, 'rotation': 188.65034770262704, 'scale': 1.0144181548525768, 'center': (675.97146206096158, 765.50418947086507)}
-# 3 {'strength': 17.096320729416995, 'rotation': 208.51667585863646, 'scale': 0.98314948826476467, 'center': (565.84941800370029, 637.43554591298084)}
-# 4 {'strength': 22.295774720560487, 'rotation': 197.11390362343087, 'scale': 0.99140738412034313, 'center': (565.72109520344031, 670.82297915874972)}
-# 5 {'strength': 8.5682680702861749, 'rotation': 185.78689169130496, 'scale': 1.0184928214999727, 'center': (789.57202515102779, 1065.1651180529966)}
-# 6 {'strength': 8.4574362960887939, 'rotation': 186.16405225316504, 'scale': 1.018492904439624, 'center': (790.04012180234304, 1056.7434160388905)}
-# 7 {'strength': 8.3639157557746202, 'rotation': 186.49563560024382, 'scale': 1.0184679639990435, 'center': (789.83682084249551, 1048.715401610021)}
-# 8 {'strength': 7.7795896571711332, 'rotation': 185.98684110741686, 'scale': 1.018431763212472, 'center': (786.53332130272452, 1063.0580712144176)}
-# 9 {'strength': 3.4803947588426305, 'rotation': 174.47885550463516, 'scale': 1.0136993040961235, 'center': (742.6218161876659, 665.75457721717885)}
-
 print "*"*80
-for j in range(1):
+
+for j in range(10):
     best_mapping = (None,0)
     for m in mapping_beliefs:
         (mapping, s_in_m) = mapping_beliefs[m].find_strongest_belief()
@@ -695,35 +642,35 @@ for j in range(1):
         pass
     if best_mapping[0] is None:
         break
-    d = {"center":mapping.center, "rotation":mapping.rotation, "scale":mapping.scale}
-    # d = {"center":(600,600), "rotation":180, "scale":1}
+    d = {"translation":mapping.translation, "rotation":mapping.rotation, "scale":mapping.scale}
+    # d = {"translation":(600,600), "rotation":180, "scale":1}
     for i in range(10):
         rotation = d["rotation"]
         scale    = d["scale"]
-        center   = d["center"]
-        next_data = {"center":(0,0), "rotation":0, "scale":0}
+        translation   = d["translation"]
+        next_data = {"translation":(0,0), "rotation":0, "scale":0}
         total_strength = 0
         for m in mapping_beliefs:
-            s_in_b = mapping_beliefs[m].strength_in_belief( (center, rotation, scale) )
-            (mapping,s_in_m) = mapping_beliefs[m].find_strongest_belief( (center, rotation, scale) )
+            s_in_b = mapping_beliefs[m].strength_in_belief( (translation, rotation, scale) )
+            (mapping,s_in_m) = mapping_beliefs[m].find_strongest_belief( (translation, rotation, scale) )
             if mapping is not None:
                 s = s_in_m
-                next_data["center"] = (next_data["center"][0]+s*mapping.center[0],
-                                       next_data["center"][1]+s*mapping.center[1])
+                next_data["translation"] = (next_data["translation"][0]+s*mapping.translation[0],
+                                       next_data["translation"][1]+s*mapping.translation[1])
                 next_data["rotation"] += s*mapping.rotation
                 next_data["scale"]    += s*mapping.scale
                 total_strength        += s
                 pass
-            print s_in_b, s_in_m, mapping
+            #print s_in_b, s_in_m, mapping
             pass
-        next_data["center"] = (next_data["center"][0]/total_strength,
-                               next_data["center"][1]/total_strength)
+        next_data["translation"] = (next_data["translation"][0]/total_strength,
+                               next_data["translation"][1]/total_strength)
         next_data["rotation"] = next_data["rotation"]/total_strength
         next_data["scale"] = next_data["scale"]/total_strength
         next_data["strength"] = total_strength
         d = next_data
     print j, d
-    proposition = (d["center"], d["rotation"], d["scale"])
+    proposition = (d["translation"], d["rotation"], d["scale"])
     for m in mapping_beliefs:
         mapping_beliefs[m].defuse_beliefs(proposition)
         pass

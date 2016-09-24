@@ -18,11 +18,11 @@ Example
 
 /*a Defines
  */
-#define NUM_MAPPINGS 30
-#define MAX_POINTS_PER_MAPPING 30
+//#define NUM_MAPPINGS 30
+//#define MAX_POINTS_PER_MAPPING 30
 
-//#define NUM_MAPPINGS 5
-//#define MAX_POINTS_PER_MAPPING 10
+#define NUM_MAPPINGS 5
+#define MAX_POINTS_PER_MAPPING 10
 
 #define PI 3.1415926538
 
@@ -32,7 +32,7 @@ Example
  */
 typedef struct
 {
-    float center[2];
+    float translation[2];
     float rotation;
     float scale;
 } t_proposition;
@@ -56,7 +56,7 @@ public:
 /*c c_mapping_point
     A point on the source image has a set of mapping beliefs, each with a concept of 'strength'
     These can be its ideas that it maps to particular points on the target with an image rotation,
-    or it can be its ideas that the mapping for an image is centered on (cx,cy) with a rotation and scale
+    or it can be its ideas that the mapping for an image is a rotation and scale followed by a translation (tx, ty)
     This latter is built up from pairs of points, and is purer in our application as the rotation is derived
     from the pair of points rather than the phase of the FFT (which is more of a clue than a calculation)
 
@@ -110,7 +110,7 @@ c_mapping::c_mapping(class c_mapping_point *src_pt, t_point_value *tgt_pv, t_pro
 float c_mapping::map_strength(t_proposition *proposition)
 {
     float strength;
-    float dx, dy, center_dist;
+    float dx, dy, translation_dist;
     t_proposition *tp;
     tp = &(this->proposition);
     strength = this->strength;
@@ -119,10 +119,10 @@ float c_mapping::map_strength(t_proposition *proposition)
     } else {
         strength *= tp->scale / proposition->scale;
     }
-    dx = tp->center[0] - proposition->center[0];
-    dy = tp->center[1] - proposition->center[1];
-    center_dist = sqrt(dx*dx + dy*dy);
-    strength *= DIST_FACTOR / (DIST_FACTOR + center_dist);
+    dx = tp->translation[0] - proposition->translation[0];
+    dy = tp->translation[1] - proposition->translation[1];
+    translation_dist = sqrt(dx*dx + dy*dy);
+    strength *= DIST_FACTOR / (DIST_FACTOR + translation_dist);
     strength *= cos(2*2*PI/360 * (tp->rotation - proposition->rotation));
     return strength;
 }
@@ -136,12 +136,12 @@ float c_mapping::position_map_strength(t_proposition *proposition)
     float cosang, sinang;
     float dtgt_x, dtgt_y;
     float dx, dy, dist;
-    dsrc_x = this->src_pt->coords[0] - proposition->center[0];
-    dsrc_y = this->src_pt->coords[1] - proposition->center[1];
+    dsrc_x = this->src_pt->coords[0];
+    dsrc_y = this->src_pt->coords[1];
     cosang = -cos(-2*PI/360*proposition->rotation);
     sinang = -sin(-2*PI/360*proposition->rotation);
-    dtgt_x = proposition->center[0] + proposition->scale*(cosang*dsrc_x - sinang*dsrc_y);
-    dtgt_y = proposition->center[1] + proposition->scale*(cosang*dsrc_y + sinang*dsrc_x);
+    dtgt_x = proposition->translation[0] + proposition->scale*(cosang*dsrc_x - sinang*dsrc_y);
+    dtgt_y = proposition->translation[1] + proposition->scale*(cosang*dsrc_y + sinang*dsrc_x);
     dx = dtgt_x - this->tgt_pv.x;
     dy = dtgt_y - this->tgt_pv.y;
     dist = sqrt(dx*dx+dy*dy);
@@ -159,8 +159,8 @@ void c_mapping::repr(char *buffer, int buf_size)
              (int) this->src_pt->coords[1],
              (int) this->tgt_pv.x,
              (int) this->tgt_pv.y,
-             this->proposition.center[0],
-             this->proposition.center[1],
+             this->proposition.translation[0],
+             this->proposition.translation[1],
              this->proposition.rotation,
              this->proposition.scale,
              this->strength);
@@ -296,9 +296,12 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
     total_strength = 0;
     for (int i=0; i<10; i++) {
         t_proposition np;
-        np.center[0] = 0;
-        np.center[1] = 0;
+        float np_dx, np_dy;
+        np.translation[0] = 0;
+        np.translation[1] = 0;
         np.rotation = 0;
+        np_dy = 0;
+        np_dx = 0;
         np.scale = 0;
         total_strength = 0;
         for (int p=0; p<NUM_MAPPINGS; p++) {
@@ -311,10 +314,11 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
                 if (m) {
                     float s;
                     s = s_in_m;
-                    np.center[0] += s*m->proposition.center[0];
-                    np.center[1] += s*m->proposition.center[1];
+                    np.translation[0] += s*m->proposition.translation[0];
+                    np.translation[1] += s*m->proposition.translation[1];
                     np.scale     += s*m->proposition.scale;
-                    np.rotation  += s*m->proposition.rotation; // BUG here
+                    np_dx        += s*cos(2*PI/360*m->proposition.rotation);
+                    np_dy        += s*sin(2*PI/360*m->proposition.rotation);
                     total_strength += s;
                     if (0) {
                         char buf[256];
@@ -325,10 +329,10 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
             }
         }
         if (total_strength==0) return 0;
-        cp.center[0] = np.center[0]/total_strength;
-        cp.center[1] = np.center[1]/total_strength;
+        cp.translation[0] = np.translation[0]/total_strength;
+        cp.translation[1] = np.translation[1]/total_strength;
         cp.scale     = np.scale/total_strength;
-        cp.rotation  = np.rotation/total_strength;
+        cp.rotation  = 360/2/PI*atan2(np_dy, np_dx);
     }
     *best_proposition = cp;
     return total_strength;
@@ -610,6 +614,10 @@ int main(int argc,char *argv[])
         pts[i+2].x -= 4;
         pts[i+3].y -= 4;
     }
+    // transformation we are looking for (for 1900->1901)
+    // scale 1
+    // rotation 13+180
+    // translate +168, -126
     c_mapping_point *mappings[NUM_MAPPINGS];
     for (int p=0; p<NUM_MAPPINGS; p++) {
         mappings[p] = NULL;
@@ -661,7 +669,7 @@ int main(int argc,char *argv[])
                     rotation = (rotation<0) ? (rotation+360) : rotation;
                     rotation = (rotation>=360) ? (rotation-360) : rotation;
 
-                    /* There is a mapping src -> tgt that is tgt = scale*rotation*src + offset
+                    /* There is a mapping src -> tgt that is tgt = scale*rotation*src + translation
                        Hence (m.tgt - pm.tgt) = scale * rotation * (m.src-pm.src)
                        or tgt_dxy = scale*rotation*(src_dxy)
                        Hence (tgt.dxy).(src.dxy) = (scale*rotation*(src.dxy)) . (src.dxy)
@@ -676,7 +684,7 @@ int main(int argc,char *argv[])
                     cos_rot_diff = cos((fft_rotation - rotation)*2*PI/360);
                     if ((cos_rot_diff>0.90) && (scale>0.95) && (scale<1.05)) {
                         float cos_rot, sin_rot;
-                        float offset_x, offset_y;
+                        float translation_x, translation_y;
 
                         if (0) {
                             fprintf(stderr," (%d,%d) -> (%d,%d)  and   (%d,%d) -> (%d,%d)\n",
@@ -691,51 +699,45 @@ int main(int argc,char *argv[])
                         }
 
                         /*
-                          Now, there must be a stable point that is the center of rotation - call it c
-                          Here we have c = scale*rotation*c + offset
-                          i.e. offset = c * (I-scale*rotation)
-                          hence c = Inverse(I-scale*rotation) . offset
-                          First, find offset, then the inverse matrix
-                          tgt_pt = scale*rotation*src_pt + offset
-                          Hence offset = tgt_pt - scale*rotation*src_pt
+                          tgt_pt = scale*rotation*src_pt + translation
+                          Hence translation = tgt_pt - scale*rotation*src_pt
                         */
                         cos_rot = -cos((-rotation)*2*PI/360);
                         sin_rot = -sin((-rotation)*2*PI/360);
-                        offset_x = pv->x - scale*(cos_rot*mappings[p]->coords[0] - sin_rot*mappings[p]->coords[1]);
-                        offset_y = pv->y - scale*(cos_rot*mappings[p]->coords[1] + sin_rot*mappings[p]->coords[0]);
+                        translation_x = pv->x - scale*(cos_rot*mappings[p]->coords[0] - sin_rot*mappings[p]->coords[1]);
+                        translation_y = pv->y - scale*(cos_rot*mappings[p]->coords[1] + sin_rot*mappings[p]->coords[0]);
 
-                        /* Now, if scale*rotation is (sc.c -sc.s, sc.s sc.c) then
-                           (I-scale*rotation) = (1-sc.c  sc.s,  -sc.s   1-sc.c)
-                           Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/((1-sc.c)^2+(sc.s)^2)
-                           Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+(sc.c)^2-2sc.c+(sc.s)^2)
-                           Inverse(I-scale*rotation) = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+sc^2-2sc.c)
-                           Hence center of rotation c = (1-sc.c  -sc.s,  sc.s   1-sc.c). 1/(1+sc^2-2sc.c) * offset
-                        */
-                        float det_inv, inv_ad, inv_bc;
                         t_proposition proposition;
-                        det_inv = (1+scale*scale-2*scale*cos_rot);
-                        inv_ad = (1-scale*cos_rot)/det_inv;
-                        inv_bc = sin_rot/det_inv;
-                        proposition.center[0] = inv_ad * offset_x - inv_bc*offset_y;
-                        proposition.center[1] = inv_ad * offset_y + inv_bc*offset_x;
+                        proposition.translation[0] = translation_x;
+                        proposition.translation[1] = translation_y;
                         proposition.rotation = rotation;
                         proposition.scale = scale;
-                        mappings[p]->add_mapping( new c_mapping(mappings[p], pv, &proposition, 1.0 ) );
+                        float strength;
+                        strength = pv->value*pmpv->pv.value;
+                        mappings[p]->add_mapping( new c_mapping(mappings[p], pv, &proposition, strength ) );
                     }
                 }
             }
         }
     }
 
-    if (0) {
+    if (1) {
         fprintf(stderr,"********************************************************************************\n");
+        t_proposition prop;
+        prop.translation[0]=168;
+        prop.translation[1]=-126;
+        prop.scale=1;
+        prop.rotation=180+13;
+        prop.rotation=180-13;
         for (int p=0; p<NUM_MAPPINGS; p++) {
             fprintf(stderr,"Mapping point %p\n",mappings[p]);
             if (mappings[p]) {
                 char buf[256];
+                float s;
                 for (c_mapping *m = mappings[p]->mappings; m; m=m->next_in_list) {
                     m->repr(buf,sizeof(buf));
-                    fprintf(stderr, "%s\n", buf);
+                    s = m->position_map_strength(&prop);
+                    fprintf(stderr, "%f: %s\n", s, buf);
                 }
             }
         }
@@ -761,9 +763,9 @@ int main(int argc,char *argv[])
         float strength;
         strength = find_best_mapping(mappings, NUM_MAPPINGS, &best_proposition);
         if (strength==0) break;
-        fprintf(stderr,"Strength %8.4f: Center (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
+        fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
                 strength,
-                best_proposition.center[0], best_proposition.center[1],
+                best_proposition.translation[0], best_proposition.translation[1],
                 best_proposition.rotation, best_proposition.scale );
         diminish_mappings_by_proposition(mappings, NUM_MAPPINGS, &best_proposition);
     }

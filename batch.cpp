@@ -23,6 +23,12 @@ Example
 
 #define NUM_MAPPINGS 5
 #define MAX_POINTS_PER_MAPPING 10
+// a, b are -PI to PI.
+// a-b is -2*PI, -PI, 0, PI, to 2*PI
+// Want       1,   0, 1,  0,   1
+// cos(a-b) is 1, -1, 1,  -1,  1
+// 1+cos(a-b) is 2, 0, 2,  0,  2
+#define ROTATION_DIFF_STRENGTH(a,b) ( (1+cos((a)-(b))) / 2 )
 
 #define PI 3.1415926538
 
@@ -123,7 +129,7 @@ float c_mapping::map_strength(t_proposition *proposition)
     dy = tp->translation[1] - proposition->translation[1];
     translation_dist = sqrt(dx*dx + dy*dy);
     strength *= DIST_FACTOR / (DIST_FACTOR + translation_dist);
-    strength *= cos(0.25 * (tp->rotation - proposition->rotation));
+    strength *= ROTATION_DIFF_STRENGTH(tp->rotation,proposition->rotation);
     return strength;
 }
 
@@ -138,15 +144,15 @@ float c_mapping::position_map_strength(t_proposition *proposition)
     float dx, dy, dist;
     dsrc_x = this->src_pt->coords[0];
     dsrc_y = this->src_pt->coords[1];
-    cosang = -cos(PI-proposition->rotation);
-    sinang = -sin(PI-proposition->rotation);
+    cosang = cos(proposition->rotation);
+    sinang = sin(proposition->rotation);
     dtgt_x = proposition->translation[0] + proposition->scale*(cosang*dsrc_x - sinang*dsrc_y);
     dtgt_y = proposition->translation[1] + proposition->scale*(cosang*dsrc_y + sinang*dsrc_x);
     dx = dtgt_x - this->tgt_pv.x;
     dy = dtgt_y - this->tgt_pv.y;
     dist = sqrt(dx*dx+dy*dy);
     strength = this->strength * (4.0/(4.0+dist));
-    strength *= cos(0.25*(this->proposition.rotation - proposition->rotation));
+    strength *= ROTATION_DIFF_STRENGTH(this->proposition.rotation,proposition->rotation);
     return strength;
 }
 
@@ -173,7 +179,7 @@ c_pv_match::c_pv_match(t_point_value *pv)
 {
     this->next_in_list = NULL;
     this->pv = *pv;
-    this->rotation = PI+atan2(pv->vec_y, pv->vec_x);
+    this->rotation = PI - atan2(pv->vec_y, pv->vec_x);
 }
 
 /*f c_mapping_point::c_mapping_point
@@ -640,7 +646,7 @@ int main(int argc,char *argv[])
             t_point_value *pv;
             float fft_rotation;
             pv = &(ec.points[i]);
-            fft_rotation = PI+atan2(pv->vec_y,pv->vec_x);
+            fft_rotation = PI - atan2(pv->vec_y,pv->vec_x);
             mappings[p]->add_match(pv);
 
             for (int pp=0; pp<p; pp++) {
@@ -665,7 +671,7 @@ int main(int argc,char *argv[])
                     src_l = sqrt(src_dx*src_dx + src_dy*src_dy);
 
                     scale = tgt_l / src_l;
-                    rotation = atan2(src_dy, src_dx) - atan2(tgt_dy, tgt_dx) ;
+                    rotation = atan2(tgt_dy, tgt_dx) - atan2(src_dy, src_dx);
                     rotation = (rotation<PI) ? (rotation+2*PI) : rotation;
                     rotation = (rotation>PI) ? (rotation-2*PI) : rotation;
 
@@ -702,8 +708,8 @@ int main(int argc,char *argv[])
                           tgt_pt = scale*rotation*src_pt + translation
                           Hence translation = tgt_pt - scale*rotation*src_pt
                         */
-                        cos_rot = -cos(PI-rotation);
-                        sin_rot = -sin(PI-rotation);
+                        cos_rot = cos(rotation);
+                        sin_rot = sin(rotation);
                         translation_x = pv->x - scale*(cos_rot*mappings[p]->coords[0] - sin_rot*mappings[p]->coords[1]);
                         translation_y = pv->y - scale*(cos_rot*mappings[p]->coords[1] + sin_rot*mappings[p]->coords[0]);
 

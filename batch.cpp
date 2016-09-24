@@ -19,7 +19,10 @@ Example
 /*a Defines
  */
 #define NUM_MAPPINGS 30
-    #define MAX_POINTS_PER_MAPPING 30
+#define MAX_POINTS_PER_MAPPING 30
+
+//#define NUM_MAPPINGS 10
+//#define MAX_POINTS_PER_MAPPING 10
 
 //#define NUM_MAPPINGS 5
 //#define MAX_POINTS_PER_MAPPING 10
@@ -46,17 +49,24 @@ typedef struct
 } t_proposition;
 
 /*c c_mapping
+  Mappings are single source->target mappings
  */
 class c_mapping
 {
 public:
-    c_mapping(class c_mapping_point *src_pt, t_point_value *tgt_pv, t_proposition *proposition, float strength);
+    c_mapping(class c_mapping_point *src_pt,
+              class c_mapping_point *src_other,
+              t_point_value *tgt_pv,
+              t_point_value *tgt_other_pv,
+              t_proposition *proposition, float strength);
     float map_strength(t_proposition *proposition);
     float position_map_strength(t_proposition *proposition);
     void repr(char *buffer, int buf_size);
     class c_mapping *next_in_list;
     class c_mapping_point *src_pt;
+    class c_mapping_point *src_other_pt;
     t_point_value tgt_pv;
+    t_point_value tgt_other_pv;
     t_proposition proposition;
     float strength;
 };
@@ -103,16 +113,22 @@ public:
 
 /*f c_mapping::c_mapping
  */
-c_mapping::c_mapping(class c_mapping_point *src_pt, t_point_value *tgt_pv, t_proposition *proposition, float strength)
+c_mapping::c_mapping(class c_mapping_point *src_pt, class c_mapping_point *src_other_pt,
+                     t_point_value *tgt_pv, t_point_value *tgt_other_pv,
+                     t_proposition *proposition, float strength)
 {
     this->next_in_list = NULL;
     this->src_pt = src_pt;
+    this->src_other_pt = src_other_pt;
     this->tgt_pv = *tgt_pv;
+    this->tgt_other_pv = *tgt_other_pv;
     this->proposition = *proposition;
     this->strength = strength;
 }
 
 /*f c_mapping::map_strength
+  how well does a proposition match this mapping's proposition?
+  Return 0 for poor, 1 for good, sliding scale
  */
 #define DIST_FACTOR (25.0)
 float c_mapping::map_strength(t_proposition *proposition)
@@ -136,24 +152,40 @@ float c_mapping::map_strength(t_proposition *proposition)
 }
 
 /*f c_mapping::position_map_strength
+  how well does a proposition match the points being mapped?
+  Return 0 for poor, 1 for good, sliding scale
  */
 float c_mapping::position_map_strength(t_proposition *proposition)
 {
     float strength;
-    float dsrc_x, dsrc_y;
+    float src_x, src_y;
     float cosang, sinang;
-    float dtgt_x, dtgt_y;
+    float tgt_x, tgt_y;
     float dx, dy, dist;
-    dsrc_x = this->src_pt->coords[0];
-    dsrc_y = this->src_pt->coords[1];
+
     cosang = cos(proposition->rotation);
     sinang = sin(proposition->rotation);
-    dtgt_x = proposition->translation[0] + proposition->scale*(cosang*dsrc_x - sinang*dsrc_y);
-    dtgt_y = proposition->translation[1] + proposition->scale*(cosang*dsrc_y + sinang*dsrc_x);
-    dx = dtgt_x - this->tgt_pv.x;
-    dy = dtgt_y - this->tgt_pv.y;
+
+    src_x = this->src_pt->coords[0];
+    src_y = this->src_pt->coords[1];
+    tgt_x = proposition->translation[0] + proposition->scale*(cosang*src_x - sinang*src_y);
+    tgt_y = proposition->translation[1] + proposition->scale*(cosang*src_y + sinang*src_x);
+    dx = tgt_x - this->tgt_pv.x;
+    dy = tgt_y - this->tgt_pv.y;
     dist = sqrt(dx*dx+dy*dy);
-    strength = this->strength * (4.0/(4.0+dist));
+    strength = this->strength * (2.0/(2.0+dist));
+
+    if (0) { // Since many mappings may have the same 'other', it may have undue influence, so ignore it
+        src_x = this->src_other_pt->coords[0];
+        src_y = this->src_other_pt->coords[1];
+        tgt_x = proposition->translation[0] + proposition->scale*(cosang*src_x - sinang*src_y);
+        tgt_y = proposition->translation[1] + proposition->scale*(cosang*src_y + sinang*src_x);
+        dx = tgt_x - this->tgt_other_pv.x;
+        dy = tgt_y - this->tgt_other_pv.y;
+        dist = sqrt(dx*dx+dy*dy);
+        strength = this->strength * (4.0/(4.0+dist));
+    }
+
     strength *= ROTATION_DIFF_STRENGTH(this->proposition.rotation,proposition->rotation);
     return strength;
 }
@@ -162,11 +194,15 @@ float c_mapping::position_map_strength(t_proposition *proposition)
  */
 void c_mapping::repr(char *buffer, int buf_size)
 {
-    snprintf(buffer, buf_size, "(%4d,%4d) -> (%4d,%4d) : (%8.2f,%8.2f) %6.2f %5.3f    %8.5f",
+    snprintf(buffer, buf_size, "(%4d,%4d) -> (%4d,%4d) : (%4d,%4d) -> (%4d,%4d) : (%8.2f,%8.2f) %6.2f %5.3f    %8.5f",
              (int) this->src_pt->coords[0],
              (int) this->src_pt->coords[1],
              (int) this->tgt_pv.x,
              (int) this->tgt_pv.y,
+             (int) this->src_other_pt->coords[0],
+             (int) this->src_other_pt->coords[1],
+             (int) this->tgt_other_pv.x,
+             (int) this->tgt_other_pv.y,
              this->proposition.translation[0],
              this->proposition.translation[1],
              360/2/PI*this->proposition.rotation,
@@ -257,6 +293,7 @@ void c_mapping_point::diminish_belief_in_proposition(t_proposition *proposition)
         s = m->position_map_strength(proposition);
         //fprintf(stderr,"Diminish %p %f %f\n", m, s, m->strength);
         if (s>0) {
+            s /= m->strength;
             m->strength *= (1-s)*(1-s);
         }
     }
@@ -273,6 +310,110 @@ static void diminish_mappings_by_proposition(c_mapping_point *mappings[], int nu
     }
 }
 
+/*f strength_of_proposition
+ */
+static float strength_of_proposition(c_mapping_point *mappings[], int num_mappings, t_proposition *proposition)
+{
+    float total_strength;
+    total_strength = 0;
+    for (int p=0; p<num_mappings; p++) {
+        if (mappings[p]) {
+            float s_in_b;
+            float s_in_m;
+            c_mapping *m;
+            s_in_b = mappings[p]->strength_in_belief(proposition);
+            m = mappings[p]->find_strongest_belief(proposition, &s_in_m);
+            if (m) { total_strength += s_in_m; }
+            //total_strength += s_in_b;
+        }
+    }
+    return total_strength;
+}
+
+/*f try_delta_proposition
+ */
+static float try_delta_proposition(c_mapping_point *mappings[], int num_mappings, float current_strength, t_proposition *proposition, t_proposition *delta, float scale)
+{
+    float delta_strength;
+    t_proposition keep;
+    keep = *proposition;
+    proposition->translation[0] += scale*delta->translation[0];
+    proposition->translation[1] += scale*delta->translation[1];
+    proposition->rotation       += scale*delta->rotation;
+    proposition->scale          += scale*delta->scale;
+    delta_strength = strength_of_proposition(mappings, num_mappings, proposition);
+    if (1) {
+        fprintf(stderr,"Strength %8.4f, %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
+                current_strength, delta_strength, proposition->translation[0], proposition->translation[1], 180/PI*proposition->rotation, proposition->scale);
+    }
+    if (delta_strength>current_strength)
+    {
+        if (1) {
+            fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
+                    current_strength, proposition->translation[0], proposition->translation[1], 180/PI*proposition->rotation, proposition->scale);
+        }
+        current_strength = delta_strength;
+    } else {
+        *proposition = keep;
+    }
+    return current_strength;
+}
+
+/*f tweak_proposition
+ */
+static float tweak_proposition(c_mapping_point *mappings[], int num_mappings, t_proposition *proposition, float scale)
+{
+    float total_strength;
+    t_proposition delta_cp;
+
+    total_strength = strength_of_proposition(mappings, num_mappings, proposition);
+
+    delta_cp.translation[0] = 0.1;
+    delta_cp.translation[1] = 0;
+    delta_cp.scale = 0;
+    delta_cp.rotation = 0;
+
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp,  1.0*scale );
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp, -1.0*scale );
+
+    delta_cp.translation[0] = 0;
+    delta_cp.translation[1] = 0.1;
+
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp,  1.0*scale );
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp, -1.0*scale );
+
+    return total_strength;
+}
+
+/*f show_strength_in_mapping
+ */
+static void show_strength_in_mapping(c_mapping_point *mappings[], int num_mappings, t_proposition *proposition)
+{
+    float total_strength_in_belief, total_strength_in_max;
+
+    total_strength_in_belief = 0;
+    total_strength_in_max = 0;
+    for (int p=0; p<NUM_MAPPINGS; p++) {
+        if (mappings[p]) {
+            float s_in_b;
+            float s_in_m;
+            c_mapping *m;
+            s_in_b = mappings[p]->strength_in_belief(proposition);
+            total_strength_in_belief += s_in_b;
+            m = mappings[p]->find_strongest_belief(proposition, &s_in_m);
+            if (m) {
+                char buf[256];
+                m->repr(buf, sizeof(buf));
+                fprintf(stderr, "%f %f %s\n", s_in_b, s_in_m, buf);
+                total_strength_in_max += s_in_m;
+            }
+        }
+    }
+    fprintf(stderr,"Strength %8.4f / %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n\n",
+            total_strength_in_belief, total_strength_in_max,
+            proposition->translation[0], proposition->translation[1], 180/PI*proposition->rotation, proposition->scale);
+}
+
 /*f find_best_mapping
  */
 static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_proposition *best_proposition)
@@ -285,7 +426,7 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
     /*b Find best mapping to start with
      */
     best_mapping_strength = 0;
-    for (int p=0; p<NUM_MAPPINGS; p++) {
+    for (int p=0; p<num_mappings; p++) {
         if (mappings[p]) {
             float strength;
             c_mapping *m = mappings[p]->find_strongest_belief(NULL, &strength);
@@ -302,7 +443,7 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
      */
     cp = best_mapping->proposition;
     total_strength = 0;
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<0; i++) {
         t_proposition np;
         float np_dx, np_dy;
         np.translation[0] = 0;
@@ -321,14 +462,20 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
                 m = mappings[p]->find_strongest_belief(&cp, &s_in_m);
                 if (m) {
                     float s;
-                    s = s_in_m;
+                    /* s_in_m gave 
+                       Strength 111.8511: Translation (  333.04, -180.99) rotation  23.75 scale 0.9963
+                       s_in_b gave
+                       Strength 560.7759: Translation (  331.71, -178.53) rotation  23.70 scale 0.9937
+                       Wanted both to be about -4 more in the y
+                    */
+                    s = s_in_b;
                     np.translation[0] += s*m->proposition.translation[0];
                     np.translation[1] += s*m->proposition.translation[1];
                     np.scale     += s*m->proposition.scale;
                     np_dx        += s*cos(m->proposition.rotation);
                     np_dy        += s*sin(m->proposition.rotation);
                     total_strength += s;
-                    if (0) {
+                    if (1) {
                         char buf[256];
                         m->repr(buf, sizeof(buf));
                         fprintf(stderr, "%f %f %s\n", s_in_b, s_in_m, buf);
@@ -336,12 +483,34 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
                 }
             }
         }
+        if (1) {
+            fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n\n",
+                    total_strength, cp.translation[0], cp.translation[1], 180/PI*cp.rotation, cp.scale);
+        }
         if (total_strength==0) return 0;
         cp.translation[0] = np.translation[0]/total_strength;
         cp.translation[1] = np.translation[1]/total_strength;
         cp.scale     = np.scale/total_strength;
         cp.rotation  = atan2(np_dy, np_dx);
     }
+
+    for (int i=0; i<30; i++) {
+        float last_strength = total_strength;
+        total_strength = tweak_proposition(mappings, num_mappings, &cp, 10.0);
+        if (total_strength<=last_strength) break;
+    }
+    for (int i=0; i<30; i++) {
+        float last_strength = total_strength;
+        total_strength = tweak_proposition(mappings, num_mappings, &cp, 1.0);
+        if (total_strength<=last_strength) break;
+    }
+    for (int i=0; i<30; i++) {
+        float last_strength = total_strength;
+        total_strength = tweak_proposition(mappings, num_mappings, &cp, 0.1);
+        if (total_strength<=last_strength) break;
+    }
+    show_strength_in_mapping(mappings, num_mappings, &cp);
+
     *best_proposition = cp;
     return total_strength;
 
@@ -677,6 +846,7 @@ int main(int argc,char *argv[])
                     src_l = sqrt(src_dx*src_dx + src_dy*src_dy);
 
                     scale = tgt_l / src_l;
+
                     rotation = atan2(tgt_dy, tgt_dx) - atan2(src_dy, src_dx);
                     rotation = (rotation<-PI) ? (rotation+2*PI) : rotation;
                     rotation = (rotation>PI) ? (rotation-2*PI) : rotation;
@@ -718,6 +888,12 @@ int main(int argc,char *argv[])
                         sin_rot = sin(rotation);
                         translation_x = pv->x - scale*(cos_rot*mappings[p]->coords[0] - sin_rot*mappings[p]->coords[1]);
                         translation_y = pv->y - scale*(cos_rot*mappings[p]->coords[1] + sin_rot*mappings[p]->coords[0]);
+                        /* following is redundant, as expected
+                        translation_x += pmpv->pv.x - scale*(cos_rot*pm->coords[0] - sin_rot*pm->coords[1]);
+                        translation_y += pmpv->pv.y - scale*(cos_rot*pm->coords[1] + sin_rot*pm->coords[0]);
+                        translation_x /= 2;
+                        translation_y /= 2;
+                        */
 
                         t_proposition proposition;
                         proposition.translation[0] = translation_x;
@@ -725,8 +901,8 @@ int main(int argc,char *argv[])
                         proposition.rotation = rotation;
                         proposition.scale = scale;
                         float strength;
-                        strength = pv->value*pmpv->pv.value;
-                        mappings[p]->add_mapping( new c_mapping(mappings[p], pv, &proposition, strength ) );
+                        strength = 100*pv->value*pmpv->pv.value;
+                        mappings[p]->add_mapping( new c_mapping(mappings[p], pm, pv, &(pmpv->pv), &proposition, strength ) );
                     }
                 }
             }
@@ -772,7 +948,7 @@ int main(int argc,char *argv[])
         fprintf(stderr,"********************************************************************************\n");
     }
 
-    for (int i=0; i<40; i++) {
+    for (int i=0; i<4; i++) {
         t_proposition best_proposition;
         float strength;
         strength = find_best_mapping(mappings, NUM_MAPPINGS, &best_proposition);

@@ -25,7 +25,7 @@ batch: $(BATCH_OBJS)
 	$(LINK) $(BATCH_OBJS) $(LINKFLAGS) -o batch
 
 batch_test: batch
-	./batch -i images/IMG_1900.JPG -i images/IMG_1901.JPG
+	./batch -i images/IMG_1900.JPG -i images/IMG_1902.JPG
 
 blah2: prog
 	./prog -n 12 -i images/IMG_1854.JPG -i images/IMG_1855.JPG \

@@ -123,7 +123,7 @@ float c_mapping::map_strength(t_proposition *proposition)
     dy = tp->translation[1] - proposition->translation[1];
     translation_dist = sqrt(dx*dx + dy*dy);
     strength *= DIST_FACTOR / (DIST_FACTOR + translation_dist);
-    strength *= cos(0.25*2*PI/360 * (tp->rotation - proposition->rotation));
+    strength *= cos(0.25 * (tp->rotation - proposition->rotation));
     return strength;
 }
 
@@ -138,15 +138,15 @@ float c_mapping::position_map_strength(t_proposition *proposition)
     float dx, dy, dist;
     dsrc_x = this->src_pt->coords[0];
     dsrc_y = this->src_pt->coords[1];
-    cosang = -cos(-2*PI/360*proposition->rotation);
-    sinang = -sin(-2*PI/360*proposition->rotation);
+    cosang = -cos(-proposition->rotation);
+    sinang = -sin(-proposition->rotation);
     dtgt_x = proposition->translation[0] + proposition->scale*(cosang*dsrc_x - sinang*dsrc_y);
     dtgt_y = proposition->translation[1] + proposition->scale*(cosang*dsrc_y + sinang*dsrc_x);
     dx = dtgt_x - this->tgt_pv.x;
     dy = dtgt_y - this->tgt_pv.y;
     dist = sqrt(dx*dx+dy*dy);
     strength = this->strength * (4.0/(4.0+dist));
-    strength *= cos(0.25*2*PI/360*(this->proposition.rotation - proposition->rotation));
+    strength *= cos(0.25*(this->proposition.rotation - proposition->rotation));
     return strength;
 }
 
@@ -161,7 +161,7 @@ void c_mapping::repr(char *buffer, int buf_size)
              (int) this->tgt_pv.y,
              this->proposition.translation[0],
              this->proposition.translation[1],
-             this->proposition.rotation,
+             360/2/PI*this->proposition.rotation,
              this->proposition.scale,
              this->strength);
     buffer[buf_size-1] = 0;
@@ -173,7 +173,7 @@ c_pv_match::c_pv_match(t_point_value *pv)
 {
     this->next_in_list = NULL;
     this->pv = *pv;
-    this->rotation = 360/(2*PI)*atan2(pv->vec_y, pv->vec_x);
+    this->rotation = atan2(pv->vec_y, pv->vec_x);
 }
 
 /*f c_mapping_point::c_mapping_point
@@ -317,8 +317,8 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
                     np.translation[0] += s*m->proposition.translation[0];
                     np.translation[1] += s*m->proposition.translation[1];
                     np.scale     += s*m->proposition.scale;
-                    np_dx        += s*cos(2*PI/360*m->proposition.rotation);
-                    np_dy        += s*sin(2*PI/360*m->proposition.rotation);
+                    np_dx        += s*cos(m->proposition.rotation);
+                    np_dy        += s*sin(m->proposition.rotation);
                     total_strength += s;
                     if (0) {
                         char buf[256];
@@ -332,7 +332,7 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
         cp.translation[0] = np.translation[0]/total_strength;
         cp.translation[1] = np.translation[1]/total_strength;
         cp.scale     = np.scale/total_strength;
-        cp.rotation  = 360/2/PI*atan2(np_dy, np_dx);
+        cp.rotation  = atan2(np_dy, np_dx);
     }
     *best_proposition = cp;
     return total_strength;
@@ -640,7 +640,7 @@ int main(int argc,char *argv[])
             t_point_value *pv;
             float fft_rotation;
             pv = &(ec.points[i]);
-            fft_rotation = 360/2/PI*atan2(pv->vec_y,pv->vec_x);
+            fft_rotation = atan2(pv->vec_y,pv->vec_x);
             mappings[p]->add_match(pv);
 
             for (int pp=0; pp<p; pp++) {
@@ -652,7 +652,7 @@ int main(int argc,char *argv[])
                     float scale, rotation;
                     float cos_rot_diff;
 
-                    cos_rot_diff = cos((fft_rotation - pmpv->rotation)*2*PI/360);
+                    cos_rot_diff = cos(fft_rotation - pmpv->rotation);
                     if (cos_rot_diff<0.90)
                         continue;
 
@@ -665,9 +665,9 @@ int main(int argc,char *argv[])
                     src_l = sqrt(src_dx*src_dx + src_dy*src_dy);
 
                     scale = tgt_l / src_l;
-                    rotation = 180 - 360/2/PI*(atan2(tgt_dy, tgt_dx) - atan2(src_dy, src_dx));
-                    rotation = (rotation<0) ? (rotation+360) : rotation;
-                    rotation = (rotation>=360) ? (rotation-360) : rotation;
+                    rotation = PI - (atan2(tgt_dy, tgt_dx) - atan2(src_dy, src_dx));
+                    rotation = (rotation<0) ? (rotation+2*PI) : rotation;
+                    rotation = (rotation>=2*PI) ? (rotation-2*PI) : rotation;
 
                     /* There is a mapping src -> tgt that is tgt = scale*rotation*src + translation
                        Hence (m.tgt - pm.tgt) = scale * rotation * (m.src-pm.src)
@@ -681,7 +681,7 @@ int main(int argc,char *argv[])
                        Note that if two angles are approximately equal, then cos(diff) is near 1.0
                        angdiff should be about rotation
                     */
-                    cos_rot_diff = cos((fft_rotation - rotation)*2*PI/360);
+                    cos_rot_diff = cos(fft_rotation - rotation);
                     if ((cos_rot_diff>0.90) && (scale>0.95) && (scale<1.05)) {
                         float cos_rot, sin_rot;
                         float translation_x, translation_y;
@@ -693,7 +693,7 @@ int main(int argc,char *argv[])
                             fprintf(stderr,"   src_dxy (%f,%f) tgt_dxy (%f,%f) src_l %f tgt_l %f\n",
                                     src_dx, src_dy, tgt_dx, tgt_dy, src_l, tgt_l );
                             fprintf(stderr,"   scale %f rotation %f fft_rotation %f pm_fft_rotation %f\n",
-                                    scale, rotation, fft_rotation, pmpv->rotation );
+                                    scale, 360/2/PI*rotation, 360/2/PI*fft_rotation, 360/2/PI*pmpv->rotation );
                             fprintf(stderr,"   cos_rot_diff %f\n",
                                     cos_rot_diff );
                         }
@@ -702,8 +702,8 @@ int main(int argc,char *argv[])
                           tgt_pt = scale*rotation*src_pt + translation
                           Hence translation = tgt_pt - scale*rotation*src_pt
                         */
-                        cos_rot = -cos((-rotation)*2*PI/360);
-                        sin_rot = -sin((-rotation)*2*PI/360);
+                        cos_rot = -cos(-rotation);
+                        sin_rot = -sin(-rotation);
                         translation_x = pv->x - scale*(cos_rot*mappings[p]->coords[0] - sin_rot*mappings[p]->coords[1]);
                         translation_y = pv->y - scale*(cos_rot*mappings[p]->coords[1] + sin_rot*mappings[p]->coords[0]);
 
@@ -766,7 +766,7 @@ int main(int argc,char *argv[])
         fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
                 strength,
                 best_proposition.translation[0], best_proposition.translation[1],
-                best_proposition.rotation, best_proposition.scale );
+                360/2/PI*best_proposition.rotation, best_proposition.scale );
         diminish_mappings_by_proposition(mappings, NUM_MAPPINGS, &best_proposition);
     }
 

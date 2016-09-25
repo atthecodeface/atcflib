@@ -57,4 +57,5 @@ void main(){
     diff = (diff<0)?0:diff;
     color.r = v.x*diff;
     color.g = v.y*diff;
+    //color.b = rotation/8.0;
 }

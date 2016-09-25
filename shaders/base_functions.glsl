@@ -283,7 +283,7 @@ vec2 flt_angle_cs(in float a)
     if ((octant&4)!=0) { as=-as; ac=-ac; }
     cs = vec2(ac, as);
     if ((octant&1)!=0) { cs = vec2(cs.y,cs.x); }
-    if ((octant&2)!=0) { cs = vec2(cs.y,-cs.x); }
+    if ((octant&2)!=0) { cs = vec2(-cs.y,cs.x); }
 
     return cs;
 }

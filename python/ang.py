@@ -2,6 +2,7 @@
 import math
 
 PI = 3.14159265
+
 def fastang(ang):
     cs = math.cos(2*PI/360*ang)
     sn = math.sin(2*PI/360*ang)

@@ -27,15 +27,28 @@ Example
 //#define NUM_MAPPINGS 5
 //#define MAX_POINTS_PER_MAPPING 10
 
+// Want to check point 2 map 0 and point 1 map 0 and why that does not seem to count
+//#define NUM_MAPPINGS 3
+//#define MAX_POINTS_PER_MAPPING 3
+
 // a, b are -PI to PI.
 // a-b is -2*PI, -PI, 0, PI, to 2*PI
 // Want       1,   0, 1,  0,   1
 // cos(a-b) is 1, -1, 1,  -1,  1
 // 1+cos(a-b) is 2, 0, 2,  0,  2
 #define ROTATION_DIFF_STRENGTH(a,b) ( (1+cos((a)-(b))) / 2 )
-#define FFT_ROTATION(dy,dx) (atan2((dy),-(dx)))
+//#define FFT_ROTATION(dy,dx) (atan2(-(dy),(dx)))
+//#define FFT_ROTATION(dy,dx) (atan2(-(dy),(dx)))
+//#define FFT_ROTATION(dy,dx) (atan2(dy,-dx))
+// after fixing base functions, try:
+#define FFT_ROTATION(dy,dx) (-atan2(dy,dx))
+
+// DIST_FACTOR used to be 2 or 4
+//#define DIST_FACTOR (10.0)
+#define DIST_FACTOR (2.0)
 
 #define PI 3.1415926538
+#define DEG(a) (180/PI*(a))
 
 /*a Types
  */
@@ -130,7 +143,6 @@ c_mapping::c_mapping(class c_mapping_point *src_pt, class c_mapping_point *src_o
   how well does a proposition match this mapping's proposition?
   Return 0 for poor, 1 for good, sliding scale
  */
-#define DIST_FACTOR (25.0)
 float c_mapping::map_strength(t_proposition *proposition)
 {
     float strength;
@@ -173,7 +185,7 @@ float c_mapping::position_map_strength(t_proposition *proposition)
     dx = tgt_x - this->tgt_pv.x;
     dy = tgt_y - this->tgt_pv.y;
     dist = sqrt(dx*dx+dy*dy);
-    strength = this->strength * (2.0/(2.0+dist));
+    strength = this->strength * (DIST_FACTOR/(DIST_FACTOR+dist));
 
     if (0) { // Since many mappings may have the same 'other', it may have undue influence, so ignore it
         src_x = this->src_other_pt->coords[0];
@@ -205,7 +217,7 @@ void c_mapping::repr(char *buffer, int buf_size)
              (int) this->tgt_other_pv.y,
              this->proposition.translation[0],
              this->proposition.translation[1],
-             360/2/PI*this->proposition.rotation,
+             DEG(this->proposition.rotation),
              this->proposition.scale,
              this->strength);
     buffer[buf_size-1] = 0;
@@ -342,15 +354,11 @@ static float try_delta_proposition(c_mapping_point *mappings[], int num_mappings
     proposition->rotation       += scale*delta->rotation;
     proposition->scale          += scale*delta->scale;
     delta_strength = strength_of_proposition(mappings, num_mappings, proposition);
-    if (1) {
-        fprintf(stderr,"Strength %8.4f, %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
-                current_strength, delta_strength, proposition->translation[0], proposition->translation[1], 180/PI*proposition->rotation, proposition->scale);
-    }
     if (delta_strength>current_strength)
     {
         if (1) {
             fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
-                    current_strength, proposition->translation[0], proposition->translation[1], 180/PI*proposition->rotation, proposition->scale);
+                    current_strength, proposition->translation[0], proposition->translation[1], DEG(proposition->rotation), proposition->scale);
         }
         current_strength = delta_strength;
     } else {
@@ -368,10 +376,19 @@ static float tweak_proposition(c_mapping_point *mappings[], int num_mappings, t_
 
     total_strength = strength_of_proposition(mappings, num_mappings, proposition);
 
-    delta_cp.translation[0] = 0.1;
+    delta_cp.translation[0] = 0;
     delta_cp.translation[1] = 0;
     delta_cp.scale = 0;
     delta_cp.rotation = 0;
+
+    delta_cp.scale = 0.0;
+    delta_cp.rotation = DEG(0.1);
+
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp,  1.0*scale );
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp, -1.0*scale );
+
+    delta_cp.translation[0] = 0.1;
+    delta_cp.translation[1] = 0;
 
     total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp,  1.0*scale );
     total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp, -1.0*scale );
@@ -411,7 +428,7 @@ static void show_strength_in_mapping(c_mapping_point *mappings[], int num_mappin
     }
     fprintf(stderr,"Strength %8.4f / %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n\n",
             total_strength_in_belief, total_strength_in_max,
-            proposition->translation[0], proposition->translation[1], 180/PI*proposition->rotation, proposition->scale);
+            proposition->translation[0], proposition->translation[1], DEG(proposition->rotation), proposition->scale);
 }
 
 /*f find_best_mapping
@@ -426,6 +443,7 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
     /*b Find best mapping to start with
      */
     best_mapping_strength = 0;
+    best_mapping = NULL;
     for (int p=0; p<num_mappings; p++) {
         if (mappings[p]) {
             float strength;
@@ -439,11 +457,11 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
     }
     if (!best_mapping) return 0;
 
-    /*b Starting with best mapping, iterate to improve
+    /*b Starting with best mapping, iterate to improve - at least perturb from the max of a perfect match
      */
     cp = best_mapping->proposition;
     total_strength = 0;
-    for (int i=0; i<0; i++) {
+    for (int i=0; i<1; i++) {
         t_proposition np;
         float np_dx, np_dy;
         np.translation[0] = 0;
@@ -475,7 +493,7 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
                     np_dx        += s*cos(m->proposition.rotation);
                     np_dy        += s*sin(m->proposition.rotation);
                     total_strength += s;
-                    if (1) {
+                    if (0) {
                         char buf[256];
                         m->repr(buf, sizeof(buf));
                         fprintf(stderr, "%f %f %s\n", s_in_b, s_in_m, buf);
@@ -483,9 +501,9 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
                 }
             }
         }
-        if (1) {
+        if (0) {
             fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n\n",
-                    total_strength, cp.translation[0], cp.translation[1], 180/PI*cp.rotation, cp.scale);
+                    total_strength, cp.translation[0], cp.translation[1], DEG(cp.rotation), cp.scale);
         }
         if (total_strength==0) return 0;
         cp.translation[0] = np.translation[0]/total_strength;
@@ -646,7 +664,8 @@ c_main::create_window()
 */
 static struct option long_options[] =
 {
-    {"infile",   required_argument, 0, 'i'},
+    {"infile", required_argument, 0, 'i'},
+    {"orient", required_argument, 0, 'o'},
     {0, 0, 0, 0}
 };
 
@@ -663,6 +682,7 @@ typedef struct
 typedef struct
 {
     t_option_list images;
+    int orientation;
 } t_options;
 
 /*f option_add_to_list
@@ -690,6 +710,9 @@ static int get_options(int argc, char **argv, t_options *options)
         switch (c) {
         case 'i':
             option_add_to_list(&options->images, optarg);
+            break;
+        case 'o':
+            options->orientation = atoi(optarg);
             break;
         default:
             break;
@@ -730,8 +753,12 @@ int main(int argc,char *argv[])
     int init_filter_end;
     int match_filter_start;
     num_filters = 0;
-    filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
-    if (1) {
+    if ((options.orientation&1)==0) {
+        filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
+    } else {
+        filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0");
+    }
+    if ((options.orientation&2)==0) {
         filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
     } else {
         filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0");
@@ -806,6 +833,8 @@ int main(int argc,char *argv[])
     for (int p=0; p<NUM_MAPPINGS; p++)
     {
         int f;
+        mappings[p] = new c_mapping_point(pts[p*4].x-4,pts[p*4].y);
+
         fprintf(stderr,"Point %d (%d,%d)\n",p,pts[p*4].x-4,pts[p*4].y);
         f = match_filter_start;
         for (int i=0; i<4; i++) {
@@ -815,7 +844,6 @@ int main(int argc,char *argv[])
             f++;
         }
         filters[f]->execute(&ec);
-        mappings[p] = new c_mapping_point(pts[p*4].x-4,pts[p*4].y);
 
         for (int i=0; (i<ec.num_points) && (i<MAX_POINTS_PER_MAPPING); i++) {
             t_point_value *pv;
@@ -834,8 +862,21 @@ int main(int argc,char *argv[])
                     float cos_rot_diff;
 
                     cos_rot_diff = cos(fft_rotation - pmpv->rotation);
-                    if (cos_rot_diff<0.90)
+                    if (cos_rot_diff<0.90) {
+                        if (0) {
+                            fprintf(stderr, "Dropping (%d,%d)->(%d,%d) and (%d,%d)->(%d,%d) as rotations mismatch (%f, %f, %f)\n",
+                                    (int)mappings[p]->coords[0], (int)mappings[p]->coords[1], pv->x, pv->y,
+                                    (int)pm->coords[0], (int)pm->coords[1], pmpv->pv.x, pmpv->pv.y,
+                                    DEG(fft_rotation), DEG(pmpv->rotation), cos_rot_diff );
+                        }
                         continue;
+                    }
+                    if (0) {
+                        fprintf(stderr, "Not initially dropping (%d,%d)->(%d,%d) and (%d,%d)->(%d,%d) as rotations don't mismatch too much (%f, %f, %f)\n",
+                                (int)mappings[p]->coords[0], (int)mappings[p]->coords[1], pv->x, pv->y,
+                                (int)pm->coords[0], (int)pm->coords[1], pmpv->pv.x, pmpv->pv.y,
+                                DEG(fft_rotation), DEG(pmpv->rotation), cos_rot_diff );
+                    }
 
                     tgt_dx = pv->x - pmpv->pv.x;
                     tgt_dy = pv->y - pmpv->pv.y;
@@ -864,18 +905,33 @@ int main(int argc,char *argv[])
                        angdiff should be about rotation
                     */
                     cos_rot_diff = cos(fft_rotation - rotation);
-                    if ((cos_rot_diff>0.90) && (scale>0.95) && (scale<1.05)) {
+
+                    if (0) {
+                        fprintf(stderr,"Checking\n");
+                        fprintf(stderr," (%d,%d) -> (%d,%d)  and   (%d,%d) -> (%d,%d)\n",
+                                (int)mappings[p]->coords[0], (int)mappings[p]->coords[1], pv->x, pv->y,
+                                (int)pm->coords[0], (int)pm->coords[1], pmpv->pv.x, pmpv->pv.y);
+                        fprintf(stderr,"   src_dxy (%f,%f) tgt_dxy (%f,%f) src_l %f tgt_l %f\n",
+                                src_dx, src_dy, tgt_dx, tgt_dy, src_l, tgt_l );
+                        fprintf(stderr,"   scale %f rotation %f fft_rotation %f pm_fft_rotation %f\n",
+                                scale, DEG(rotation), DEG(fft_rotation), DEG(pmpv->rotation) );
+                        fprintf(stderr,"   cos_rot_diff %f\n",
+                                cos_rot_diff );
+                    }
+                    // Losing (cos_rot_diff>0.90) &&
+                    if ( (cos_rot_diff>0.90) && (scale>0.95) && (scale<1.05)) {
                         float cos_rot, sin_rot;
                         float translation_x, translation_y;
 
                         if (0) {
+                            fprintf(stderr,"Adding\n");
                             fprintf(stderr," (%d,%d) -> (%d,%d)  and   (%d,%d) -> (%d,%d)\n",
                                     (int)mappings[p]->coords[0], (int)mappings[p]->coords[1], pv->x, pv->y,
                                     (int)pm->coords[0], (int)pm->coords[1], pmpv->pv.x, pmpv->pv.y);
                             fprintf(stderr,"   src_dxy (%f,%f) tgt_dxy (%f,%f) src_l %f tgt_l %f\n",
                                     src_dx, src_dy, tgt_dx, tgt_dy, src_l, tgt_l );
                             fprintf(stderr,"   scale %f rotation %f fft_rotation %f pm_fft_rotation %f\n",
-                                    scale, 360/2/PI*rotation, 360/2/PI*fft_rotation, 360/2/PI*pmpv->rotation );
+                                    scale, DEG(rotation), DEG(fft_rotation), DEG(pmpv->rotation) );
                             fprintf(stderr,"   cos_rot_diff %f\n",
                                     cos_rot_diff );
                         }
@@ -915,7 +971,7 @@ int main(int argc,char *argv[])
         prop.translation[0]=168;
         prop.translation[1]=-126;
         prop.scale=1;
-        prop.rotation=-13.0/360*2*PI;
+        prop.rotation = DEG(-13.0);
         for (int p=0; p<NUM_MAPPINGS; p++) {
             fprintf(stderr,"Mapping point %p\n",mappings[p]);
             if (mappings[p]) {
@@ -948,15 +1004,16 @@ int main(int argc,char *argv[])
         fprintf(stderr,"********************************************************************************\n");
     }
 
-    for (int i=0; i<4; i++) {
+    for (int i=0; i<40; i++) {
         t_proposition best_proposition;
         float strength;
         strength = find_best_mapping(mappings, NUM_MAPPINGS, &best_proposition);
         if (strength==0) break;
-        fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
+        fprintf(stderr,"Best proposition %d\nStrength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
+                i,
                 strength,
                 best_proposition.translation[0], best_proposition.translation[1],
-                360/2/PI*best_proposition.rotation, best_proposition.scale );
+                DEG(best_proposition.rotation), best_proposition.scale );
         diminish_mappings_by_proposition(mappings, NUM_MAPPINGS, &best_proposition);
     }
 

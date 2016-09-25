@@ -3,6 +3,12 @@ import math
 
 PI = 3.14159265
 
+
+#a Useful functions
+def match_to_gimp(tx,ty,r,s):
+    r = 2*PI/360*r
+    return ( tx-512+s*(512*math.cos(r)-512*math.sin(r)), ty-512+s*(512*math.cos(r)+512*math.sin(r)))
+
 #a Classes
 #c c_mapping
 class c_mapping(object):

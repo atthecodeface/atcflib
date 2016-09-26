@@ -308,13 +308,13 @@ int c_filter_glsl::compile(void)
     }
     if (get_shader_uniform_ids())
         return 1;
-    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_src");
+    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_0");
     uniform_texture_base_id = -1;
     uniform_texture_base_x = -1;
     uniform_texture_base_y = -1;
     if (texture_base!=0) {
         gl_get_errors("before get uniforms");
-        uniform_texture_base_id = glGetUniformLocation(filter_pid, "texture_base");
+        uniform_texture_base_id = glGetUniformLocation(filter_pid, "texture_1");
         uniform_texture_base_x = glGetUniformLocation(filter_pid, "uv_base_x");
         uniform_texture_base_y = glGetUniformLocation(filter_pid, "uv_base_y");
         gl_get_errors("after get uniforms");
@@ -379,7 +379,7 @@ int c_filter_correlate::compile(void)
     }
     if (get_shader_uniform_ids())
         return 1;
-    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_src");
+    uniform_texture_src_id = glGetUniformLocation(filter_pid, "texture_0");
     uniform_out_xy_id      = glGetUniformLocation(filter_pid, "out_xy");
     uniform_out_size_id    = glGetUniformLocation(filter_pid, "out_size");
     uniform_src_xy_id      = glGetUniformLocation(filter_pid, "src_xy");

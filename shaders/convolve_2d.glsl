@@ -4,13 +4,13 @@
 
 out vec4 color;
 in vec2 uv_to_frag;
-uniform sampler2D texture_src;
+uniform sampler2D texture_0;
 
 void main()
 {
      vec4[NUM_WEIGHTS] colors;
      for (int i=0; i<NUM_WEIGHTS; i++) {
-          colors[i] = OFFSET_WEIGHTS[i].z * texture(texture_src, vec2(uv_to_frag.x+OFFSET_WEIGHTS[i].x, uv_to_frag.y+OFFSET_WEIGHTS[i].y));
+          colors[i] = OFFSET_WEIGHTS[i].z * texture(texture_0, vec2(uv_to_frag.x+OFFSET_WEIGHTS[i].x, uv_to_frag.y+OFFSET_WEIGHTS[i].y));
      }
      color = vec4(0.0,0.0,0.0,0.0);
      for (int i=0; i<NUM_WEIGHTS; i++) {

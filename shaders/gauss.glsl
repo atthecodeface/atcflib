@@ -5,12 +5,12 @@
 
 out vec4 color;
 in vec2 uv_to_frag;
-uniform sampler2D texture_src;
+uniform sampler2D texture_0;
 
 void main()
 {
      vec4[NUM_WEIGHTS] colors;
-     gauss(texture_src, uv_to_frag.xy, X_NOT_Y, WEIGHTS, colors);
+     gauss(texture_0, uv_to_frag.xy, X_NOT_Y, WEIGHTS, colors);
      color = vec4(0.0);
      for (int i=0; i<NUM_WEIGHTS; i++) {
           color += colors[i];

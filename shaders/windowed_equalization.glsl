@@ -7,7 +7,7 @@
 
 out vec4 color;
 in vec2 uv_to_frag;
-uniform sampler2D texture_src;
+uniform sampler2D texture_0;
 
 void main()
 {
@@ -16,14 +16,14 @@ void main()
      float mean, variance;
      for (i=0; i<NUM_OFFSETS; i++) {
           float I;
-          I = texture(texture_src, vec2(uv_to_frag.x + OFFSETS[i].x, uv_to_frag.y + OFFSETS[i].y)).r;
+          I = texture(texture_0, vec2(uv_to_frag.x + OFFSETS[i].x, uv_to_frag.y + OFFSETS[i].y)).r;
           sum += I;
           sum_sq += I*I;
      }
      mean = sum/NUM_OFFSETS;
      variance = sum*sum - sum_sq;
 
-     color   = texture(texture_src, uv_to_frag);
+     color   = texture(texture_0, uv_to_frag);
      color.r = abs(NUM_OFFSETS*(color.r - mean) / sqrt(variance) );
 }
 

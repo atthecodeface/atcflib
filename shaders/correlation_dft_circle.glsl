@@ -8,7 +8,7 @@
 out float color;
 
 in vec2 offset_xy;
-uniform sampler2D texture_src;
+uniform sampler2D texture_0;
 uniform vec2 src_xy;
 uniform float src_x_ofs;
 uniform float src_y_ofs;
@@ -23,7 +23,7 @@ void main()
      vec2[NUM_CIRCLE_STEPS*4] dft;
      float[NUM_CIRCLE_STEPS*4] dft_power;
      vec2[NUM_CIRCLE_STEPS*2] dft_normalized;
-     texture_circle(texture_src, (src_xy+vec2(src_x_ofs,src_y_ofs)+vec2(0.5f,0.5f))/1024.0, CORR_CIRCLE_RADIUS, circle_offsets_8, colors);
+     texture_circle(texture_0, (src_xy+vec2(src_x_ofs,src_y_ofs)+vec2(0.5f,0.5f))/1024.0, CORR_CIRCLE_RADIUS, circle_offsets_8, colors);
      dft32(colors, dft);
      dft32_normalize(dft, dft_power, dft_normalized);
      color = dft_power[ox&31];

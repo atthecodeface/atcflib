@@ -167,7 +167,7 @@ blah7: prog
 
 
 
-test: gauss harris windowed_equalization sobel
+test: gauss harris windowed_equalization sobel alu_constant alu_mult fft
 
 alu_constant: prog
 	./prog -n 3 \

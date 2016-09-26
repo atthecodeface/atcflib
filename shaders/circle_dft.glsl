@@ -6,7 +6,7 @@
 
 out vec4 color;
 in vec2 uv_to_frag;
-uniform sampler2D texture_src;
+uniform sampler2D texture_0;
 
 void main()
 {
@@ -15,7 +15,7 @@ void main()
      float[8] dft_power;
      float[8] dft_angle;
 
-     texture_circle(texture_src, uv_to_frag, DFT_CIRCLE_RADIUS, circle_offsets_8, colors);
+     texture_circle(texture_0, uv_to_frag, DFT_CIRCLE_RADIUS, circle_offsets_8, colors);
      dft32_8(colors, dft);
      dft8_power_angle(dft, dft_power, dft_angle);
 

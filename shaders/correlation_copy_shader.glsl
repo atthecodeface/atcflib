@@ -9,7 +9,7 @@
 out float color;
 
 in vec2 offset_xy;
-uniform sampler2D texture_src;
+uniform sampler2D texture_0;
 uniform vec2 src_xy;
 
 void main(){
@@ -17,6 +17,6 @@ void main(){
      texture_xy.x = (src_xy.x + offset_xy.x-16)/1024.0;
      texture_xy.y = (src_xy.y + offset_xy.y-16)/1024.0;
 
-     color = texture(texture_src, texture_xy).r;
+     color = texture(texture_0, texture_xy).r;
 }
 

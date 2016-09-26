@@ -1,7 +1,7 @@
 out float color;
 in vec2 uv_to_frag; // from vertex shader
-uniform sampler2D texture_src;
-uniform sampler2D texture_base;
+uniform sampler2D texture_0;
+uniform sampler2D texture_1;
 uniform float uv_base_x;
 uniform float uv_base_y;
 
@@ -13,8 +13,8 @@ void main(){
      vec2 src_xy;
      src_xy = vec2( (uv_base_x + 15.5)/1024.0,  (uv_base_y + 15.5)/1024.0);
      for (int i=0; i<NUM_OFFSETS_SQ; i++) {
-          diffs[i] = ( texture(texture_src,  vec2(uv_to_frag.x+offsets_2d_81[i].x, uv_to_frag.y+offsets_2d_81[i].y)).r -
-                       texture(texture_base, vec2(src_xy.x    +offsets_2d_81[i].x, src_xy.y    +offsets_2d_81[i].y)).r );
+          diffs[i] = ( texture(texture_0,  vec2(uv_to_frag.x+offsets_2d_81[i].x, uv_to_frag.y+offsets_2d_81[i].y)).r -
+                       texture(texture_1, vec2(src_xy.x    +offsets_2d_81[i].x, src_xy.y    +offsets_2d_81[i].y)).r );
      }
      sum = 0.0;
      for (int i=0; i<NUM_OFFSETS_SQ; i++) {

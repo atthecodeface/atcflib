@@ -1,12 +1,12 @@
 out float color;
 in vec2 uv_to_frag;
-uniform sampler2D texture_src;
+uniform sampler2D texture_0;
 
 #define NUM_WEIGHTS 12
 
 float intensity_at(in float x, in float y)
 {
-     vec3 t=texture(texture_src, vec2(x,y)).rgb;
+     vec3 t=texture(texture_0, vec2(x,y)).rgb;
      return sqrt(t.r*t.r + t.g*t.g + t.b*t.b)*0.8;
 }
 

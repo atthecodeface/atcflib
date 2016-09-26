@@ -545,7 +545,7 @@ c_filter_find4::c_filter_find4(t_len_string *filename, t_len_string *options_lis
     perimeter = 10;
     minimum = 0.0;
     max_elements = 320;
-    min_distance = 4.0;
+    min_distance = 2.5;
     if (sscanf(options_list->ptr,"%d,%d,%d,%d",&textures[0],&textures[1],&textures[2],&textures[3])!=4) {
         parse_error = "Failed to parse find texture options - need '(<src>*4)' texture number";
     }
@@ -582,41 +582,55 @@ int c_filter_find4::execute(t_exec_context *ec)
     elements_minimum = -1.0;
     n=0;
     points = (t_point_value *)malloc(sizeof(t_point_value)*max_elements);
+    // for points in cirlce radius 4, we have
+    // 0.0 0.780360637414 1.53073250366 2.22227927729 2.82842524837 3.32587660639 3.69551660682 3.92314021565 4.0
+    // or for 4 points, we have (dx,dy) = (0.00,4.00), (1.53,3.70), (2.83,2.83), (3.70,1.53)
+    // or as integer offsets : (0,4), (2,4), (3,3), (4,2)
+    // or for 8 points, we have (dx,dy) = (0.00,4.00), (0.78,0.392), (1.53,3.70), (2.22,3.33), (2.83,2.83), etc
+    // or as integer offsets: (0,4), (1,4), (2,4), (2,3), (3,3), (3,2), (4,2), (4,1)
+    static int offsets[32][2] = { {4,0}, {4,1}, {4,2}, {3,2}, {3,3}, {2,3}, {2,4}, {1,4},
+                                  {0,4}, {-1,4}, {-2,4}, {-2,3}, {-3,3}, {-3,2}, {-4,2}, {-4,1},
+                                  {-4,0}, {-4,-1}, {-4,-2}, {-3,-2}, {-3,-3}, {-2,-3}, {-2,-4}, {-1,-4},
+                                  {0,-4}, {1,-4}, {2,-4}, {2,-3}, {3,-3}, {3,-2}, {4,-2}, {4,-1} };
     for (int y=perimeter; y<h-perimeter; y++) {
         for (int x=perimeter; x<w-perimeter; x++) {
-            float value_xy, value;
-            float vec_xy[2];
-            value_xy = 0;
+            t_point_value best_pv_of_pt;
+            float value;
+            best_pv_of_pt.value = 0;
             for (int a=0; a<16; a++) {
                 float vecx, vecy;
-                float dx, dy;
+                int dx, dy;
                 vecx = 0;
                 vecy = 0;
-                dx = 4*cos(2*PI*a/16);
-                dy = 4*sin(2*PI*a/16);
+                dx = offsets[a*2][0];
+                dy = offsets[a*2][1];
                 for (int i=0; i<4; i++) {
                     int xi, yi;
-                    float tmp;
+                    int tmp;
                     xi = x + dx;
                     yi = y + dy;
-                    vecx += raw_img[i][(yi*w+xi)*4+0]; // is this +0 for red?
-                    vecy += raw_img[i][(yi*w+xi)*4+1];
+                    vecx += raw_img[i][(yi*w+xi)*4+0]; // From red
+                    vecy += raw_img[i][(yi*w+xi)*4+1]; // From green
                     tmp = dy;
                     dy = dx;
                     dx = -tmp;
                 }
                 value = vecx*vecx+vecy*vecy;
-                if (value>value_xy) {
-                    value_xy=value;
-                    vec_xy[0] = vecx;
-                    vec_xy[1] = vecy;
+                if (value <= elements_minimum) continue;
+                if (value>best_pv_of_pt.value) {
+                    best_pv_of_pt.value = value;
+                    best_pv_of_pt.vec_x = vecx;
+                    best_pv_of_pt.vec_y = vecy;
+                    best_pv_of_pt.extra[0] = a;
+                    best_pv_of_pt.extra[1] = dx;
+                    best_pv_of_pt.extra[2] = dy;
                 }
             }
             int i;
-            if (value_xy<=elements_minimum) continue;
-            if (value_xy<minimum) continue;
+            if (best_pv_of_pt.value <= elements_minimum) continue;
+            if (best_pv_of_pt.value < minimum) continue;
             for (i=0; i<n; i++) {
-                if (points[i].value<value_xy) break;
+                if (points[i].value < best_pv_of_pt.value) break;
             }
             if (n==max_elements) n--;
             if (i<n) {
@@ -625,9 +639,12 @@ int c_filter_find4::execute(t_exec_context *ec)
             n++;
             points[i].x=x;
             points[i].y=y;
-            points[i].value = value_xy;
-            points[i].vec_x = vec_xy[0];
-            points[i].vec_y = vec_xy[1];
+            points[i].value = best_pv_of_pt.value;
+            points[i].vec_x = best_pv_of_pt.vec_x;
+            points[i].vec_y = best_pv_of_pt.vec_y;
+            points[i].extra[0] = best_pv_of_pt.extra[0];
+            points[i].extra[1] = best_pv_of_pt.extra[1];
+            points[i].extra[2] = best_pv_of_pt.extra[2];
             if (n==max_elements) {
                 elements_minimum = points[n-1].value;
             }
@@ -654,10 +671,10 @@ int c_filter_find4::execute(t_exec_context *ec)
         }
     }
     for (int i=0; (i<n) && (i<20); i++) {
-        fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f)\n", i, points[i].x, points[i].y, points[i].value,
+        fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f) : %d %d %d\n", i, points[i].x, points[i].y, points[i].value,
                 -360*atan2(points[i].vec_y, points[i].vec_x)/2/PI,
-                points[i].vec_x,
-                points[i].vec_y );
+                points[i].vec_x, points[i].vec_y,
+                points[i].extra[0], points[i].extra[1], points[i].extra[2] );
     }
     if (ec->points) free(ec->points);
     ec->points = points;

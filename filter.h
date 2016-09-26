@@ -48,6 +48,7 @@ typedef struct
     float value;
     float vec_x;
     float vec_y;
+    int extra[4];
 } t_point_value;
 
 /*t t_exec_context

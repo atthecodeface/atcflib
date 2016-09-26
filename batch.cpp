@@ -49,6 +49,7 @@ Example
 
 #define PI 3.1415926538
 #define DEG(a) (180/PI*(a))
+#define RAD(a) ((a)*PI/180)
 
 /*a Types
  */
@@ -356,9 +357,9 @@ static float try_delta_proposition(c_mapping_point *mappings[], int num_mappings
     delta_strength = strength_of_proposition(mappings, num_mappings, proposition);
     if (delta_strength>current_strength)
     {
-        if (1) {
-            fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
-                    current_strength, proposition->translation[0], proposition->translation[1], DEG(proposition->rotation), proposition->scale);
+        if (0) {
+            fprintf(stderr,"Improved strength %8.4f from %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n",
+                    delta_strength, current_strength, proposition->translation[0], proposition->translation[1], DEG(proposition->rotation), proposition->scale);
         }
         current_strength = delta_strength;
     } else {
@@ -382,7 +383,13 @@ static float tweak_proposition(c_mapping_point *mappings[], int num_mappings, t_
     delta_cp.rotation = 0;
 
     delta_cp.scale = 0.0;
-    delta_cp.rotation = DEG(0.1);
+    delta_cp.rotation = RAD(0.3);
+
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp,  1.0*scale );
+    total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp, -1.0*scale );
+
+    delta_cp.scale = 0.0;
+    delta_cp.rotation = RAD(0.1);
 
     total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp,  1.0*scale );
     total_strength = try_delta_proposition(mappings, num_mappings, total_strength, proposition, &delta_cp, -1.0*scale );
@@ -501,10 +508,6 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
                 }
             }
         }
-        if (0) {
-            fprintf(stderr,"Strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n\n",
-                    total_strength, cp.translation[0], cp.translation[1], DEG(cp.rotation), cp.scale);
-        }
         if (total_strength==0) return 0;
         cp.translation[0] = np.translation[0]/total_strength;
         cp.translation[1] = np.translation[1]/total_strength;
@@ -512,6 +515,10 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
         cp.rotation  = atan2(np_dy, np_dx);
     }
 
+    if (1) {
+        fprintf(stderr,"Pre-tweak strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n\n",
+                total_strength, cp.translation[0], cp.translation[1], DEG(cp.rotation), cp.scale);
+    }
     for (int i=0; i<30; i++) {
         float last_strength = total_strength;
         total_strength = tweak_proposition(mappings, num_mappings, &cp, 10.0);
@@ -1004,7 +1011,7 @@ int main(int argc,char *argv[])
         fprintf(stderr,"********************************************************************************\n");
     }
 
-    for (int i=0; i<40; i++) {
+    for (int i=0; i<10; i++) {
         t_proposition best_proposition;
         float strength;
         strength = find_best_mapping(mappings, NUM_MAPPINGS, &best_proposition);
@@ -1014,6 +1021,10 @@ int main(int argc,char *argv[])
                 strength,
                 best_proposition.translation[0], best_proposition.translation[1],
                 DEG(best_proposition.rotation), best_proposition.scale );
+        fprintf(stderr,"Gimp: scale %8.4f; rotate about center %8.4f; offset (%8.2f,%8.2f)\n\n",
+                best_proposition.scale, DEG(best_proposition.rotation),
+                best_proposition.translation[0]-512 + 512*best_proposition.scale*(cos(best_proposition.rotation)-sin(best_proposition.rotation)),
+                best_proposition.translation[1]-512 + 512*best_proposition.scale*(cos(best_proposition.rotation)+sin(best_proposition.rotation)) );
         diminish_mappings_by_proposition(mappings, NUM_MAPPINGS, &best_proposition);
     }
 

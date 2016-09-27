@@ -262,7 +262,7 @@ int c_filter::uniform_set(const char *uniform, float value)
     glUseProgram(filter_pid);
     gl_id = glGetUniformLocation(filter_pid, uniform);
     GL_GET_ERRORS;
-    if (gl_id>0) {
+    if (gl_id>=0) {
         glUniform1f(gl_id, value);
         GL_GET_ERRORS;
         return 0;
@@ -287,10 +287,10 @@ c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list,
     set_filename("shaders/", ".glsl", filename, &filter_filename);
     set_key_values(uniforms, &uniform_key_values);
     filter_pid = 0;
-    uniform_texture_src_id = 0;
+    uniform_texture_src_id = -1;
     if (sscanf(options_list->ptr,"%d,%d,%d",&texture_base,&texture_src,&texture_dest)==3) {
     } else {
-        texture_base = 0;
+        texture_base = -1;
         if (sscanf(options_list->ptr,"%d,%d",&texture_src,&texture_dest)!=2) {
             parse_error = "Failed to parse GLSL texture options - need '(<src>,<dst>)' texture numbers";
         }
@@ -312,11 +312,11 @@ int c_filter_glsl::compile(void)
     uniform_texture_base_id = -1;
     uniform_texture_base_x = -1;
     uniform_texture_base_y = -1;
-    if (texture_base!=0) {
+    if (texture_base>=0) {
         gl_get_errors("before get uniforms");
         uniform_texture_base_id = glGetUniformLocation(filter_pid, "texture_1");
-        uniform_texture_base_x = glGetUniformLocation(filter_pid, "uv_base_x");
-        uniform_texture_base_y = glGetUniformLocation(filter_pid, "uv_base_y");
+        uniform_texture_base_x  = glGetUniformLocation(filter_pid, "uv_base_x");
+        uniform_texture_base_y  = glGetUniformLocation(filter_pid, "uv_base_y");
         gl_get_errors("after get uniforms");
     }
     return 0;

@@ -1,5 +1,5 @@
-// texture_0 is the main texture, indexed by uv_to_frag
-// texture_1 is indexed by uv_base_x and uv_base_y, which need to be converted to 0->1 from 0->1023
+// texture_1 is the main texture, indexed by uv_to_frag
+// texture_0 is indexed by uv_base_x and uv_base_y, which need to be converted to 0->1 from 0->1023
 
 out vec4 color;
 in vec2 uv_to_frag; // from vertex shader
@@ -21,8 +21,8 @@ void main(){
     base_xy = ivec2( int(uv_base_x), int(uv_base_y));
     src_xy = ivec2( int(1024.0*uv_to_frag.x), int(1024.0*uv_to_frag.y));
 
-    base_dft = texelFetch(texture_1, base_xy, 0);
-    src_dft  = texelFetch(texture_0, src_xy, 0);
+    base_dft = texelFetch(texture_0, base_xy, 0);
+    src_dft  = texelFetch(texture_1, src_xy, 0);
 
     float p0,a0, p1,a1, diff, adiff, rotation;
     diff = 1.0;

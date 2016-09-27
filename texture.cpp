@@ -119,6 +119,7 @@ texture_load(const char *image_filename, GLuint image_type)
     texture->hdr.height = surface->h;
 
     //Generate an OpenGL texture to return
+    texture->gl_id = 0;
     glGenTextures(1,&texture->gl_id);
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
 
@@ -175,6 +176,11 @@ texture_target_as_framebuffer(t_texture_ptr texture)
         glGenFramebuffers(1, &frame_buffer);
     }
     glBindFramebuffer( GL_FRAMEBUFFER, frame_buffer );
+
+    if (0) {
+        fprintf(stderr,"Binding texture %d as target frame buffer\n", texture->gl_id);
+    }
+
     glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->gl_id, 0);
 
     glViewport(0, 0, texture->hdr.width, texture->hdr.height);
@@ -248,6 +254,22 @@ texture_draw_init(void)
 void
 texture_attach_to_shader(t_texture_ptr texture, int shader, GLint t_u)
 {
+    if (!texture) {
+        fprintf(stderr,"NULL texture passed to texture_attach_to_shader\n" );
+        return;
+    }
+    if ((shader<0) || (shader>4)) {
+        fprintf(stderr,"Shader number '%d' out of range in call to texture_attach_to_shader\n", shader );
+        return;
+    }
+    if (t_u<0) {
+        fprintf(stderr,"Bad uniform '%d' out of range in call to texture_attach_to_shader\n", t_u );
+        return;
+    }
+    if (texture->gl_id==0) {
+        fprintf(stderr,"Texture did not have gl_id in texture_attach_to_shader\n");
+        return;
+    }
     GL_GET_ERRORS;
     glActiveTexture(GL_TEXTURE0+shader);
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);

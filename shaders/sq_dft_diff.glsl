@@ -19,7 +19,7 @@ void main(){
      vec2[8] dft_normalized;
      float[8]diffs;
      int i;
-     texture_circle(texture_0, uv_to_frag, CORR_CIRCLE_RADIUS, circle_offsets_8, colors);
+     texture_circle(texture_1, uv_to_frag, CORR_CIRCLE_RADIUS, circle_offsets_8, colors);
      dft32_8(colors, dft);
      dft32_normalize_8(dft, dft_power, dft_normalized);
      diffs[0] = 0;
@@ -27,7 +27,7 @@ void main(){
           float diff;
           float ang;
           vec4 src_dft;
-          src_dft = texture(texture_1, vec2(src_xy.x + i/1024.0, src_xy.y));
+          src_dft = texture(texture_0, vec2(src_xy.x + i/1024.0, src_xy.y));
           diff = dft_power[i]-src_dft.x;
           angle_diff[i] = flt_angle(dft_normalized[i]) - src_dft.y*8.0;
           diffs[i] = diff*diff;

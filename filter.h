@@ -67,11 +67,14 @@ class c_filter
 public:
     c_filter(void);
     ~c_filter();
+    int read_int_list(t_len_string *string, int *ints, int max_ints);
     void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);
     void set_key_values(t_len_string *ls, t_key_values *kvs);
     int uniform_set(const char *uniform, float value);
     void get_shader_defines(char **shader_defines);
     int  get_shader_uniform_ids(void);
+    int get_texture_uniform_ids(void);
+    int set_texture_uniforms(t_exec_context *ec);
     int  set_shader_uniforms(void);
     int  get_value_from_key_value(t_key_value_entry_ptr kve);
     virtual int compile(void) {return 0;};
@@ -79,6 +82,9 @@ public:
     const char *parse_error;
     t_key_values uniform_key_values;
     GLuint filter_pid;
+    int num_textures;
+    int textures[8];
+    GLint texture_gl_ids[8];
 };
 
 /*a External functions

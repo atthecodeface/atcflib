@@ -28,8 +28,8 @@ Example
 //#define MAX_POINTS_PER_MAPPING 10
 
 // Want to check point 2 map 0 and point 1 map 0 and why that does not seem to count
-//#define NUM_MAPPINGS 3
-//#define MAX_POINTS_PER_MAPPING 3
+#define NUM_MAPPINGS 3
+#define MAX_POINTS_PER_MAPPING 3
 
 // a, b are -PI to PI.
 // a-b is -2*PI, -PI, 0, PI, to 2*PI
@@ -782,6 +782,8 @@ int main(int argc,char *argv[])
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,8)");
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,9)");
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,10)");
+    filters[num_filters++] = filter_from_string("glsl:circle_dft_diff_combine(7,8,9,10,11)&-DDISCRETE_CIRCLE_OFS=discrete_circle_offsets_4_32&-DNUM_OFFSETS=32");
+    filters[num_filters++] = filter_from_string("save:test_d.png(11)");
     filters[num_filters++] = filter_from_string("fndf:a(7,8,9,10)");
 
     int failures=0;
@@ -850,7 +852,9 @@ int main(int argc,char *argv[])
             filters[f]->execute(&ec);
             f++;
         }
-        filters[f]->execute(&ec);
+        for (int i=match_filter_start+4; i<num_filters; i++) {
+            filters[i]->execute(&ec);
+        }
 
         for (int i=0; (i<ec.num_points) && (i<MAX_POINTS_PER_MAPPING); i++) {
             t_point_value *pv;

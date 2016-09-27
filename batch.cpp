@@ -28,8 +28,8 @@ Example
 //#define MAX_POINTS_PER_MAPPING 10
 
 // Want to check point 2 map 0 and point 1 map 0 and why that does not seem to count
-#define NUM_MAPPINGS 3
-#define MAX_POINTS_PER_MAPPING 3
+//#define NUM_MAPPINGS 3
+//#define MAX_POINTS_PER_MAPPING 3
 
 // a, b are -PI to PI.
 // a-b is -2*PI, -PI, 0, PI, to 2*PI
@@ -515,7 +515,7 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
         cp.rotation  = atan2(np_dy, np_dx);
     }
 
-    if (1) {
+    if (0) {
         fprintf(stderr,"Pre-tweak strength %8.4f: Translation (%8.2f,%8.2f) rotation %6.2f scale %6.4f\n\n",
                 total_strength, cp.translation[0], cp.translation[1], DEG(cp.rotation), cp.scale);
     }
@@ -534,7 +534,9 @@ static float find_best_mapping(c_mapping_point *mappings[], int num_mappings, t_
         total_strength = tweak_proposition(mappings, num_mappings, &cp, 0.1);
         if (total_strength<=last_strength) break;
     }
-    show_strength_in_mapping(mappings, num_mappings, &cp);
+    if (0) {
+        show_strength_in_mapping(mappings, num_mappings, &cp);
+    }
 
     *best_proposition = cp;
     return total_strength;
@@ -784,7 +786,8 @@ int main(int argc,char *argv[])
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,10)");
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff_combine(7,8,9,10,11)&-DDISCRETE_CIRCLE_OFS=discrete_circle_offsets_4_32&-DNUM_OFFSETS=32");
     //filters[num_filters++] = filter_from_string("save:test_e.png(10)");
-    filters[num_filters++] = filter_from_string("fndf:a(7,8,9,10)");
+    //filters[num_filters++] = filter_from_string("fndf:a(7,8,9,10)");
+    filters[num_filters++] = filter_from_string("find:a(11)&min_distance=2.5&max_elements=100&minimum=0.1");
 
     int failures=0;
     for (int i=0; i<num_filters; i++) {
@@ -831,14 +834,13 @@ int main(int argc,char *argv[])
         pts[i+2].x -= 4;
         pts[i+3].y -= 4;
     }
-    // transformation we are looking for (for 1900->1901)
-    // scale 1
-    // rotation 13+180
-    // translate +168, -126
+
     c_mapping_point *mappings[NUM_MAPPINGS];
+
     for (int p=0; p<NUM_MAPPINGS; p++) {
         mappings[p] = NULL;
     }
+
     for (int p=0; p<NUM_MAPPINGS; p++)
     {
         int f;
@@ -1015,7 +1017,7 @@ int main(int argc,char *argv[])
         fprintf(stderr,"********************************************************************************\n");
     }
 
-    for (int i=0; i<1; i++) {
+    for (int i=0; i<10; i++) {
         t_proposition best_proposition;
         float strength;
         strength = find_best_mapping(mappings, NUM_MAPPINGS, &best_proposition);

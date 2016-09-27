@@ -783,7 +783,7 @@ int main(int argc,char *argv[])
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,9)");
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,10)");
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff_combine(7,8,9,10,11)&-DDISCRETE_CIRCLE_OFS=discrete_circle_offsets_4_32&-DNUM_OFFSETS=32");
-    filters[num_filters++] = filter_from_string("save:test_d.png(11)");
+    //filters[num_filters++] = filter_from_string("save:test_e.png(10)");
     filters[num_filters++] = filter_from_string("fndf:a(7,8,9,10)");
 
     int failures=0;

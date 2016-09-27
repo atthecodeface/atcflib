@@ -333,6 +333,33 @@ fft5d: prog
 	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=409f&-Uuv_base_y=644f' \
 						--filter='save:test_d90.png(6)'
 
+fft6: prog
+	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1901_r25.JPG \
+						--filter='glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+	                    --filter='glsl:circle_dft(2,4)&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g' \
+	                    --filter='glsl:circle_dft(3,5)&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g' \
+	                    --filter='glsl:circle_dft_diff(4,5,6)&-Uuv_base_x=413f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=409f&-Uuv_base_y=652f' \
+	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=405f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=409f&-Uuv_base_y=644f' \
+	                    --filter='glsl:circle_dft_diff_combine(6,7,8,9,10)&-DDISCRETE_CIRCLE_OFS=discrete_circle_offsets_4_16&-DNUM_OFFSETS=16' \
+						--filter='find:a(10)&min_distance=2.5&max_elements=100&minimum=0.1' \
+
+fft7: prog
+	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1901_r25.JPG \
+						--filter='glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+						--filter='glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0' \
+	                    --filter='glsl:circle_dft(2,4)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g' \
+	                    --filter='glsl:circle_dft(3,5)&-DNUM_CIRCLE_STEPS=8&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g' \
+	                    --filter='glsl:circle_dft_diff(4,5,6)&-Uuv_base_x=413f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=409f&-Uuv_base_y=652f' \
+	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=405f&-Uuv_base_y=648f' \
+	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=409f&-Uuv_base_y=644f' \
+	                    --filter='glsl:circle_dft_diff_combine(6,7,8,9,10)&-DDISCRETE_CIRCLE_OFS=discrete_circle_offsets_4_32&-DNUM_OFFSETS=32' \
+						--filter='save:test_d25.png(10)' \
+						--filter='find:a(10)' \
+
 clean:
 	rm *.o prog
 

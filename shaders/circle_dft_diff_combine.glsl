@@ -45,6 +45,28 @@ const ivec2 discrete_circle_offsets_4_32[32] = ivec2[](
     ivec2(4,-1) 
     );
 
+const ivec2 discrete_circle_offsets_4_16[16] = ivec2[](
+    ivec2(4,0),
+    ivec2(4,2),
+    ivec2(3,3),
+    ivec2(2,4),
+
+    ivec2(0,4),
+    ivec2(-2,4),
+    ivec2(-3,3),
+    ivec2(-4,2),
+
+    ivec2(-4,0),
+    ivec2(-4,-2),
+    ivec2(-3,-3),
+    ivec2(-2,-4),
+
+    ivec2(0,-4),
+    ivec2(2,-4),
+    ivec2(3,-3),
+    ivec2(4,-2)
+    );
+
 void main(){
     ivec2 src_xy;
     ivec2 base_xy;
@@ -66,10 +88,10 @@ void main(){
         dxy = DISCRETE_CIRCLE_OFS[a];
         dx = dxy.x;
         dy = dxy.y;
-        src0_data  = texelFetch(texture_0, src_xy+ivec2(dx,dy),   0).rg;
-        src1_data  = texelFetch(texture_1, src_xy+ivec2(-dy,dx),  0).rg;
+        src0_data  = texelFetch(texture_0, src_xy+ivec2( dx, dy), 0).rg;
+        src1_data  = texelFetch(texture_1, src_xy+ivec2(-dy, dx), 0).rg;
         src2_data  = texelFetch(texture_2, src_xy+ivec2(-dx,-dy), 0).rg;
-        src3_data  = texelFetch(texture_3, src_xy+ivec2(dx,-dy),  0).rg;
+        src3_data  = texelFetch(texture_3, src_xy+ivec2( dy,-dx), 0).rg;
 
         dxy_sum = src0_data + src1_data + src2_data + src3_data;
         dxy_l2  = (dxy_sum.x*dxy_sum.x + dxy_sum.y*dxy_sum.y);
@@ -79,6 +101,7 @@ void main(){
             max_dxy_sum = dxy_sum;
         }
     }
-    color.rg = max_dxy_sum/4;
-    color.b = sqrt(max_dxy_l2);
+    color.r = sqrt(max_dxy_l2);
+    color.r = max_dxy_l2;
+    color.gb = max_dxy_sum/4;
 }

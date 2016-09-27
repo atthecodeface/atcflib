@@ -467,10 +467,35 @@ int c_filter_correlate::execute(t_exec_context *ec)
  */
 c_filter_find::c_filter_find(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
+    t_key_value_entry_ptr kve;
+
     perimeter = 10;
     minimum = 0.0;
     max_elements = 320;
     min_distance = 10.0;
+
+    set_key_values(uniforms, &uniform_key_values);
+
+    if ((kve=key_value_find(&uniform_key_values, "minimum"))!=NULL) {
+        if (sscanf(key_value_entry_value(kve), "%f", &minimum)!=1) {
+            parse_error = "Failed to parse find minimum value";
+        }
+    }
+    if ((kve=key_value_find(&uniform_key_values, "min_distance"))!=NULL) {
+        if (sscanf(key_value_entry_value(kve), "%f", &min_distance)!=1) {
+            parse_error = "Failed to parse find min distance";
+        }
+    }
+    if ((kve=key_value_find(&uniform_key_values, "max_elements"))!=NULL) {
+        if (sscanf(key_value_entry_value(kve), "%d", &max_elements)!=1) {
+            parse_error = "Failed to parse find max elements";
+        }
+    }
+    if ((kve=key_value_find(&uniform_key_values, "perimeter"))!=NULL) {
+        if (sscanf(key_value_entry_value(kve), "%d", &perimeter)!=1) {
+            parse_error = "Failed to parse find perimeter";
+        }
+    }
 
     num_textures = read_int_list(options_list, textures, sizeof(textures)/sizeof(int));
     if (num_textures!=1) {
@@ -490,26 +515,27 @@ int c_filter_find::compile(void)
 int c_filter_find::execute(t_exec_context *ec)
 {
     t_texture *texture;
+    const t_texture_header *texture_hdr;
     float *raw_img;
     float elements_minimum;
     int   n;
-    const void *raw_buffer;
-    const t_texture_header *texture_hdr;
+    int w, h;
 
     texture = ec->textures[textures[0]];
 
-    raw_buffer = texture_get_buffer(texture, GL_RED);
     texture_hdr = texture_header(texture);
-    raw_img = (float *)raw_buffer;
+    raw_img = (float *)texture_get_buffer(texture, GL_RGBA);
+    w = texture_hdr->width;
+    h = texture_hdr->height;
 
     elements_minimum = -1.0;
     n=0;
     points = (t_point_value *)malloc(sizeof(t_point_value)*max_elements);
-    for (int y=perimeter; y<texture_hdr->height-perimeter; y++) {
-        for (int x=perimeter; x<texture_hdr->width-perimeter; x++) {
+    for (int y=perimeter; y<h-perimeter; y++) {
+        for (int x=perimeter; x<w-perimeter; x++) {
             int i;
             float value_xy;
-            value_xy = raw_img[y*texture_hdr->width+x];
+            value_xy = raw_img[(y*w+x)*4+0];
             if (value_xy<=elements_minimum) continue;
             if (value_xy<minimum) continue;
             for (i=0; i<n; i++) {
@@ -523,6 +549,8 @@ int c_filter_find::execute(t_exec_context *ec)
             points[i].x=x;
             points[i].y=y;
             points[i].value = value_xy;
+            points[i].vec_x = raw_img[(y*w+x)*4+1];
+            points[i].vec_y = raw_img[(y*w+x)*4+2];
             if (n==max_elements) {
                 elements_minimum = points[n-1].value;
             }
@@ -549,7 +577,11 @@ int c_filter_find::execute(t_exec_context *ec)
         }
     }
     for (int i=0; (i<n) && (i<10); i++) {
-        fprintf(stderr,"%d: (%d,%d) = %f\n", i, points[i].x, points[i].y, points[i].value);
+        fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f)\n",
+                i, points[i].x, points[i].y, points[i].value,
+                180/PI*atan2(points[i].vec_y, points[i].vec_x),
+                points[i].vec_x, points[i].vec_y
+            );
     }
     if (ec->points) free(ec->points);
     ec->points = points;

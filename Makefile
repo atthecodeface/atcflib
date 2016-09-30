@@ -11,12 +11,50 @@ CPPFLAGS  = -g -Wall -I/usr/include/SDL2
 ifeq ($(OS),Darwin)
 GLM = ../glm
 LINK      = c++
-LINKFLAGS = -g -iframework /Library/Frameworks -framework SDL2 -framework SDL2_image -framework SDL2_ttf -framework OpenGL
-CPPFLAGS  = -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers
+LINKFLAGS = -g -iframework /Library/Frameworks -framework SDL2 -framework SDL2_image -framework SDL2_ttf -framework OpenGL -lpng16  -ljpeg -L/usr/local/lib 
+CPPFLAGS  = -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers -I/usr/local/include
 endif
 
-PROG_OBJS = main.o key_value.o texture.o shader.o filter.o
-BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o
+PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o
+BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o
+
+PYTHON := python2.6
+FRAMEWORK_PATH := /Library/Frameworks
+
+#CC := ${GCC} -dynamic -fno-strict-aliasing  -fno-common -fwrapv
+#CXX := ${GCC} -dynamic -fno-strict-aliasing -fno-common -fwrapv
+#LINK := ${GCC}
+#LINKASOBJ := ld -r -o
+#LINKASBIN := ${GPP} ${LINKFLAGS} -o
+#LINKDYNLIB := ${GPP} ${LINKFLAGS} -dynamiclib -o 
+#PYTHONLINKLIB := ${GPP} -L/opt/local/lib -bundle -undefined dynamic_lookup ${LOCAL_LINKFLAGS} -o
+#${PYTHON_LIB}: ${C_MODEL_OBJS}  $(TARGET_DIR)/derived_model_list.o ${SUPPORT_PYTHON_OBJS} ${ENGINE_OBJECTS}
+#	@echo "Building Python simulation library for GUI sims ${PYTHON_LIB}"
+#	${Q}${PYTHONLINKLIB} $@ $(call os_lib_hdr,$@) ${C_MODEL_OBJS} $(TARGET_DIR)/derived_model_list.o ${SUPPORT_PYTHON_OBJS} ${MODEL_LIBS} ${LOCAL_LINKLIBS} ${CYCLICITY_LIBS}
+
+PYTHON=python2.7
+FRAMEWORK_PATH := /Library/Frameworks
+PYTHON_INCLUDES := -I${FRAMEWORK_PATH}/Python.framework/Versions/Current/include/${PYTHON}
+
+ALL: python_wrapper.so
+
+python_wrapper.o: python_wrapper.cpp
+	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c python_wrapper.cpp
+
+python_wrapper.so: python_wrapper.o filter.o shader.o key_value.o
+	#c++ -L/opt/local/lib -bundle -undefined dynamic_lookup ${LOCAL_LINKFLAGS} -o
+	c++ -bundle -undefined dynamic_lookup -o python_wrapper.so filter.o shader.o key_value.o python_wrapper.o -lpng16 -L/usr/local/lib 
+
+.PHONY: test_quaternion
+test_quaternion: quaternion_test
+	./quaternion_test
+
+quaternion_test.o: quaternion.h quaternion_test.cpp
+
+quaternion.o: quaternion.h quaternion.cpp
+
+quaternion_test: quaternion_test.o quaternion.o
+	$(LINK) quaternion_test.o quaternion.o $(LINKFLAGS) -o quaternion_test
 
 prog: $(PROG_OBJS)
 	$(LINK) $(PROG_OBJS) $(LINKFLAGS) -o prog
@@ -26,6 +64,12 @@ batch: $(BATCH_OBJS)
 
 batch_test: batch
 	./batch -i images/IMG_1900.JPG -i images/IMG_1901.JPG --orient=0
+
+batch_test2: batch
+	./batch -i images/IMG_1900.JPG -i images/IMG_1902.JPG --orient=0
+
+batch_test3: batch
+	./batch -i images/IMG_1901.JPG -i images/IMG_1902.JPG --orient=0
 
 batch_test_10: batch
 	./batch -i images/IMG_1900.JPG -i images/IMG_1901_r10.JPG --orient=0
@@ -187,6 +231,10 @@ windowed_equalization: prog
 	                    --filter='glsl:windowed_equalization(1,2)&-DNUM_OFFSETS=81&-DOFFSETS=offsets_2d_81' \
 						--filter='save:test_a.png(2)'
 
+copy_img: prog
+	./prog -n 4 -i images/IMG_1854.JPG \
+						--filter='save:test_a.png(0)'
+
 sobel: prog
 	./prog -n 4 -i images/IMG_1854.JPG \
 					    --filter='glsl:yuv_from_rgb(0,1)' \
@@ -196,7 +244,7 @@ sobel: prog
 
 gauss: prog
 	./prog -n 4 -i images/IMG_1854.JPG \
-						--filter='glsl:yuv_from_rgb(0,1)' \
+						--filter='glsl:yuv_from_rgb(0,1)&-DSELECTED_VALUE=r' \
 	                    --filter='glsl:gauss(1,2)&-DX_NOT_Y=false&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 	                    --filter='glsl:gauss(2,3)&-DX_NOT_Y=true&-DNUM_WEIGHTS=9&-DWEIGHTS=gauss_offset_weights9' \
 						--filter='save:test_a.png(3)'
@@ -359,6 +407,12 @@ fft7: prog
 	                    --filter='glsl:circle_dft_diff_combine(6,7,8,9,10)&-DDISCRETE_CIRCLE_OFS=discrete_circle_offsets_4_32&-DNUM_OFFSETS=32' \
 						--filter='save:test_d25.png(10)' \
 						--filter='find:a(10)' \
+
+
+
+octagon1: batch
+	./batch -i images/IMG_2157.JPG -i images/IMG_2158.JPG --orient=0
+
 
 clean:
 	rm *.o prog

@@ -18,8 +18,11 @@ Example
 
 /*a Defines
  */
-#define NUM_MAPPINGS 30
+#define NUM_MAPPINGS 70
 #define MAX_POINTS_PER_MAPPING 30
+
+//#define NUM_MAPPINGS 30
+//#define MAX_POINTS_PER_MAPPING 30
 
 //#define NUM_MAPPINGS 10
 //#define MAX_POINTS_PER_MAPPING 10
@@ -764,13 +767,17 @@ int main(int argc,char *argv[])
     num_filters = 0;
     if ((options.orientation&1)==0) {
         filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
+        //filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_XSCALE=(0.5*3456.0/5184.0)&-DINTENSITY_XOFS=0.1&-DINTENSITY_YSCALE=0.5&-DINTENSITY_YOFS=-0.1");
     } else {
         filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0");
+        //filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(0,2)&-DINTENSITY_YSCALE=(0.5*3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=0.5&-DINTENSITY_YOFS=0.0");
     }
     if ((options.orientation&2)==0) {
         filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_YSCALE=1.0&-DINTENSITY_YOFS=0.0");
+        //filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_XSCALE=(0.5*3456.0/5184.0)&-DINTENSITY_XOFS=0.05&-DINTENSITY_YSCALE=0.5&-DINTENSITY_YOFS=0.0");
     } else {
         filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0");
+        //filters[num_filters++] = filter_from_string("glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(0.5*3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=0.5&-DINTENSITY_YOFS=0.0");
     }
     filters[num_filters++] = filter_from_string("glsl:harris(2,4)&-DNUM_OFFSETS=25&-DOFFSETS=offsets_2d_25");
     filters[num_filters++] = filter_from_string("find:a(4)");
@@ -778,6 +785,7 @@ int main(int argc,char *argv[])
     filters[num_filters++] = filter_from_string("glsl:circle_dft(3,6)&-DDFT_CIRCLE_RADIUS=8&-DCIRCLE_COMPONENT=g");
     filters[num_filters++] = filter_from_string("save:test_a.png(2)");
     filters[num_filters++] = filter_from_string("save:test_b.png(3)");
+    filters[num_filters++] = filter_from_string("save:test_h.png(4)");
     init_filter_end = num_filters;
     match_filter_start = num_filters;
     filters[num_filters++] = filter_from_string("glsl:circle_dft_diff(5,6,7)");

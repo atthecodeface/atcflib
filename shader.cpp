@@ -4,9 +4,9 @@
  */
 #define GL_GLEXT_PROTOTYPES
 #define GLM_FORCE_RADIANS
-#include <SDL.h> 
-#include <SDL_opengl.h>
+#include <OpenGL/gl3.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "shader.h"
 
 /*a Types

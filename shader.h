@@ -23,6 +23,10 @@
 #else
 #define __INC_SHADER
 
+/*a Includes
+ */
+#include <OpenGL/gl3.h>
+
 /*a Defines
  */
 

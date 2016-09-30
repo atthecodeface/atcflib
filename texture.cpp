@@ -4,11 +4,11 @@
  */
 #define GL_GLEXT_PROTOTYPES
 #define GLM_FORCE_RADIANS
-#include <SDL.h> 
-#include <SDL_opengl.h>
-#include <SDL_image.h>
+#include <OpenGL/gl3.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "texture.h"
+#include "image_io.h"
 
 /*a Types
  */
@@ -41,12 +41,13 @@ texture_buffers(t_texture *texture)
 int
 texture_save(t_texture_ptr texture, const char *png_filename, int components, int conversion)
 {
-    SDL_Surface *image;
     unsigned char *image_pixels;
+    int width, height;
     int ret;
 
-    image = SDL_CreateRGBSurface(0, texture->hdr.width, texture->hdr.height,32,0,0,0,0);
-    image_pixels = (unsigned char*)image->pixels;
+    width = texture->hdr.width;
+    height = texture->hdr.height;
+    image_pixels = (unsigned char*)malloc(height*width*4*sizeof(unsigned char));
 
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -54,33 +55,33 @@ texture_save(t_texture_ptr texture, const char *png_filename, int components, in
     if (conversion==0) {
         float *raw_img = (float *)texture->raw_buffer;
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
-        for (int j=0; j<texture->hdr.height; j++){
-            for (int i=0; i<texture->hdr.width; i++){
-                int p_in = (j*texture->hdr.width+i)*4;
-                int p_out = (j*texture->hdr.width+i)*4;
-                image_pixels[p_out+0] = 255.9*raw_img[p_in+2];
+        for (int j=0; j<height; j++){
+            for (int i=0; i<width; i++){
+                int p_in = (j*width+i)*4;
+                int p_out = (j*width+i)*4;
+                image_pixels[p_out+0] = 255.9*raw_img[p_in+0];
                 image_pixels[p_out+1] = 255.9*raw_img[p_in+1];
-                image_pixels[p_out+2] = 255.9*raw_img[p_in+0];
-                image_pixels[p_out+3] = 255.9*raw_img[p_in+3];
+                image_pixels[p_out+2] = 255.9*raw_img[p_in+2];
+                image_pixels[p_out+3] = 255;//255.9*raw_img[p_in+3];
             }
         }
     } else {
         unsigned int*raw_img = (unsigned int *)texture->raw_buffer;
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texture->raw_buffer);
-        for (int j=0; j<texture->hdr.height; j++){
-            for (int i=0; i<texture->hdr.width; i++){
-                int p_in = (j*texture->hdr.width+i)*4+components;
-                int p_out = (j*texture->hdr.width+i)*4;
+        for (int j=0; j<height; j++){
+            for (int i=0; i<width; i++){
+                int p_in = (j*width+i)*4+components;
+                int p_out = (j*width+i)*4;
                 image_pixels[p_out+0] = (raw_img[p_in+0]>>0)&0xff; // B
                 image_pixels[p_out+1] = (raw_img[p_in+0]>>16)&0xff; // G
                 image_pixels[p_out+2] = (raw_img[p_in+0]>>24)&0xff; // R
-                image_pixels[p_out+3] = (raw_img[p_in+0]>>8)&0xff; // A
+                image_pixels[p_out+3] = 255;//(raw_img[p_in+0]>>8)&0xff; // A
             }
         }
     }
 
-    ret = IMG_SavePNG(image, png_filename);
-    free(image);
+    ret = image_write_rgba(png_filename, image_pixels, width, height);
+    free(image_pixels);
     return ret;
 }
 
@@ -89,34 +90,16 @@ texture_save(t_texture_ptr texture, const char *png_filename, int components, in
 t_texture_ptr 
 texture_load(const char *image_filename, GLuint image_type)
 {
-    SDL_Surface *surface, *image_surface;
-    SDL_PixelFormat sdl_pixel_format;
     t_texture *texture;
+    unsigned char *image_pixels;
 
     texture = (t_texture *)malloc(sizeof(t_texture));
 
-    fprintf(stderr,"Attempting image load from %s...\n",image_filename);
-
-    image_surface=IMG_Load(image_filename);
-    if (image_surface==NULL) {
-        fprintf(stderr, "Failure to load image\n%s\n", SDL_GetError());
+    image_pixels = image_read_rgba(image_filename, &texture->hdr.width, &texture->hdr.height);
+    if (!image_pixels) {
+        fprintf(stderr,"Failed to read image file '%s'\n", image_filename);
         return NULL;
     }
-
-    sdl_pixel_format.palette = NULL;
-    sdl_pixel_format.format = SDL_PIXELFORMAT_RGB888;
-    sdl_pixel_format.BitsPerPixel = 24;
-    sdl_pixel_format.BytesPerPixel = 8;
-    sdl_pixel_format.Rmask=0x0000ff;
-    sdl_pixel_format.Gmask=0x00ff00;
-    sdl_pixel_format.Bmask=0xff0000;
-    surface = SDL_ConvertSurface(image_surface, &sdl_pixel_format, 0 );
-    if (surface==NULL) {
-        fprintf(stderr, " Failure to convert image:\n%s\n", SDL_GetError());
-        return 0;
-    }
-    texture->hdr.width  = surface->w;
-    texture->hdr.height = surface->h;
 
     //Generate an OpenGL texture to return
     texture->gl_id = 0;
@@ -124,14 +107,15 @@ texture_load(const char *image_filename, GLuint image_type)
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
 
     //glPixelStorei(GL_UNPACK_ALIGNMENT,4);	
-    //glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,16/*surface->w*/,16/*surface->h*/,0,GL_RGB,GL_UNSIGNED_BYTE,surface->pixels);
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,surface->w,surface->h,0,GL_RGB,GL_UNSIGNED_BYTE,surface->pixels);
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,texture->hdr.width,texture->hdr.height,0,GL_RGBA,GL_UNSIGNED_BYTE,image_pixels);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-    SDL_FreeSurface(surface);
-    SDL_FreeSurface(image_surface);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+    free(image_pixels);
 
     texture_buffers(texture);
     return texture;

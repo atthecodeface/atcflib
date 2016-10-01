@@ -43,6 +43,32 @@ def alu_test(ops):
             save_as_png(tb[ts[-1]],save_filename)
             pass
     pass
+
+class c_filter(object):
+    filter_text = 'glsl:gauss(1,2)'
+    defines = [("X_NOT_Y","false"), ("NUM_WEIGHTS","9"), ("WEIGHTS","gauss_offset_weights9")]
+    def __init__(self):
+        self.f = python_wrapper.filter(filter=self.filter_text)
+        for d in self.defines:
+            self.f.define(d[0],d[1])
+            pass
+        self.f.compile()
+        pass
+    def execute(self,textures):
+        self.f.textures(textures)
+        self.f.execute()
+        pass
+    pass
+
+class c_gauss_filter_y(c_filter):
+    filter_text = 'glsl:gauss(1,2)'
+    defines = [("X_NOT_Y","false"), ("NUM_WEIGHTS","9"), ("WEIGHTS","gauss_offset_weights9")]
+
+class c_gauss_filter_x(c_filter):
+    filter_text = 'glsl:gauss(1,2)'
+    defines = [("X_NOT_Y","true"), ("NUM_WEIGHTS","9"), ("WEIGHTS","gauss_offset_weights9")]
+        
+
 alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
             ((2,2,1), "0.8", "test_constant_80.png"),
             ((0,1,2), "src_a*src_b", "test_constant_40.png"),
@@ -56,23 +82,12 @@ alu_test( [ ((2,2,0), "(x*y)",    "test_xy.png"),
 alu_test( [ ((2,2,0), "abs(sin(200*x*y)*sin(200*(1-x)*y))",    "test_sin_xy.png"),
             ] )
 
-b = python_wrapper.filter(filter='glsl:gauss(1,2)')
-b.define("X_NOT_Y","false")
-b.define("NUM_WEIGHTS","9")
-b.define("WEIGHTS","gauss_offset_weights9")
-b.compile()
-b.textures([tb[0],tb[1]])
-b.execute()
 
-b = python_wrapper.filter(filter='glsl:gauss(1,2)')
-b.define("X_NOT_Y","true")
-b.define("NUM_WEIGHTS","9")
-b.define("WEIGHTS","gauss_offset_weights9")
-b.compile()
-b.textures([tb[1],tb[2]])
-b.execute()
-
+gfx = c_gauss_filter_x()
+gfy = c_gauss_filter_y()
+gfx.execute((tb[0],tb[1]))
+gfy.execute((tb[1],tb[2]))
 save_as_png(tb[2],"test_gauss_sin_xy.png")
 
-alu_test( [ ((1,2,3),"30*abs(src_a-src_b)","test_gauss_sin_xy_diff.png"),
+alu_test( [ ((0,2,3),"30*abs(src_a-src_b)","test_gauss_sin_xy_diff.png"),
             ] )

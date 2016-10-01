@@ -88,6 +88,12 @@ key_value_find(t_key_values *kv, const char *key);
 extern void
 key_value_init(t_key_values *kv, size_t extra_room);
 
+/*f key_value_free
+ * Free data in a key values structure
+ */
+extern void
+key_value_free(t_key_values *kv);
+
 /*a Wrapper
  */
 #endif

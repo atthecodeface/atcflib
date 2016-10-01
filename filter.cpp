@@ -125,6 +125,17 @@ c_filter::c_filter(void)
     return;
 }
 
+/*f c_filter::free_filter
+ */
+void c_filter::free_filter(void)
+{
+    key_value_free(&option_key_values);
+    if (filter_pid!=0) {
+        shader_delete(filter_pid);
+        filter_pid = 0;
+    }
+}
+
 /*f c_filter::read_int_list
   requires string to not flow in to more digits
  */
@@ -392,6 +403,7 @@ int c_filter::uniform_set(const char *uniform, float value)
  */
 c_filter::~c_filter(void)
 {
+    this->free_filter();
     return;
 }
 
@@ -414,6 +426,7 @@ c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list,
  */
 c_filter_glsl::~c_filter_glsl()
 {
+    this->free_filter();
     return;
 }
 
@@ -475,6 +488,7 @@ c_filter_correlate::c_filter_correlate(t_len_string *filename, t_len_string *opt
  */
 c_filter_correlate::~c_filter_correlate()
 {
+    this->free_filter();
     return;
 }
 
@@ -571,6 +585,7 @@ c_filter_find::c_filter_find(t_len_string *filename, t_len_string *options_list,
  */
 c_filter_find::~c_filter_find()
 {
+    this->free_filter();
     return;
 }
 
@@ -679,6 +694,7 @@ c_filter_save::c_filter_save(t_len_string *filename, t_len_string *options_list,
  */
 c_filter_save::~c_filter_save()
 {
+    this->free_filter();
     return;
 }
 
@@ -726,6 +742,7 @@ c_filter_find4::c_filter_find4(t_len_string *filename, t_len_string *options_lis
  */
 c_filter_find4::~c_filter_find4()
 {
+    this->free_filter();
     return;
 }
 

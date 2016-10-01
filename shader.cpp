@@ -134,3 +134,13 @@ shader_load_and_link(GLuint program_id, const char *vertex_shader, const char *f
     return program_id;
 }
 
+
+/*f shader_delete
+ */
+void
+shader_delete(GLuint program_id)
+{
+    if (program_id!=0) {
+        glDeleteShader(program_id);
+    }
+}

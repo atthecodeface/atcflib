@@ -80,6 +80,7 @@ class c_filter
 public:
     c_filter(void);
     virtual ~c_filter();
+    void free_filter(void);
     int read_int_list(t_len_string *string, int *ints, int max_ints);
     int read_texture_int_list(t_len_string *string);
     void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);

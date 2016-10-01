@@ -43,6 +43,11 @@ shader_load(const char *shader_filename, GLenum shader_type, const char *shader_
 extern GLuint
 shader_load_and_link(GLuint program_id, const char *vertex_shader, const char *fragment_shader, const char *shader_defines);
 
+/*f shader_delete
+ */
+extern void
+shader_delete(GLuint program_id);
+
 /*a Wrapper
  */
 #endif

@@ -145,3 +145,13 @@ key_value_init(t_key_values *kv, size_t extra_room)
     kv->extra_room = extra_room;
 }
 
+/*f key_value_free
+ */
+void
+key_value_free(t_key_values *kv)
+{
+    while (kv->kv_head) {
+        key_value_remove(kv, kv->kv_head);
+    }
+}
+

@@ -4,8 +4,6 @@ Example
  */
 /*a Includes
  */
-#define GL_GLEXT_PROTOTYPES
-#define GLM_FORCE_RADIANS
 #include <SDL.h> 
 #include <SDL_opengl.h>
 #include <SDL_image.h>

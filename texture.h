@@ -23,6 +23,10 @@
 #else
 #define __INC_TEXTURE
 
+/*a Includes
+ */
+#include <OpenGL/gl3.h>
+
 /*a Defines
  */
 #define STR(x) #x
@@ -117,6 +121,11 @@ texture_load(const char *image_filename, GLuint image_type);
  */
 extern t_texture_ptr 
 texture_create(int width, int height);
+
+/*f texture_destroy
+ */
+extern void 
+texture_destroy(t_texture_ptr texture);
 
 /*a Wrapper
  */

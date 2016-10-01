@@ -2,8 +2,6 @@
  */
 /*a Includes
  */
-#define GL_GLEXT_PROTOTYPES
-#define GLM_FORCE_RADIANS
 #include <OpenGL/gl3.h> 
 #include <ctype.h>
 #include <stdio.h>

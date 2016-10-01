@@ -2,8 +2,6 @@
  */
 /*a Includes
  */
-#define GL_GLEXT_PROTOTYPES
-#define GLM_FORCE_RADIANS
 #include <OpenGL/gl3.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -132,6 +130,7 @@ texture_create(int width, int height)
     texture->hdr.width = width;
     texture->hdr.height = height;
 
+    texture->gl_id = 0;
     glGenTextures(1, &texture->gl_id);
     glBindTexture(GL_TEXTURE_2D, texture->gl_id);
 
@@ -345,4 +344,19 @@ texture_get_buffer_uint(t_texture_ptr texture, int components)
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glGetTexImage(GL_TEXTURE_2D, 0, a, GL_UNSIGNED_INT, texture->raw_buffer);
     return texture->raw_buffer;
+}
+
+/*f texture_destroy
+ */
+void
+texture_destroy(t_texture_ptr texture)
+{
+    if (texture->raw_buffer) {
+        free(texture->raw_buffer);
+        texture->raw_buffer = NULL;
+    }
+    if (texture->gl_id>0) {
+        glDeleteTextures(1, &texture->gl_id);
+        texture->gl_id = 0;
+    }
 }

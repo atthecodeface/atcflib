@@ -12,7 +12,7 @@ ifeq ($(OS),Darwin)
 GLM = ../glm
 LINK      = c++
 LINKFLAGS = -g -iframework /Library/Frameworks -framework SDL2 -framework SDL2_image -framework SDL2_ttf -framework OpenGL -lpng16  -ljpeg -L/usr/local/lib 
-CPPFLAGS  = -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers -I/usr/local/include
+CPPFLAGS  = -DGLM_FORCE_RADIANS -DGL_GLEXT_PROTOTYPES -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers -I/usr/local/include
 endif
 
 PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o
@@ -36,14 +36,15 @@ PYTHON=python2.7
 FRAMEWORK_PATH := /Library/Frameworks
 PYTHON_INCLUDES := -I${FRAMEWORK_PATH}/Python.framework/Versions/Current/include/${PYTHON}
 
-ALL: python_wrapper.so
+all: python_wrapper.so
 
-python_wrapper.o: python_wrapper.cpp
-	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c python_wrapper.cpp
+python_%.o: python_%.cpp
+	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@
 
-python_wrapper.so: python_wrapper.o filter.o shader.o key_value.o
+PY_OBJS := python_wrapper.o python_texture.o filter.o shader.o key_value.o texture.o image_io.o
+python_wrapper.so: ${PY_OBJS}
 	#c++ -L/opt/local/lib -bundle -undefined dynamic_lookup ${LOCAL_LINKFLAGS} -o
-	c++ -bundle -undefined dynamic_lookup -o python_wrapper.so filter.o shader.o key_value.o python_wrapper.o -lpng16 -L/usr/local/lib 
+	c++ -bundle -undefined dynamic_lookup -o python_wrapper.so ${PY_OBJS} -lpng16 -ljpeg -L/usr/local/lib 
 
 .PHONY: test_quaternion
 test_quaternion: quaternion_test

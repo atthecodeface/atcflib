@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+from OpenGL.GLUT import *
+from OpenGL.GL import *
+import python_wrapper
+
+def init_opengl():
+        glutInit(sys.argv)
+        glutInitDisplayMode(GLUT_3_2_CORE_PROFILE |GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
+        glutInitWindowSize(64,64)
+        glutCreateWindow("self.window_title")
+
+init_opengl()
+a = python_wrapper.texture(filename='images/IMG_2162.JPG')
+print a.width
+print a.height
+a.save("fred.png")
+
+print [1,2,3]

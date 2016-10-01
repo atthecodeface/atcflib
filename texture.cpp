@@ -15,9 +15,6 @@
 typedef struct t_texture
 {
     t_texture_header hdr;
-    GLuint gl_id;
-    GLuint format;
-
     void *raw_buffer;
 } t_texture;
 
@@ -47,7 +44,7 @@ texture_save(t_texture_ptr texture, const char *png_filename, int components, in
     height = texture->hdr.height;
     image_pixels = (unsigned char*)malloc(height*width*4*sizeof(unsigned char));
 
-    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    glBindTexture(GL_TEXTURE_2D, texture->hdr.gl_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
     if (conversion==0) {
@@ -100,9 +97,9 @@ texture_load(const char *image_filename, GLuint image_type)
     }
 
     //Generate an OpenGL texture to return
-    texture->gl_id = 0;
-    glGenTextures(1,&texture->gl_id);
-    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    texture->hdr.gl_id = 0;
+    glGenTextures(1,&texture->hdr.gl_id);
+    glBindTexture(GL_TEXTURE_2D, texture->hdr.gl_id);
 
     //glPixelStorei(GL_UNPACK_ALIGNMENT,4);	
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,texture->hdr.width,texture->hdr.height,0,GL_RGBA,GL_UNSIGNED_BYTE,image_pixels);
@@ -130,9 +127,9 @@ texture_create(int width, int height)
     texture->hdr.width = width;
     texture->hdr.height = height;
 
-    texture->gl_id = 0;
-    glGenTextures(1, &texture->gl_id);
-    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    texture->hdr.gl_id = 0;
+    glGenTextures(1, &texture->hdr.gl_id);
+    glBindTexture(GL_TEXTURE_2D, texture->hdr.gl_id);
 
     glTexImage2D(GL_TEXTURE_2D, 0,
                  GL_RGBA32F, width, height, 0, // Texture is RGB with this width and height
@@ -161,10 +158,10 @@ texture_target_as_framebuffer(t_texture_ptr texture)
     glBindFramebuffer( GL_FRAMEBUFFER, frame_buffer );
 
     if (0) {
-        fprintf(stderr,"Binding texture %d as target frame buffer\n", texture->gl_id);
+        fprintf(stderr,"Binding texture %d as target frame buffer\n", texture->hdr.gl_id);
     }
 
-    glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->gl_id, 0);
+    glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->hdr.gl_id, 0);
 
     glViewport(0, 0, texture->hdr.width, texture->hdr.height);
 
@@ -249,13 +246,13 @@ texture_attach_to_shader(t_texture_ptr texture, int shader, GLint t_u)
         fprintf(stderr,"Bad uniform '%d' out of range in call to texture_attach_to_shader\n", t_u );
         return;
     }
-    if (texture->gl_id==0) {
+    if (texture->hdr.gl_id==0) {
         fprintf(stderr,"Texture did not have gl_id in texture_attach_to_shader\n");
         return;
     }
     GL_GET_ERRORS;
     glActiveTexture(GL_TEXTURE0+shader);
-    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    glBindTexture(GL_TEXTURE_2D, texture->hdr.gl_id);
     glUniform1i(t_u, shader);
     GL_GET_ERRORS;
 }
@@ -326,7 +323,7 @@ texture_get_buffer(t_texture_ptr texture, int components)
     int a;
     a = GL_RGBA;
     if (components>=0) a=components;
-    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    glBindTexture(GL_TEXTURE_2D, texture->hdr.gl_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glGetTexImage(GL_TEXTURE_2D, 0, a, GL_FLOAT, texture->raw_buffer);
     return texture->raw_buffer;
@@ -340,7 +337,7 @@ texture_get_buffer_uint(t_texture_ptr texture, int components)
     int a;
     a = GL_RGBA;
     if (components>=0) a=components;
-    glBindTexture(GL_TEXTURE_2D, texture->gl_id);
+    glBindTexture(GL_TEXTURE_2D, texture->hdr.gl_id);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glGetTexImage(GL_TEXTURE_2D, 0, a, GL_UNSIGNED_INT, texture->raw_buffer);
     return texture->raw_buffer;
@@ -355,8 +352,8 @@ texture_destroy(t_texture_ptr texture)
         free(texture->raw_buffer);
         texture->raw_buffer = NULL;
     }
-    if (texture->gl_id>0) {
-        glDeleteTextures(1, &texture->gl_id);
-        texture->gl_id = 0;
+    if (texture->hdr.gl_id>0) {
+        glDeleteTextures(1, &texture->hdr.gl_id);
+        texture->hdr.gl_id = 0;
     }
 }

@@ -37,6 +37,7 @@ typedef struct t_key_value_entry *t_key_value_entry_ptr;
 typedef struct t_key_value_entry
 {
     t_key_value_entry_ptr next;
+    t_key_value_entry_ptr prev;
     char *key;
     char *value;
     void *data;
@@ -57,6 +58,11 @@ typedef struct
 
 /*a External functions
  */
+extern void
+key_value_set(t_key_values *kv, const char *key, const char *value);
+extern int
+key_value_delete(t_key_values *kv, const char *key);
+
 /*f key_value_parse
  * Parse a string and create a list of key_values from it
  * The string should be [&]<key>=<value>[&<key>=<value>]*

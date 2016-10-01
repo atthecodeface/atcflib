@@ -743,6 +743,7 @@ int main(int argc,char *argv[])
     c_filter *filters[256];
     t_options options;
     t_exec_context ec;
+    ec.use_ids = 1;
 
     m = new c_main();
     if (m->init()==0) {

@@ -14,6 +14,7 @@
  */
 #include <Python.h>
 #include <OpenGL/gl3.h>
+#include "python_filter.h"
 #include "python_texture.h"
 
 /*a Defines
@@ -43,6 +44,7 @@ int gl_get_errors(const char *msg)
 static PyMethodDef python_wrapper_module_methods[] =
 {
     {"texture", (PyCFunction)python_texture, METH_VARARGS|METH_KEYWORDS, "Create a new texture object."},
+    {"filter",  (PyCFunction)python_filter, METH_VARARGS|METH_KEYWORDS, "Create a new filter object."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
@@ -51,6 +53,8 @@ static PyMethodDef python_wrapper_module_methods[] =
 extern "C" void initpython_wrapper( void )
 {
     (void) Py_InitModule3("python_wrapper", python_wrapper_module_methods, "Python interface to wrapped thing" );
+    python_texture_init();
+    python_filter_init();
 }
 
 /*a Editor preferences and notes

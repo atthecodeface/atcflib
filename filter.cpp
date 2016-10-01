@@ -22,6 +22,7 @@ class c_filter_save : public c_filter
 {
 public:
     c_filter_save(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    ~c_filter_save();
     char *save_filename;
     virtual int execute(t_exec_context *ec);
 };
@@ -32,9 +33,9 @@ class c_filter_glsl : public c_filter
 {
 public:
     c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    ~c_filter_glsl();
     char *filter_filename;
     char *shader_defines;
-    int texture_dest;
 
     virtual int compile(void);
     virtual int execute(t_exec_context *ec);
@@ -46,9 +47,9 @@ class c_filter_correlate : public c_filter
 {
 public:
     c_filter_correlate(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    ~c_filter_correlate();
     char *filter_filename;
     char *shader_defines;
-    int texture_dest;
     GLint uniform_out_xy_id;
     GLint uniform_out_size_id;
     GLint uniform_src_xy_id;
@@ -75,6 +76,7 @@ class c_filter_find : public c_filter
 {
 public:
     c_filter_find(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    ~c_filter_find();
     int perimeter;
     float minimum;
     float min_distance;
@@ -92,6 +94,7 @@ class c_filter_find4 : public c_filter
 {
 public:
     c_filter_find4(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms);
+    ~c_filter_find4();
     int perimeter;
     float minimum;
     float min_distance;
@@ -111,10 +114,13 @@ c_filter::c_filter(void)
 {
     int i;
     parse_error = NULL;
-    key_value_init(&uniform_key_values, sizeof(t_filter_key_value_data));
+    key_value_init(&option_key_values, sizeof(t_filter_key_value_data));
     filter_pid = 0;
-    for (i=0; i<sizeof(textures)/sizeof(int); i++)
-        textures[i] = -1;
+    for (i=0; i<MAX_FILTER_TEXTURES; i++) {
+        textures[i].texture = NULL;
+        textures[i].sampler_id = -1;
+        textures[i].ec_id = -1;
+    }
     num_textures = 0;
     return;
 }
@@ -150,6 +156,21 @@ int c_filter::read_int_list(t_len_string *string, int *ints, int max_ints)
     return num_ints;
 }
 
+/*f c_filter::read_texture_int_list
+ */
+int c_filter::read_texture_int_list(t_len_string *string)
+{
+    int n;
+    int texture_ec_ids[MAX_FILTER_TEXTURES];
+
+    n = read_int_list(string, texture_ec_ids, sizeof(texture_ec_ids)/sizeof(int));
+    for (int i=0; i<n; i++) {
+        textures[i].ec_id = texture_ec_ids[i];
+        textures[i].texture = NULL;
+    }
+    return n;
+}
+
 /*f c_filter::set_filename
  */
 void c_filter::set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename)
@@ -158,6 +179,7 @@ void c_filter::set_filename(const char *dirname, const char *suffix, t_len_strin
     int buffer_length;
     buffer_length = filename->len+strlen("shaders/")+10;
     ptr = *filter_filename = (char *)malloc(buffer_length);
+    ptr[0] = 0;
     if (dirname) {
         ptr = strcpy( *filter_filename,  dirname);
     }
@@ -196,14 +218,14 @@ void c_filter::get_shader_defines(char **shader_defines)
     t_key_value_entry_ptr kve;
     (*shader_defines) = (char *)malloc(1024);
     (*shader_defines)[0] = 0;
-    kve = key_value_iter(&uniform_key_values, NULL);
+    kve = key_value_iter(&option_key_values, NULL);
     while (kve) {
         if (!strncmp("-D", kve->key, 2)) {
             sprintf((*shader_defines)+strlen((*shader_defines)),
                     "#define %s %s\n",
                     kve->key+2, kve->value);
         }
-        kve = key_value_iter(&uniform_key_values, kve);
+        kve = key_value_iter(&option_key_values, kve);
     }
 }
 
@@ -234,7 +256,7 @@ int c_filter::get_shader_uniform_ids(void)
     int failures;
     gl_get_errors("before get shader uniforms");
     failures = 0;
-    kve = key_value_iter(&uniform_key_values, NULL);
+    kve = key_value_iter(&option_key_values, NULL);
     while (kve) {
         if (!strncmp("-U", kve->key, 2)) {
             t_filter_key_value_data *kvd;
@@ -249,7 +271,7 @@ int c_filter::get_shader_uniform_ids(void)
                 failures++;
             }
         }
-        kve = key_value_iter(&uniform_key_values, kve);
+        kve = key_value_iter(&option_key_values, kve);
     }
     gl_get_errors("after get shader uniforms");
     return failures;
@@ -257,17 +279,17 @@ int c_filter::get_shader_uniform_ids(void)
 
 /*f c_filter::get_texture_uniform_ids
  */
-int c_filter::get_texture_uniform_ids(void)
+int c_filter::get_texture_uniform_ids(int num_dest)
 {
     int failures;
     gl_get_errors("before get texture uniforms");
     failures = 0;
-    for (int i=0; i<num_textures; i++) {
+    for (int i=0; i<num_textures-num_dest; i++) {
         char buffer[32];
         sprintf(buffer, "texture_%d", i);
-        texture_gl_ids[i] = glGetUniformLocation(filter_pid, buffer);
-        if (texture_gl_ids[i]<0) {
-            fprintf(stderr, "Failed to find uniform '%s' in shader\n", buffer);
+        textures[i].sampler_id = glGetUniformLocation(filter_pid, buffer);
+        if (textures[i].sampler_id<0) {
+            fprintf(stderr, "Failed to find sampler uniform '%s' in shader\n", buffer);
             failures++;
         }
     }
@@ -275,19 +297,47 @@ int c_filter::get_texture_uniform_ids(void)
     return failures;
 }
 
+/*f c_filter::bind_texture
+ */
+int c_filter::bind_texture(int n, t_texture_ptr texture)
+{
+    if ((n>=0) && (n<=MAX_FILTER_TEXTURES)) {
+        textures[n].texture = texture;
+        return 0;
+    }
+    return -1;
+}
+
+/*f c_filter::bind_texture
+ */
+t_texture_ptr c_filter::bound_texture(t_exec_context *ec, int n)
+{
+    t_texture_ptr texture;
+    if ((n<0) || (n>=num_textures))
+        return NULL;
+    texture = textures[n].texture;
+    if (ec) {
+        if (ec->use_ids) {
+            texture = ec->textures[textures[n].ec_id];
+        }
+    }
+    return texture;
+}
+
 /*f c_filter::set_texture_uniforms
  */
-int c_filter::set_texture_uniforms(t_exec_context *ec)
+int c_filter::set_texture_uniforms(t_exec_context *ec, int num_dest)
 {
     int failures;
     gl_get_errors("before set texture uniforms");
     failures = 0;
     for (int i=0; i<num_textures; i++) {
-        if (0) {
-            fprintf(stderr, "Texture %d buffer %d program uniform id %d\n", i, textures[i], texture_gl_ids[i]);
-        }
-        if (texture_gl_ids[i]>=0) {
-            texture_attach_to_shader(ec->textures[textures[i]], i, texture_gl_ids[i]);
+        if (textures[i].sampler_id>=0) {
+            t_texture_ptr texture;
+            texture = bound_texture(ec, i);
+            if (texture) {
+                texture_attach_to_shader(texture, i, textures[i].sampler_id);
+            }
         }
     }
     glActiveTexture(GL_TEXTURE0);
@@ -301,17 +351,21 @@ int c_filter::set_shader_uniforms(void)
 {
     t_key_value_entry_ptr kve;
     int failures;
+    gl_get_errors("before set shader uniforms");
     failures = 0;
-    kve = key_value_iter(&uniform_key_values, NULL);
+    kve = key_value_iter(&option_key_values, NULL);
     while (kve) {
-        t_filter_key_value_data *kvd;
-        kvd = key_value_entry_data(kve, t_filter_key_value_data);
-        if (kvd->gl_id>=0) {
-            glUniform1f(kvd->gl_id, kvd->value_float);
-            fprintf(stderr,"Set shader id %d to %f\n",kvd->gl_id, kvd->value_float); 
+        if (!strncmp("-U", kve->key, 2)) {
+            t_filter_key_value_data *kvd;
+            kvd = key_value_entry_data(kve, t_filter_key_value_data);
+            if (kvd->gl_id>=0) {
+                glUniform1f(kvd->gl_id, kvd->value_float);
+                fprintf(stderr,"Set shader id %s %d to %f\n",kve->key, kvd->gl_id, kvd->value_float); 
+            }
         }
-        kve = key_value_iter(&uniform_key_values, kve);
+        kve = key_value_iter(&option_key_values, kve);
     }
+    gl_get_errors("after set shader uniforms");
     return failures;
 }
 
@@ -348,16 +402,19 @@ c_filter::~c_filter(void)
 c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     set_filename("shaders/", ".glsl", filename, &filter_filename);
-    set_key_values(uniforms, &uniform_key_values);
+    set_key_values(uniforms, &option_key_values);
     filter_pid = 0;
-    num_textures = read_int_list(options_list, textures, sizeof(textures)/sizeof(int));
+    num_textures = read_texture_int_list(options_list);
     if (num_textures<2) {
         parse_error = "Failed to parse GLSL texture options - need at least '(<src>+,<dst>)' texture numbers";
     }
-    if (num_textures>0) {
-        texture_dest = textures[num_textures-1];
-        num_textures--;
-    }
+}
+
+/*f c_filter_glsl destructor
+ */
+c_filter_glsl::~c_filter_glsl()
+{
+    return;
 }
 
 /*f c_filter_glsl::compile
@@ -367,12 +424,17 @@ int c_filter_glsl::compile(void)
     get_shader_defines(&shader_defines);
     filter_pid = shader_load_and_link(0, "shaders/vertex_shader.glsl", filter_filename, shader_defines);
     if (filter_pid==0) {
+        parse_error = "Failed to load and link shader";
         return 1;
     }
-    if (get_shader_uniform_ids())
+    if (get_shader_uniform_ids()) {
+        parse_error = "Failed to get shader uniform ids";
         return 1;
-    if (get_texture_uniform_ids())
+    }
+    if (get_texture_uniform_ids(1)) {
+        parse_error = "Failed to get texture uniform ids";
         return 1;
+    }
     return 0;
 }
 
@@ -381,11 +443,11 @@ int c_filter_glsl::compile(void)
 int c_filter_glsl::execute(t_exec_context *ec)
 {
     GL_GET_ERRORS;
-    texture_target_as_framebuffer(ec->textures[texture_dest]);
+    texture_target_as_framebuffer(bound_texture(ec,num_textures-1));
     glUseProgram(filter_pid);
 
     set_shader_uniforms();
-    set_texture_uniforms(ec);
+    set_texture_uniforms(ec, 1);
 
     texture_draw();
 
@@ -401,16 +463,19 @@ int c_filter_glsl::execute(t_exec_context *ec)
 c_filter_correlate::c_filter_correlate(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     set_filename("shaders/", ".glsl", filename, &filter_filename);
-    set_key_values(uniforms, &uniform_key_values);
+    set_key_values(uniforms, &option_key_values);
     filter_pid = 0;
-    num_textures = read_int_list(options_list, textures, sizeof(textures)/sizeof(int));
+    num_textures = read_texture_int_list(options_list);
     if (num_textures<2) {
         parse_error = "Failed to parse GLSL texture options - need at least '(<src>+,<dst>)' texture numbers";
     }
-    if (num_textures>0) {
-        texture_dest = textures[num_textures-1];
-        num_textures--;
-    }
+}
+
+/*f c_filter_correlate destructor
+ */
+c_filter_correlate::~c_filter_correlate()
+{
+    return;
 }
 
 /*f c_filter_correlate::compile
@@ -424,7 +489,7 @@ int c_filter_correlate::compile(void)
     }
     if (get_shader_uniform_ids())
         return 1;
-    if (get_texture_uniform_ids())
+    if (get_texture_uniform_ids(1))
         return 1;
     uniform_out_xy_id      = glGetUniformLocation(filter_pid, "out_xy");
     uniform_out_size_id    = glGetUniformLocation(filter_pid, "out_size");
@@ -437,7 +502,7 @@ int c_filter_correlate::compile(void)
 int c_filter_correlate::execute(t_exec_context *ec)
 {
     GL_GET_ERRORS;
-    texture_target_as_framebuffer(ec->textures[texture_dest]);
+    texture_target_as_framebuffer(bound_texture(ec,num_textures-1));
 
     glClearColor(0.2,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -445,7 +510,7 @@ int c_filter_correlate::execute(t_exec_context *ec)
     glUniform2f(uniform_out_size_id,32,32);
 
     set_shader_uniforms();
-    set_texture_uniforms(ec);
+    set_texture_uniforms(ec, 1);
 
     GL_GET_ERRORS;
     texture_draw_prepare();
@@ -473,33 +538,40 @@ c_filter_find::c_filter_find(t_len_string *filename, t_len_string *options_list,
     max_elements = 320;
     min_distance = 10.0;
 
-    set_key_values(uniforms, &uniform_key_values);
+    set_key_values(uniforms, &option_key_values);
 
-    if ((kve=key_value_find(&uniform_key_values, "minimum"))!=NULL) {
+    if ((kve=key_value_find(&option_key_values, "minimum"))!=NULL) {
         if (sscanf(key_value_entry_value(kve), "%f", &minimum)!=1) {
             parse_error = "Failed to parse find minimum value";
         }
     }
-    if ((kve=key_value_find(&uniform_key_values, "min_distance"))!=NULL) {
+    if ((kve=key_value_find(&option_key_values, "min_distance"))!=NULL) {
         if (sscanf(key_value_entry_value(kve), "%f", &min_distance)!=1) {
             parse_error = "Failed to parse find min distance";
         }
     }
-    if ((kve=key_value_find(&uniform_key_values, "max_elements"))!=NULL) {
+    if ((kve=key_value_find(&option_key_values, "max_elements"))!=NULL) {
         if (sscanf(key_value_entry_value(kve), "%d", &max_elements)!=1) {
             parse_error = "Failed to parse find max elements";
         }
     }
-    if ((kve=key_value_find(&uniform_key_values, "perimeter"))!=NULL) {
+    if ((kve=key_value_find(&option_key_values, "perimeter"))!=NULL) {
         if (sscanf(key_value_entry_value(kve), "%d", &perimeter)!=1) {
             parse_error = "Failed to parse find perimeter";
         }
     }
 
-    num_textures = read_int_list(options_list, textures, sizeof(textures)/sizeof(int));
+    num_textures = read_texture_int_list(options_list);
     if (num_textures!=1) {
         parse_error = "Failed to parse find texture options - need '(<src>)' texture number";
     }
+}
+
+/*f c_filter_find destructor
+ */
+c_filter_find::~c_filter_find()
+{
+    return;
 }
 
 /*f c_filter_find::compile
@@ -520,7 +592,7 @@ int c_filter_find::execute(t_exec_context *ec)
     int   n;
     int w, h;
 
-    texture = ec->textures[textures[0]];
+    texture = bound_texture(ec, 0);
 
     texture_hdr = texture_header(texture);
     raw_img = (float *)texture_get_buffer(texture, GL_RGBA);
@@ -595,12 +667,19 @@ int c_filter_find::execute(t_exec_context *ec)
 c_filter_save::c_filter_save(t_len_string *filename, t_len_string *options_list, t_len_string *uniforms) : c_filter()
 {
     set_filename(NULL, NULL, filename, &save_filename);
-    set_key_values(uniforms, &uniform_key_values);
+    set_key_values(uniforms, &option_key_values);
 
-    num_textures = read_int_list(options_list, textures, sizeof(textures)/sizeof(int));
+    num_textures = read_texture_int_list(options_list);
     if (num_textures!=1) {
         parse_error = "Failed to parse save texture - need '(<src>)' texture number";
     }
+}
+
+/*f c_filter_save destructor
+ */
+c_filter_save::~c_filter_save()
+{
+    return;
 }
 
 /*f c_filter_save::execute
@@ -610,13 +689,21 @@ int c_filter_save::execute(t_exec_context *ec)
     int components=0;
     int conversion=0;
     t_key_value_entry_ptr kve;
-    if ((kve=key_value_find(&uniform_key_values, "conv"))!=NULL) {
+    t_texture_ptr texture;
+
+    texture = bound_texture(ec, 0);
+
+    if ((kve=key_value_find(&option_key_values, "conv"))!=NULL) {
         conversion=1;
     }
-    if ((kve=key_value_find(&uniform_key_values, "green"))!=NULL) {
+    if ((kve=key_value_find(&option_key_values, "green"))!=NULL) {
         components=1;
     }
-    return texture_save(ec->textures[textures[0]], save_filename, components, conversion);
+
+    if (0) {
+        fprintf(stderr, "Saving to '%s'\n",save_filename);
+    }
+    return texture_save(texture, save_filename, components, conversion);
 }
 
 /*a c_filter_find4 methods
@@ -629,10 +716,17 @@ c_filter_find4::c_filter_find4(t_len_string *filename, t_len_string *options_lis
     minimum = 0.0;
     max_elements = 320;
     min_distance = 2.5;
-    num_textures = read_int_list(options_list, textures, sizeof(textures)/sizeof(int));
+    num_textures = read_texture_int_list(options_list);
     if (num_textures!=4) {
         parse_error = "Failed to parse find texture options - need '(<src>*4)' texture number";
     }
+}
+
+/*f c_filter_find4 destructor
+ */
+c_filter_find4::~c_filter_find4()
+{
+    return;
 }
 
 /*f c_filter_find4::compile
@@ -655,7 +749,7 @@ int c_filter_find4::execute(t_exec_context *ec)
     for (int i=0; i<4; i++) {
         const void *raw_buffer;
         t_texture *t;
-        t = ec->textures[textures[i]];
+        t = bound_texture(ec, i);
         raw_buffer = texture_get_buffer(t, GL_RGBA);
         texture_hdr[i] = texture_header(t);
         w = texture_hdr[i]->width;

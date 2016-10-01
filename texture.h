@@ -56,6 +56,8 @@ typedef struct
 {
     int width;
     int height;
+    GLuint gl_id;
+    GLuint format; //NOT USED AT PRESENT
 } t_texture_header;
 
 /*f texture_header

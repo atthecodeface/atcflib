@@ -12,7 +12,7 @@ ifeq ($(OS),Darwin)
 GLM = ../glm
 LINK      = c++
 LINKFLAGS = -g -iframework /Library/Frameworks -framework SDL2 -framework SDL2_image -framework SDL2_ttf -framework OpenGL -lpng16  -ljpeg -L/usr/local/lib 
-CPPFLAGS  = -DGLM_FORCE_RADIANS -DGL_GLEXT_PROTOTYPES -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers -I/usr/local/include
+CPPFLAGS  = -std=c++11 -DGLM_FORCE_RADIANS -DGL_GLEXT_PROTOTYPES -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers -I/usr/local/include
 endif
 
 PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o
@@ -41,7 +41,7 @@ all: python_wrapper.so
 python_%.o: python_%.cpp
 	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@
 
-PY_OBJS := python_wrapper.o python_texture.o filter.o shader.o key_value.o texture.o image_io.o
+PY_OBJS := python_wrapper.o python_texture.o python_filter.o filter.o shader.o key_value.o texture.o image_io.o
 python_wrapper.so: ${PY_OBJS}
 	#c++ -L/opt/local/lib -bundle -undefined dynamic_lookup ${LOCAL_LINKFLAGS} -o
 	c++ -bundle -undefined dynamic_lookup -o python_wrapper.so ${PY_OBJS} -lpng16 -ljpeg -L/usr/local/lib 

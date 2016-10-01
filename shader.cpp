@@ -70,6 +70,11 @@ shader_load(const char *shader_filename, GLenum shader_type, const char *shader_
         shader_code_files[1] = shader_defines;
     shader_code_files[2] = shader_base_functions_code;
     shader_code_files[3] = shader_code;
+    if (0) {
+        for (int i=0; i<4; i++) {
+            fprintf(stderr,"%s\n",shader_code_files[i]);
+        }
+    }
     glShaderSource(shader_id, 4, shader_code_files, NULL);
     glCompileShader(shader_id);
     free((void *)shader_code);
@@ -97,6 +102,8 @@ shader_load_and_link(GLuint program_id, const char *vertex_shader, const char *f
     GLuint fragment_shader_id;
     GLint link_result;
 
+    if (shader_init()!=0)
+        return 0;
     if (program_id==0) {
         program_id = glCreateProgram();
     }

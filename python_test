@@ -10,9 +10,69 @@ def init_opengl():
         glutCreateWindow("self.window_title")
 
 init_opengl()
-a = python_wrapper.texture(filename='images/IMG_2162.JPG')
-print a.width
-print a.height
-a.save("fred.png")
+#a = python_wrapper.texture(filename='images/IMG_2162.JPG')
+tb = []
+size = 512
+for i in range(12):
+        tb.append(python_wrapper.texture(width=size, height=size))
+        pass
+print tb[0].width, tb[0].height
 
-print [1,2,3]
+
+#b = python_wrapper.filter(filter="glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0")
+#b.define("INTENSITY_YSCALE","3.0")
+#b.define("INTENSITY_YSCALE",remove=1)
+#b.compile()
+
+def save_as_png(texture, filename):
+        b = python_wrapper.filter(filter="save:%s(0)"%filename)
+        b.textures([texture])
+        b.compile()
+        b.execute()
+        pass
+
+save_as_png(tb[0], "test_black.png")
+
+def alu_test(ops):
+    for (ts, op, save_filename) in ops:
+            b = python_wrapper.filter(filter="glsl:alu_buffers(0,0,0)")
+            b.define("OP",op)
+            b.compile()
+            b.textures( [tb[i] for i in ts] )
+            b.execute()
+            save_as_png(tb[ts[-1]],save_filename)
+            pass
+    pass
+alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
+            ((2,2,1), "0.8", "test_constant_80.png"),
+            ((0,1,2), "src_a*src_b", "test_constant_40.png"),
+            ] )
+
+alu_test( [ ((2,2,0), "(x*y)",    "test_xy.png"),
+            ((2,2,1), "(1-x)*y",  "test_x1y.png"),
+            ((0,1,2), "(1-4*src_a*src_b)", "test_xymult.png"),
+            ] )
+
+alu_test( [ ((2,2,0), "abs(sin(200*x*y)*sin(200*(1-x)*y))",    "test_sin_xy.png"),
+            ] )
+
+b = python_wrapper.filter(filter='glsl:gauss(1,2)')
+b.define("X_NOT_Y","false")
+b.define("NUM_WEIGHTS","9")
+b.define("WEIGHTS","gauss_offset_weights9")
+b.compile()
+b.textures([tb[0],tb[1]])
+b.execute()
+
+b = python_wrapper.filter(filter='glsl:gauss(1,2)')
+b.define("X_NOT_Y","true")
+b.define("NUM_WEIGHTS","9")
+b.define("WEIGHTS","gauss_offset_weights9")
+b.compile()
+b.textures([tb[1],tb[2]])
+b.execute()
+
+save_as_png(tb[2],"test_gauss_sin_xy.png")
+
+alu_test( [ ((1,2,3),"30*abs(src_a-src_b)","test_gauss_sin_xy_diff.png"),
+            ] )

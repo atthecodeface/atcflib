@@ -124,7 +124,11 @@ python_filter_method_parameter(PyObject* self, PyObject* args, PyObject *kwds)
         return NULL;
 
     if (py_obj->filter) {
-        py_obj->filter->set_parameter(name, 0.0);
+        if (PyFloat_Check(value)) {
+            py_obj->filter->set_parameter(name, PyFloat_AsDouble(value));
+        } else if (PyLong_Check(value)) {
+            py_obj->filter->set_parameter(name, (int)PyInt_AsLong(value));
+        }
     }
     Py_RETURN_NONE;
 }

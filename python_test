@@ -47,8 +47,14 @@ def alu_test(ops):
 class c_filter(object):
     filter_text = 'glsl:yuv_from_rgb(1,2)'
     defines = {}
-    def __init__(self, extra_defines={}):
+    uniforms = {}
+    def __init__(self, extra_uniforms={}, extra_defines={}):
         self.f = python_wrapper.filter(filter=self.filter_text)
+        for u in extra_uniforms:
+            self.f.parameter(u,extra_uniforms[u])
+        for u in self.uniforms:
+            if u not in extra_uniforms:    
+                self.f.parameter(u,self.uniforms[u])
         for d in extra_defines:
             self.f.define(d,str(extra_defines[d]))
             pass
@@ -68,6 +74,20 @@ class c_filter(object):
 class c_yuv_from_rgb(c_filter):
     filter_text = 'glsl:yuv_from_rgb(1,2)'
     defines = []
+
+if False:
+    to_rgb = c_yuv_from_rgb(extra_uniforms={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+                            extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
+                                           "GL_POSITION":"vec4(ysc*y+yc,xsc*x+xc,0,1)",
+                                           })
+    img = python_wrapper.texture(filename='images/IMG_2162.JPG')
+    to_rgb.f.parameter("ysc",4.0)
+    to_rgb.f.parameter("xsc",4.0)
+    to_rgb.f.parameter("yc",-2.0)
+    to_rgb.f.parameter("xc",-2.0)
+    to_rgb.execute((img,tb[4]))
+    save_as_png(tb[4],"img_rgb2.png")
+    die
 
 class c_gauss_filter_y(c_filter):
     filter_text = 'glsl:gauss(1,2)'
@@ -127,6 +147,12 @@ to_rgb = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float
                                        "INTENSITY_XOFS":"0.0",})
 to_rgb.execute((img,tb[4]))
 save_as_png(tb[4],"img_rgb.png")
+
+to_rgb = c_yuv_from_rgb(extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
+                                       "GL_POSITION":"vec4(ysc*y-yc,xsc*x-xc,0,1)",
+                                       })
+to_rgb.execute((img,tb[4]))
+save_as_png(tb[4],"img_rgb2.png")
 
 for (i,sc) in [(0,1), (1,6), (2,5), (3,3.5), (4,2), (5,2), (6,2)]:
         if False:

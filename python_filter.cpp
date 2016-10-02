@@ -100,39 +100,31 @@ python_filter_method_define(PyObject* self, PyObject* args, PyObject *kwds)
         snprintf(buffer, sizeof(buffer), "-D%s", name);
         buffer[sizeof(buffer)-1] = 0;
         if (remove) {
-            key_value_delete(&py_obj->filter->option_key_values, buffer);
+            py_obj->filter->unset_parameter(buffer);
         } else {
-            key_value_set(&py_obj->filter->option_key_values, buffer, value?value:"");
+            py_obj->filter->set_parameter(buffer, value?value:"");
         }
     }
     Py_RETURN_NONE;
 }
 
-/*f python_filter_method_uniform
+/*f python_filter_method_parameter
  */
 static PyObject *
-python_filter_method_uniform(PyObject* self, PyObject* args, PyObject *kwds)
+python_filter_method_parameter(PyObject* self, PyObject* args, PyObject *kwds)
 {
     t_PyObject_filter *py_obj = (t_PyObject_filter *)self;
     const char *name = NULL;
-    const char *value = NULL;
-    int remove=0;
+    PyObject *value = NULL;
 
-    static const char *kwlist[] = {"name", "value", "remove", NULL};
+    static const char *kwlist[] = {"name", "value", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|si", (char **)kwlist, 
-                                     &name, &value, &remove))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO", (char **)kwlist, 
+                                     &name, &value))
         return NULL;
 
     if (py_obj->filter) {
-        char buffer[256];
-        snprintf(buffer, sizeof(buffer), "-U%s", name);
-        buffer[sizeof(buffer)-1] = 0;
-        if (remove) {
-            key_value_delete(&py_obj->filter->option_key_values, buffer);
-        } else {
-            key_value_set(&py_obj->filter->option_key_values, buffer, value?value:"");
-        }
+        py_obj->filter->set_parameter(name, 0.0);
     }
     Py_RETURN_NONE;
 }
@@ -175,7 +167,7 @@ python_filter_method_textures(PyObject* self, PyObject* args, PyObject *kwds)
 PyMethodDef python_filter_methods[] = {
     {"textures", (PyCFunction)python_filter_method_textures, METH_VARARGS|METH_KEYWORDS},
     {"define",   (PyCFunction)python_filter_method_define, METH_VARARGS|METH_KEYWORDS},
-    {"uniform",  (PyCFunction)python_filter_method_uniform, METH_VARARGS|METH_KEYWORDS},
+    {"parameter",  (PyCFunction)python_filter_method_parameter, METH_VARARGS|METH_KEYWORDS},
     {"compile",  (PyCFunction)python_filter_method_compile, METH_VARARGS|METH_KEYWORDS},
     {"execute",  (PyCFunction)python_filter_method_exec, METH_VARARGS|METH_KEYWORDS},
     {NULL, NULL},

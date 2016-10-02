@@ -5,6 +5,10 @@ uniform sampler2D texture_1;
 uniform float uv_base_x;
 uniform float uv_base_y;
 
+#ifdef EXTRA_UNIFORMS
+EXTRA_UNIFORMS
+#endif
+
 void main(){
      float src_a;
      float src_b;

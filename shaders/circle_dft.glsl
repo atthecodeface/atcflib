@@ -25,9 +25,8 @@ void main()
      color.z = uintBitsToFloat( pack_power_angle(dft_power[2], dft_angle[2]) );
      color.w = uintBitsToFloat( pack_power_angle(dft_power[3], dft_angle[3]) );
 
-     //color.x = float(int((pack_power_angle(dft_power[3], dft_angle[3]))) &0xff)/255.0;
-
-     //float a,b;
-     //unpack_power_angle(pack_power_angle(dft_power[1], dft_angle[1]),a,b);
-     //color.x = b/8;
+#ifdef SINGLE_COMPONENT
+     color.xyzw = vec4(0);
+     color.x = dft_power[SINGLE_COMPONENT]/COMPONENT_SCALE;
+#endif
 }

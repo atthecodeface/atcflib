@@ -26,8 +26,9 @@
 /*a Includes
  */
 #include "texture.h"
-#include "key_value.h"
 #include "shader.h"
+#include <map>
+#include <string>
 
 /*a Defines
  */
@@ -73,32 +74,71 @@ typedef struct {
     GLint sampler_id;
 } t_filter_texture;
 
+/*t fp_validity
+ */
+enum {
+    fp_valid_string=1,
+    fp_valid_real=2,
+    fp_valid_integer=4,
+    fp_valid_gl_id=8,
+};
+
+/*t t_filter_parameter
+ */
+typedef struct
+{
+    int valid_values;
+    const char *string;
+    double real;
+    int integer;
+    GLint gl_id;
+} t_filter_parameter;
+
 /*t c_filter
  */
 class c_filter
 {
-public:
-    c_filter(void);
-    virtual ~c_filter();
-    void free_filter(void);
+private:
+    virtual int do_compile(void) {return 0;};
+    virtual int do_execute(t_exec_context *ec) {return 0;};
+
+    std::map <std::string, t_filter_parameter> *parameter_map;
+
+    void get_parameter_value(t_filter_parameter *fp);
+    void set_parameter(t_filter_parameter *fp, double value);
+    void set_parameter(t_filter_parameter *fp, int value);
+    void set_parameter(t_filter_parameter *fp, const char *value);
+
     int read_int_list(t_len_string *string, int *ints, int max_ints);
-    int read_texture_int_list(t_len_string *string);
+
+protected:    
+    void set_parameters_from_string(t_len_string *parameter_string, struct t_parameter_def *parameter_defns, void *parameters);
     void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);
-    void set_key_values(t_len_string *ls, t_key_values *kvs);
-    int uniform_set(const char *uniform, float value);
     void get_shader_defines(char **shader_defines);
     int  get_shader_uniform_ids(void);
     int  get_texture_uniform_ids(int num_dest);
     int set_texture_uniforms(t_exec_context *ec, int num_dest);
     int  set_shader_uniforms(void);
-    int  get_value_from_key_value(t_key_value_entry_ptr kve);
+
+public:
+    c_filter(t_len_string *textures, t_len_string *parameters);
+    virtual ~c_filter();
+    int compile(void) {return this->do_compile();};
+    int execute(t_exec_context *ec) {return this->do_execute(ec);};
+
+    int uniform_set(const char *uniform, float value); // used in batch, needs to be replaced with set_parameter
+
+    int set_parameter(const char *name, double value);
+    int set_parameter(const char *name, int value);
+    int set_parameter(const char *name, const char *value);
+    int unset_parameter(const char *name);
+
+    const char *parse_error;
+    GLuint filter_pid;
+
     int bind_texture(int n, t_texture_ptr texture);
     t_texture_ptr bound_texture(t_exec_context *ec, int n);
-    virtual int compile(void) {return 0;};
-    virtual int execute(t_exec_context *ec) {return 0;};
-    const char *parse_error;
-    t_key_values option_key_values;
-    GLuint filter_pid;
+
     int num_textures;
     t_filter_texture textures[MAX_FILTER_TEXTURES];
 };

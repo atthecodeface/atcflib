@@ -45,12 +45,17 @@ def alu_test(ops):
     pass
 
 class c_filter(object):
-    filter_text = 'glsl:gauss(1,2)'
-    defines = [("X_NOT_Y","false"), ("NUM_WEIGHTS","9"), ("WEIGHTS","gauss_offset_weights9")]
-    def __init__(self):
+    filter_text = 'glsl:yuv_from_rgb(1,2)'
+    defines = {}
+    def __init__(self, extra_defines={}):
         self.f = python_wrapper.filter(filter=self.filter_text)
+        for d in extra_defines:
+            self.f.define(d,str(extra_defines[d]))
+            pass
         for d in self.defines:
-            self.f.define(d[0],d[1])
+            if d not in extra_defines:
+                self.f.define(d,str(self.defines[d]))
+                pass
             pass
         self.f.compile()
         pass
@@ -60,14 +65,31 @@ class c_filter(object):
         pass
     pass
 
+class c_yuv_from_rgb(c_filter):
+    filter_text = 'glsl:yuv_from_rgb(1,2)'
+    defines = []
+
 class c_gauss_filter_y(c_filter):
     filter_text = 'glsl:gauss(1,2)'
-    defines = [("X_NOT_Y","false"), ("NUM_WEIGHTS","9"), ("WEIGHTS","gauss_offset_weights9")]
+    defines = {"X_NOT_Y":"false", "NUM_WEIGHTS":"9", "WEIGHTS":"gauss_offset_weights9"}
 
 class c_gauss_filter_x(c_filter):
     filter_text = 'glsl:gauss(1,2)'
-    defines = [("X_NOT_Y","true"), ("NUM_WEIGHTS","9"), ("WEIGHTS","gauss_offset_weights9")]
+    defines = {"X_NOT_Y":"true", "NUM_WEIGHTS":"9", "WEIGHTS":"gauss_offset_weights9"}
         
+class c_sobel_filter(c_filter):
+    filter_text = 'glsl:convolve_2d(1,2)'
+    defines = {"NUM_WEIGHTS":"9", "OFFSET_WEIGHTS":"sobel_weights"}
+
+class c_harris_filter(c_filter):
+    filter_text = 'glsl:harris(1,2)'
+    defines = {"NUM_OFFSETS":"25", "OFFSETS":"offsets_2d_25"}
+
+class c_circle_dft_filter(c_filter):
+    filter_text = "glsl:circle_dft(2,4)"
+    defines = { "NUM_CIRCLE_STEPS":"8", 
+                "DFT_CIRCLE_RADIUS":"8",
+                "CIRCLE_COMPONENT":"r" }
 
 alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
             ((2,2,1), "0.8", "test_constant_80.png"),
@@ -91,3 +113,31 @@ save_as_png(tb[2],"test_gauss_sin_xy.png")
 
 alu_test( [ ((0,2,3),"30*abs(src_a-src_b)","test_gauss_sin_xy_diff.png"),
             ] )
+
+circle_dft = c_circle_dft_filter(extra_defines={"SINGLE_COMPONENT":4, "COMPONENT_SCALE":4})
+circle_dft.execute((tb[2],tb[3]))
+save_as_png(tb[3],"test_gauss_sin_xy_dft.png")
+
+
+
+img = python_wrapper.texture(filename='images/IMG_2162.JPG')
+to_rgb = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float(img.width)),
+                                       "INTENSITY_YSCALE":"1.0",
+                                       "INTENSITY_YOFS":"0.0",
+                                       "INTENSITY_XOFS":"0.0",})
+to_rgb.execute((img,tb[4]))
+save_as_png(tb[4],"img_rgb.png")
+
+for (i,sc) in [(0,1), (1,6), (2,5), (3,3.5), (4,2), (5,2), (6,2)]:
+        if False:
+                circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":4+4*i,
+                                                                "SINGLE_COMPONENT":2,
+                                                                "COMPONENT_SCALE":4})
+                pass
+        else:
+                circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":8,
+                                                        "SINGLE_COMPONENT":i,
+                                                        "COMPONENT_SCALE":sc})
+                pass
+        circle_dft.execute((tb[4],tb[5]))
+        save_as_png(tb[5],"img_dft_%d.png"%i)

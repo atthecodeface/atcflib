@@ -1,0 +1,8 @@
+*~
+*.pyc
+*.o
+*.so
+*.png
+batch
+prog
+quaternion_test

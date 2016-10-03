@@ -76,6 +76,9 @@ class c_filter(object):
         pass
     pass
 
+class c_alu_filter(c_filter):
+    filter_text = 'glsl:alu_buffers(0,0,0)'
+
 class c_yuv_from_rgb(c_filter):
     filter_text = 'glsl:yuv_from_rgb(1,2)'
 
@@ -126,6 +129,10 @@ class c_circle_dft_diff_combine_filter(c_filter):
 
 class c_find_filter(c_filter):
     filter_text = "find:a(1)"
+
+class c_windowed_equalization_filter(c_filter):
+    filter_text = 'glsl:windowed_equalization(2,4)'
+    defines = {"NUM_OFFSETS":81, "OFFSETS":"offsets_2d_81"}
 
 alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
             ((2,2,1), "0.8", "test_constant_80.png"),
@@ -196,11 +203,13 @@ if True:
                             extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
                                            "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
                                            })
+    copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
+    equalize = c_windowed_equalization_filter()
     harris = c_harris_filter()
     find_corners = c_find_filter(extra_parameters={"min_distance":10.0, "max_elements":20})
-    find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.01, "max_elements":100})
+    find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.1, "max_elements":100})
     circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":8,
-                                                    "CIRCLE_COMPONENT":"g",
+                                                    "CIRCLE_COMPONENT":"r",
                                                     })
     circle_dft_diff         = c_circle_dft_diff_filter()
     circle_dft_diff_combine = c_circle_dft_diff_combine_filter()
@@ -209,9 +218,16 @@ if True:
     to_rgb.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0-ar*0} )
     to_rgb.execute((imgs[0],tb[0]))
     to_rgb.execute((imgs[1],tb[1]))
+    harris.execute( (tb[0],tb[4]) )
+
+    if False: # do windowed equalization to remove brightness and contrastiness dependence - with loss of information
+        copy_img.execute((tb[0],tb[0],tb[2]))
+        equalize.execute((tb[2],tb[0]))
+        copy_img.execute((tb[1],tb[1],tb[2]))
+        equalize.execute((tb[2],tb[1]))
+        pass
     circle_dft.execute((tb[0],tb[2]))
     circle_dft.execute((tb[1],tb[3]))
-    harris.execute( (tb[0],tb[4]) )
     find_corners.execute( (tb[4],) )
 
     print find_corners.f.num_points

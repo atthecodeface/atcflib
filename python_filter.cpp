@@ -126,8 +126,12 @@ python_filter_method_parameter(PyObject* self, PyObject* args, PyObject *kwds)
     if (py_obj->filter) {
         if (PyFloat_Check(value)) {
             py_obj->filter->set_parameter(name, PyFloat_AsDouble(value));
-        } else if (PyLong_Check(value)) {
+        } else if (PyInt_Check(value)) {
             py_obj->filter->set_parameter(name, (int)PyInt_AsLong(value));
+        } else if (PyLong_Check(value)) {
+            py_obj->filter->set_parameter(name, (int)PyLong_AsLong(value));
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Need float or int to set parameter");
         }
     }
     Py_RETURN_NONE;

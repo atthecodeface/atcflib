@@ -87,8 +87,8 @@ public:
 typedef struct
 {
     int perimeter;
-    float minimum;
-    float min_distance;
+    double minimum;
+    double min_distance;
     int max_elements;
 } t_filter_find_parameters;
 
@@ -123,8 +123,8 @@ t_parameter_def c_filter_find::parameter_defns[] = {
 typedef struct
 {
     int perimeter;
-    float minimum;
-    float min_distance;
+    double minimum;
+    double min_distance;
     int max_elements;
 } t_filter_find4_parameters;
 
@@ -193,14 +193,15 @@ c_filter::c_filter(t_len_string *textures, t_len_string *parameter_string)
         std::string value_string;
         if (equals) {
             key_string  =std::string(ptr,equals-ptr);
-            value_string=std::string(equals+1,value_end-equals+1);
+            value_string=std::string(equals+1,value_end-equals-1);
         } else {
             key_string  =std::string(ptr,value_end-ptr);
             value_string=std::string("");
         }
         t_filter_parameter &fp = (*parameter_map)[key_string];
         fp.valid_values = fp_valid_string;
-        fp.string = value_string.c_str();
+        fp.string = (const char *)malloc(strlen(value_string.c_str()+1));
+        strcpy((char *)fp.string, value_string.c_str());
         ptr = value_end;
     }
 
@@ -301,24 +302,21 @@ void c_filter::get_parameter_value(t_filter_parameter *fp)
     }
 }
 
-/*f c_filter::set_parameters_from_string
+/*f c_filter::set_parameters_from_map
  */
-void c_filter::set_parameters_from_string(t_len_string *parameter_string, t_parameter_def *parameter_defns, void *parameters)
+void c_filter::set_parameters_from_map(t_parameter_def *parameter_defns, void *parameters)
 {
     for (int i=0; parameter_defns[i].name; i++) {
         // change to find the parameter by name - then use default
         for (auto fpi = parameter_map->begin(); fpi != parameter_map->end(); ++fpi) {
             if (!fpi->first.compare(parameter_defns[i].name)) {
+                get_parameter_value(&(fpi->second));
                 char *p = ((char *)parameters) + parameter_defns[i].this_offset;
                 if (parameter_defns[i].type=='i') {
-                    ((int *)p)[0] = atoi(fpi->second.string);
+                    ((int *)p)[0] = fpi->second.integer;
                 }
                 if (parameter_defns[i].type=='f') {
-                    double f;
-                    if (sscanf(fpi->second.string, "%lf", &f)!=1) {
-                        parse_error = "Failed to parse float";
-                    }
-                    ((double *)p)[0] = f;
+                    ((double *)p)[0] = fpi->second.real;
                 }
             }
         }
@@ -653,6 +651,44 @@ int c_filter_correlate::do_execute(t_exec_context *ec)
     return 0;
 }
 
+/*a c_filter_save methods
+ */
+/*f c_filter_save constructor
+ */
+c_filter_save::c_filter_save(t_len_string *filename, t_len_string *textures, t_len_string *parameter_string)
+    : c_filter(textures, parameter_string)
+{
+    set_filename(NULL, NULL, filename, &save_filename);
+    parameters.conversion = 0;
+    parameters.components = 0;
+
+    if (num_textures!=1) {
+        parse_error = "Failed to parse save texture - need '(<src>)' texture number";
+    }
+}
+
+/*f c_filter_save destructor
+ */
+c_filter_save::~c_filter_save()
+{
+    return;
+}
+
+/*f c_filter_save::do_execute
+ */
+int c_filter_save::do_execute(t_exec_context *ec)
+{
+    t_texture_ptr texture;
+
+    set_parameters_from_map(parameter_defns, (void *)&parameters);
+    texture = bound_texture(ec, 0);
+
+    if (0) {
+        fprintf(stderr, "Saving to '%s'\n",save_filename);
+    }
+    return texture_save(texture, save_filename, parameters.components, parameters.conversion);
+}
+
 /*a c_filter_find methods
  */
 /*f c_filter_find constructor
@@ -665,7 +701,6 @@ c_filter_find::c_filter_find(t_len_string *filename, t_len_string *textures, t_l
     parameters.max_elements = 320;
     parameters.min_distance = 10.0;
 
-    set_parameters_from_string(parameter_string, parameter_defns, (void *)&parameters);
     if (num_textures!=1) {
         parse_error = "Failed to parse find texture options - need '(<src>)' texture number";
     }
@@ -696,6 +731,8 @@ int c_filter_find::do_execute(t_exec_context *ec)
     int   n;
     int w, h;
 
+    set_parameters_from_map(parameter_defns, (void *)&parameters);
+
     texture = bound_texture(ec, 0);
 
     texture_hdr = texture_header(texture);
@@ -704,6 +741,8 @@ int c_filter_find::do_execute(t_exec_context *ec)
     h = texture_hdr->height;
 
     elements_minimum = -1.0;
+
+    if (elements_minimum<parameters.minimum) elements_minimum=parameters.minimum;
     n=0;
     points = (t_point_value *)malloc(sizeof(t_point_value)*parameters.max_elements);
     for (int y=parameters.perimeter; y<h-parameters.perimeter; y++) {
@@ -712,7 +751,6 @@ int c_filter_find::do_execute(t_exec_context *ec)
             float value_xy;
             value_xy = raw_img[(y*w+x)*4+0];
             if (value_xy<=elements_minimum) continue;
-            if (value_xy<parameters.minimum) continue;
             for (i=0; i<n; i++) {
                 if (points[i].value<value_xy) break;
             }
@@ -764,44 +802,6 @@ int c_filter_find::do_execute(t_exec_context *ec)
     return 0;
 }
 
-/*a c_filter_save methods
- */
-/*f c_filter_save constructor
- */
-c_filter_save::c_filter_save(t_len_string *filename, t_len_string *textures, t_len_string *parameter_string)
-    : c_filter(textures, parameter_string)
-{
-    set_filename(NULL, NULL, filename, &save_filename);
-    parameters.conversion = 0;
-    parameters.components = 0;
-
-    set_parameters_from_string(parameter_string, parameter_defns, (void *)&parameters);
-    if (num_textures!=1) {
-        parse_error = "Failed to parse save texture - need '(<src>)' texture number";
-    }
-}
-
-/*f c_filter_save destructor
- */
-c_filter_save::~c_filter_save()
-{
-    return;
-}
-
-/*f c_filter_save::do_execute
- */
-int c_filter_save::do_execute(t_exec_context *ec)
-{
-    t_texture_ptr texture;
-
-    texture = bound_texture(ec, 0);
-
-    if (0) {
-        fprintf(stderr, "Saving to '%s'\n",save_filename);
-    }
-    return texture_save(texture, save_filename, parameters.components, parameters.conversion);
-}
-
 /*a c_filter_find4 methods
  */
 /*f c_filter_find4 constructor
@@ -813,7 +813,7 @@ c_filter_find4::c_filter_find4(t_len_string *filename, t_len_string *textures, t
     parameters.minimum = 0.0;
     parameters.max_elements = 320;
     parameters.min_distance = 2.5;
-    set_parameters_from_string(parameter_string, parameter_defns, (void *)&parameters);
+
     if (num_textures!=4) {
         parse_error = "Failed to parse find texture options - need '(<src>*4)' texture number";
     }
@@ -843,6 +843,7 @@ int c_filter_find4::do_execute(t_exec_context *ec)
     float *raw_img[4];
     int w, h;
 
+    set_parameters_from_map(parameter_defns, (void *)&parameters);
     for (int i=0; i<4; i++) {
         const void *raw_buffer;
         t_texture *t;
@@ -855,6 +856,7 @@ int c_filter_find4::do_execute(t_exec_context *ec)
     }
 
     elements_minimum = -1.0;
+    if (elements_minimum<parameters.minimum) elements_minimum=parameters.minimum;
     n=0;
     points = (t_point_value *)malloc(sizeof(t_point_value)*parameters.max_elements);
     // for points in cirlce radius 4, we have
@@ -903,7 +905,6 @@ int c_filter_find4::do_execute(t_exec_context *ec)
             }
             int i;
             if (best_pv_of_pt.value <= elements_minimum) continue;
-            if (best_pv_of_pt.value < parameters.minimum) continue;
             for (i=0; i<n; i++) {
                 if (points[i].value < best_pv_of_pt.value) break;
             }

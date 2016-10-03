@@ -12,7 +12,7 @@ def init_opengl():
 init_opengl()
 #a = python_wrapper.texture(filename='images/IMG_2162.JPG')
 tb = []
-size = 512
+size = 1024
 for i in range(12):
         tb.append(python_wrapper.texture(width=size, height=size))
         pass
@@ -47,14 +47,14 @@ def alu_test(ops):
 class c_filter(object):
     filter_text = 'glsl:yuv_from_rgb(1,2)'
     defines = {}
-    uniforms = {}
-    def __init__(self, extra_uniforms={}, extra_defines={}):
+    parameters = {}
+    def __init__(self, extra_parameters={}, extra_defines={}):
         self.f = python_wrapper.filter(filter=self.filter_text)
-        for u in extra_uniforms:
-            self.f.parameter(u,extra_uniforms[u])
-        for u in self.uniforms:
-            if u not in extra_uniforms:    
-                self.f.parameter(u,self.uniforms[u])
+        for u in extra_parameters:
+            self.f.parameter(u,extra_parameters[u])
+        for u in self.parameters:
+            if u not in extra_parameters:    
+                self.f.parameter(u,self.parameters[u])
         for d in extra_defines:
             self.f.define(d,str(extra_defines[d]))
             pass
@@ -65,6 +65,11 @@ class c_filter(object):
             pass
         self.f.compile()
         pass
+    def set_parameters(self, parameters={}):
+        for p in parameters:
+            self.f.parameter(p,parameters[p])
+            pass
+        pass
     def execute(self,textures):
         self.f.textures(textures)
         self.f.execute()
@@ -73,10 +78,9 @@ class c_filter(object):
 
 class c_yuv_from_rgb(c_filter):
     filter_text = 'glsl:yuv_from_rgb(1,2)'
-    defines = []
 
 if False:
-    to_rgb = c_yuv_from_rgb(extra_uniforms={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+    to_rgb = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
                             extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
                                            "GL_POSITION":"vec4(ysc*y+yc,xsc*x+xc,0,1)",
                                            })
@@ -111,6 +115,18 @@ class c_circle_dft_filter(c_filter):
                 "DFT_CIRCLE_RADIUS":"8",
                 "CIRCLE_COMPONENT":"r" }
 
+class c_circle_dft_diff_filter(c_filter):
+    filter_text = "glsl:circle_dft_diff(2,4,5)"
+    parameters = {"uv_base_x":0.0, "uv_base_y":0.0}
+
+class c_circle_dft_diff_combine_filter(c_filter):
+    filter_text = "glsl:circle_dft_diff_combine(1,2,3,4,0)"
+    defines = {"DISCRETE_CIRCLE_OFS":"discrete_circle_offsets_4_32",
+               "NUM_OFFSETS":32}
+
+class c_find_filter(c_filter):
+    filter_text = "find:a(1)"
+
 alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
             ((2,2,1), "0.8", "test_constant_80.png"),
             ((0,1,2), "src_a*src_b", "test_constant_40.png"),
@@ -125,36 +141,39 @@ alu_test( [ ((2,2,0), "abs(sin(200*x*y)*sin(200*(1-x)*y))",    "test_sin_xy.png"
             ] )
 
 
-gfx = c_gauss_filter_x()
-gfy = c_gauss_filter_y()
-gfx.execute((tb[0],tb[1]))
-gfy.execute((tb[1],tb[2]))
-save_as_png(tb[2],"test_gauss_sin_xy.png")
+if False:
+    gfx = c_gauss_filter_x()
+    gfy = c_gauss_filter_y()
+    gfx.execute((tb[0],tb[1]))
+    gfy.execute((tb[1],tb[2]))
+    save_as_png(tb[2],"test_gauss_sin_xy.png")
 
-alu_test( [ ((0,2,3),"30*abs(src_a-src_b)","test_gauss_sin_xy_diff.png"),
-            ] )
+    alu_test( [ ((0,2,3),"30*abs(src_a-src_b)","test_gauss_sin_xy_diff.png"),
+                ] )
 
-circle_dft = c_circle_dft_filter(extra_defines={"SINGLE_COMPONENT":4, "COMPONENT_SCALE":4})
-circle_dft.execute((tb[2],tb[3]))
-save_as_png(tb[3],"test_gauss_sin_xy_dft.png")
+    circle_dft = c_circle_dft_filter(extra_defines={"SINGLE_COMPONENT":4, "COMPONENT_SCALE":4})
+    circle_dft.execute((tb[2],tb[3]))
+    save_as_png(tb[3],"test_gauss_sin_xy_dft.png")
 
+    f = python_wrapper.filter(filter='find:a(10)')
+    f.compile()
+    f.textures((tb[3],))
+    f.parameter("minimum",0.87)
+    f.execute()
+    print f.num_points
+    print f.points
 
+if False:
 
-img = python_wrapper.texture(filename='images/IMG_2162.JPG')
-to_rgb = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float(img.width)),
-                                       "INTENSITY_YSCALE":"1.0",
-                                       "INTENSITY_YOFS":"0.0",
-                                       "INTENSITY_XOFS":"0.0",})
-to_rgb.execute((img,tb[4]))
-save_as_png(tb[4],"img_rgb.png")
+    img = python_wrapper.texture(filename='images/IMG_2162.JPG')
+    to_rgb = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float(img.width)),
+                                           "INTENSITY_YSCALE":"1.0",
+                                           "INTENSITY_YOFS":"0.0",
+                                           "INTENSITY_XOFS":"0.0",})
+    to_rgb.execute((img,tb[4]))
+    save_as_png(tb[4],"img_rgb.png")
 
-to_rgb = c_yuv_from_rgb(extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
-                                       "GL_POSITION":"vec4(ysc*y-yc,xsc*x-xc,0,1)",
-                                       })
-to_rgb.execute((img,tb[4]))
-save_as_png(tb[4],"img_rgb2.png")
-
-for (i,sc) in [(0,1), (1,6), (2,5), (3,3.5), (4,2), (5,2), (6,2)]:
+    for (i,sc) in [(0,1), (1,6), (2,5), (3,3.5), (4,2), (5,2), (6,2)]:
         if False:
                 circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":4+4*i,
                                                                 "SINGLE_COMPONENT":2,
@@ -167,3 +186,46 @@ for (i,sc) in [(0,1), (1,6), (2,5), (3,3.5), (4,2), (5,2), (6,2)]:
                 pass
         circle_dft.execute((tb[4],tb[5]))
         save_as_png(tb[5],"img_dft_%d.png"%i)
+    pass
+
+if True:
+    imgs = ( python_wrapper.texture(filename='images/IMG_1900.JPG'),
+             python_wrapper.texture(filename='images/IMG_1901_r10.JPG') )
+
+    to_rgb = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+                            extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
+                                           "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
+                                           })
+    harris = c_harris_filter()
+    find_corners = c_find_filter(extra_parameters={"min_distance":10.0, "max_elements":20})
+    find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.01, "max_elements":100})
+    circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":8,
+                                                    "CIRCLE_COMPONENT":"g",
+                                                    })
+    circle_dft_diff         = c_circle_dft_diff_filter()
+    circle_dft_diff_combine = c_circle_dft_diff_combine_filter()
+
+    ar = float(imgs[0].width)/imgs[0].height
+    to_rgb.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0-ar*0} )
+    to_rgb.execute((imgs[0],tb[0]))
+    to_rgb.execute((imgs[1],tb[1]))
+    circle_dft.execute((tb[0],tb[2]))
+    circle_dft.execute((tb[1],tb[3]))
+    harris.execute( (tb[0],tb[4]) )
+    find_corners.execute( (tb[4],) )
+
+    print find_corners.f.num_points
+    print find_corners.f.points[:10]
+
+    pt = find_corners.f.points[0]
+    xy = (pt[0],pt[1])
+    for i, dxy in [(0,(4,0)), (1,(0,4)), (2,(-4,0)), (3,(0,-4))]:
+        circle_dft_diff.set_parameters( {"uv_base_x":xy[0]+dxy[0], "uv_base_y":xy[1]+dxy[1]} )
+        circle_dft_diff.execute( (tb[2], tb[3], tb[5+i]) )
+        pass
+    circle_dft_diff_combine.execute( (tb[5], tb[6], tb[7], tb[8], tb[9]) )
+    find_matches.execute( (tb[9],) )
+    for i in range(10):
+        save_as_png(tb[i],"img_dft_%d.png"%i)
+
+    pass

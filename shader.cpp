@@ -5,6 +5,7 @@
 #include <OpenGL/gl3.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "shader.h"
 
 /*a Types
@@ -70,14 +71,8 @@ shader_load(const char *shader_filename, GLenum shader_type, const char *shader_
         shader_code_files[1] = shader_defines;
     shader_code_files[2] = shader_base_functions_code;
     shader_code_files[3] = shader_code;
-    if (0) {
-        for (int i=0; i<4; i++) {
-            fprintf(stderr,"%s\n",shader_code_files[i]);
-        }
-    }
     glShaderSource(shader_id, 4, shader_code_files, NULL);
     glCompileShader(shader_id);
-    free((void *)shader_code);
 
     glGetShaderiv(shader_id,GL_COMPILE_STATUS, &compile_result);
     if (compile_result==GL_FALSE) {
@@ -85,11 +80,28 @@ shader_load(const char *shader_filename, GLenum shader_type, const char *shader_
         //int line=1;
         glGetShaderInfoLog(shader_id, sizeof(error_buf), NULL, error_buf);
         fprintf(stderr," Failed to compile shader '%s'\n%s\n", shader_filename, error_buf);
-        for (int i=0; i<4; i++) {
+        shader_id = 0;
+        if (1) {
+            int line=1;
+            for (int i=0; i<4; i++) {
+                const char *text = shader_code_files[i];
+                while (1) {
+                    const char *next_line;
+                    next_line = strchr(text,'\n');
+                    if (!next_line)
+                        break;
+                    fprintf(stderr, "%d: ", line);
+                    for (int j=0; j<=next_line-text; j++) {
+                        fputc(text[j],stderr);
+                    }
+                    line++;
+                    text = next_line+1;
+                }
+            }
         }
-        return 0;
     }
 
+    free((void *)shader_code);
     return shader_id;
 }
 

@@ -112,7 +112,7 @@ private:
     int read_int_list(t_len_string *string, int *ints, int max_ints);
 
 protected:    
-    void set_parameters_from_string(t_len_string *parameter_string, struct t_parameter_def *parameter_defns, void *parameters);
+    void set_parameters_from_map(struct t_parameter_def *parameter_defns, void *parameters);
     void set_filename(const char *dirname, const char *suffix, t_len_string *filename, char **filter_filename);
     void get_shader_defines(char **shader_defines);
     int  get_shader_uniform_ids(void);

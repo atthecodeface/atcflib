@@ -26,8 +26,8 @@
 /*t t_PyObject_filter
  */
 typedef struct {
-     PyObject_HEAD
-     c_filter *filter;
+    PyObject_HEAD
+    c_filter *filter;
     t_exec_context ec;
 } t_PyObject_filter;
 
@@ -189,12 +189,31 @@ python_filter_dealloc(PyObject *self)
     }
 }
 
+/*f python_filter_getattr
+ */
 static PyObject *
 python_filter_getattr(PyObject *self, char *attr)
 {
     t_PyObject_filter *py_obj = (t_PyObject_filter *)self;
     
     if (py_obj->filter) {
+    }
+    if (!strcmp(attr, "num_points")) {
+        return PyInt_FromLong(py_obj->ec.num_points);
+    }
+    if (py_obj->ec.points) {
+        if (!strcmp(attr, "points")) {
+            PyObject *list;
+            list = PyList_New(0);
+            for (int i=0; i<py_obj->ec.num_points; i++) {
+                t_point_value *pv;
+                pv = &(py_obj->ec.points[i]);
+                PyList_Append(list, 
+                              Py_BuildValue("iifff", pv->x, pv->y, (double)pv->value, (double)pv->vec_x, (double)pv->vec_y)
+                    ); // CAN FAIL
+            }
+            return list;
+        }
     }
     return Py_FindMethod(python_filter_methods, self, attr);
 }

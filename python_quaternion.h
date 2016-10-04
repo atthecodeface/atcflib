@@ -12,24 +12,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @file          python_filter.h
- * @brief         Python wrapper for OpenGL filters
+ * @file          python_quaternion.h
+ * @brief         Python wrapper for quaternions
  *
  */
 
 /*a Wrapper
  */
-#ifdef __INC_PYTHON_FILTER
+#ifdef __INC_PYTHON_QUATERNION
 #else
-#define __INC_PYTHON_FILTER
+#define __INC_PYTHON_QUATERNION
 
 /*a Includes
  */
+#include "quaternion.h"
 
 /*a External functions
  */
-extern void python_filter_init(void);
-extern PyObject *python_filter(PyObject* self, PyObject* args, PyObject *kwds);
+extern void python_quaternion_init(void);
+extern PyObject *python_quaternion(PyObject* self, PyObject* args, PyObject *kwds);
+extern PyObject *python_quaternion_from_c(c_quaternion *quaternion);
+extern int python_quaternion_data(PyObject* self, int id, void *data_ptr);
 
 /*a Wrapper
  */

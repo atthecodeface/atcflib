@@ -17,7 +17,7 @@ endif
 
 PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o
 BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o
-PY_OBJS := python_wrapper.o python_texture.o python_filter.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o
+PY_OBJS := python_wrapper.o python_texture.o python_filter.o python_lens_projection.o python_quaternion.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o quaternion.o
 
 PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks

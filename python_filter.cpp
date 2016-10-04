@@ -15,7 +15,6 @@
 #include <Python.h>
 #include "python_filter.h"
 #include "python_texture.h"
-#include "key_value.h"
 #include "filter.h"
 
 /*a Defines

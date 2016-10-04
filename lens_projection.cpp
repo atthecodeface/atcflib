@@ -49,6 +49,8 @@ c_lens_projection::~c_lens_projection()
 void c_lens_projection::orient(const c_quaternion &orientation)
 {
     this->orientation = orientation;
+    this->orientation.normalize();
+
 }
 
 /*f c_lens_projection::set_lens
@@ -173,7 +175,7 @@ c_quaternion c_lens_projection::orientation_of_xy(const double xy[2]) const
  */
 void c_lens_projection::xy_of_orientation(const c_quaternion *orientation, double xy[2]) const
 {
-    c_quaternion q = this->orientation;
+    c_quaternion q = c_quaternion(this->orientation);
     c_quaternion qc;
     c_quaternion mapped_001;
     double rxyz[4];
@@ -183,9 +185,10 @@ void c_lens_projection::xy_of_orientation(const c_quaternion *orientation, doubl
     q.conjugate();          // invert this camera orientation
     q = q * (*orientation); // add the input orientation
 
+    q.normalize();
     // q is now input orientation - camera orientation
     // Find how (0,0,1) is mapped through q
-    qc = q;
+    qc = c_quaternion(q);
     qc.conjugate();
     mapped_001 = q * c_quaternion::rijk(0,0,0,1) * qc;
 
@@ -194,7 +197,6 @@ void c_lens_projection::xy_of_orientation(const c_quaternion *orientation, doubl
 
     yaw  = acos(rxyz[3]); // yaw that gets mapped z back to 1
     roll = atan2(rxyz[1], rxyz[2]); // to get (x,y) mapped to (0,0) after z is mapped back to 1
-
     ry[0] = -roll;
     ry[1] = -yaw;
     roll_yaw_to_xy(ry, xy);
@@ -218,6 +220,24 @@ void c_lens_projection::xy_b_of_a(const c_lens_projection *a, const c_lens_proje
 {
     c_quaternion wq = a->orientation_of_xy(xy_a);
     b->xy_of_orientation(&wq, xy_b);
+}
+
+
+/*f lens_projection_type
+ */
+t_lens_projection_type c_lens_projection::lens_projection_type(const char *name)
+{
+    t_lens_projection_type lp_type;
+    lp_type = lens_projection_type_equidistant;
+    if (name) {
+        if (!strcmp(name,"rectilinear")) {
+            lp_type = lens_projection_type_rectilinear;
+        }
+        if (!strcmp(name,"stereographic")) {
+            lp_type = lens_projection_type_stereographic;
+        }
+    }
+    return lp_type;
 }
 
 /*a Rest

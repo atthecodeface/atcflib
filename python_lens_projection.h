@@ -12,24 +12,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @file          python_filter.h
- * @brief         Python wrapper for OpenGL filters
+ * @file          python_lens_projection.h
+ * @brief         Python wrapper for lens projection
  *
  */
 
 /*a Wrapper
  */
-#ifdef __INC_PYTHON_FILTER
+#ifdef __INC_PYTHON_LENS_PROJECTION
 #else
-#define __INC_PYTHON_FILTER
+#define __INC_PYTHON_LENS_PROJECTION
 
 /*a Includes
  */
 
 /*a External functions
  */
-extern void python_filter_init(void);
-extern PyObject *python_filter(PyObject* self, PyObject* args, PyObject *kwds);
+extern void python_lens_projection_init(void);
+extern PyObject *python_lens_projection(PyObject* self, PyObject* args, PyObject *kwds);
 
 /*a Wrapper
  */

@@ -63,6 +63,7 @@ public:
     c_lens_projection(void);
     ~c_lens_projection();
 
+    static t_lens_projection_type lens_projection_type(const char *name);
     static void xy_b_of_a(const c_lens_projection *a, const c_lens_projection *b, const double xy_a[2], double xy_b[2]);
 
     inline double get_frame_width(void) { return frame_width; }

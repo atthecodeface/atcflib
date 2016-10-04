@@ -9,8 +9,11 @@ def init_opengl():
         glutInitWindowSize(64,64)
         glutCreateWindow("self.window_title")
 
+print "init opengl"        
 init_opengl()
 #a = python_wrapper.texture(filename='images/IMG_2162.JPG')
+
+print "Create textures"
 tb = []
 size = 1024
 for i in range(12):
@@ -31,7 +34,7 @@ def save_as_png(texture, filename):
         b.execute()
         pass
 
-save_as_png(tb[0], "test_black.png")
+#save_as_png(tb[0], "test_black.png")
 
 def alu_test(ops):
     for (ts, op, save_filename) in ops:
@@ -134,21 +137,25 @@ class c_windowed_equalization_filter(c_filter):
     filter_text = 'glsl:windowed_equalization(2,4)'
     defines = {"NUM_OFFSETS":81, "OFFSETS":"offsets_2d_81"}
 
-alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
-            ((2,2,1), "0.8", "test_constant_80.png"),
-            ((0,1,2), "src_a*src_b", "test_constant_40.png"),
-            ] )
+if False:
+    print "ALU tests"
 
-alu_test( [ ((2,2,0), "(x*y)",    "test_xy.png"),
-            ((2,2,1), "(1-x)*y",  "test_x1y.png"),
-            ((0,1,2), "(1-4*src_a*src_b)", "test_xymult.png"),
-            ] )
+    alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
+                ((2,2,1), "0.8", "test_constant_80.png"),
+                ((0,1,2), "src_a*src_b", "test_constant_40.png"),
+                ] )
 
-alu_test( [ ((2,2,0), "abs(sin(200*x*y)*sin(200*(1-x)*y))",    "test_sin_xy.png"),
-            ] )
+    alu_test( [ ((2,2,0), "(x*y)",    "test_xy.png"),
+                ((2,2,1), "(1-x)*y",  "test_x1y.png"),
+                ((0,1,2), "(1-4*src_a*src_b)", "test_xymult.png"),
+                ] )
+
+    alu_test( [ ((2,2,0), "abs(sin(200*x*y)*sin(200*(1-x)*y))",    "test_sin_xy.png"),
+                ] )
 
 
 if False:
+    print "Gauss filter and find test"
     gfx = c_gauss_filter_x()
     gfy = c_gauss_filter_y()
     gfx.execute((tb[0],tb[1]))
@@ -171,6 +178,7 @@ if False:
     print f.points
 
 if False:
+    print "DFT images"
 
     img = python_wrapper.texture(filename='images/IMG_2162.JPG')
     to_rgb = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float(img.width)),
@@ -195,7 +203,9 @@ if False:
         save_as_png(tb[5],"img_dft_%d.png"%i)
     pass
 
-if True:
+if False:
+    print "Diff images"
+
     imgs = ( python_wrapper.texture(filename='images/IMG_1900.JPG'),
              python_wrapper.texture(filename='images/IMG_1901_r10.JPG') )
 
@@ -245,3 +255,40 @@ if True:
         save_as_png(tb[i],"img_dft_%d.png"%i)
 
     pass
+
+if True:
+    lens_projection = python_wrapper.lens_projection
+    quaternion      = python_wrapper.quaternion
+    lp_20 = lens_projection(frame_width=36.0, focal_length=20.0, lens_type="rectilinear")
+    a = quaternion()
+    b = quaternion()
+    c = quaternion(r=1.0)
+    print c
+    c = quaternion(r=1, i=2, j=3, k=4) * quaternion(i=1)* quaternion(j=1)* quaternion(k=1)
+    print c
+
+    a.scale(2)
+    print a.rijk
+    a.lookat((1,2,3),(4,5,4))
+    b.lookat((1,0,0),(0,1,0))
+    print "a", a
+    print "b", b
+    print "~a", ~a
+    print abs(a)
+    a.from_rotation((1,1,0),60.0,degrees=1)
+    print a
+    a.from_euler(pitch=60.0,degrees=1)
+    lp_20.orient(a)
+    print lp_20
+    print "orientation of 0,0",lp_20.orientation_of_xy((0,0))
+    print "x,y of orientation of a",lp_20.xy_of_orientation(a)
+    a.from_rotation((1,1,0),60.0,degrees=1)
+    lp_20.orient(a)
+    print lp_20
+    print "orientation of 0,0",lp_20.orientation_of_xy((0,0))
+    print "x,y of orientation of a",lp_20.xy_of_orientation(a)
+    print a
+    print lp_20.orientation
+    a.scale(2)
+    print a
+    print lp_20.orientation

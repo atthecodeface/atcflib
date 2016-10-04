@@ -85,6 +85,7 @@ public:
     c_quaternion *multiply(const c_quaternion *other);
 
     c_quaternion *from_euler(double roll, double pitch, double yaw, int degrees);
+    c_quaternion *lookat(double xyz[3], double up[3]);
     c_quaternion *from_rotation(double angle, double axis[3], int degrees);
     double as_rotation(double axis[3]) const;
     void get_rijk(double rijk[4]) const;

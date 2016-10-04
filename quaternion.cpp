@@ -15,7 +15,7 @@ Ported from gjslib.math.quaternion python
 /*a Defines
  */
 #define EPSILON (1E-20)
-#define PI (M_PI) //3.141592838)
+#define PI (M_PI)
 
 /*a Infix operator methods for doubles
  */
@@ -182,6 +182,24 @@ c_quaternion *c_quaternion::from_euler(double roll, double pitch, double yaw, in
     quat.k = cy * sr * cp - sy * cr * sp;
     return this;
 }
+
+/*f c_quaternion::lookat
+ */
+c_quaternion *c_quaternion::lookat(double xyz[3], double up[3])
+{
+    double len_xyz = sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
+    double pitch =  asin(xyz[0] / len_xyz);
+    double yaw   = -atan2(xyz[1] , xyz[2]);
+
+    double cy = cos(yaw);
+    double sy = sin(yaw);
+    double cp = cos(pitch);
+    double sp = sin(pitch);
+    double roll = atan2( up[1]*cy    + up[2]*sy,
+                         up[1]*sy*sp - up[2]*cy*sp + up[0]*cp );
+    return this->from_euler(-roll, -pitch, -yaw, 0)->conjugate();
+}
+
 /*f More
  */
 /*

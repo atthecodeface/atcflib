@@ -202,6 +202,8 @@ python_texture_from_handle(int handle)
     return NULL;
 }
 
+/*f python_texture_data
+ */
 int
 python_texture_data(PyObject* self, int id, void *data_ptr)
 {
@@ -213,7 +215,8 @@ python_texture_data(PyObject* self, int id, void *data_ptr)
     return 1;
 }
 
-
+/*f python_texture_init
+ */
 void python_texture_init(void)
 {
 }

@@ -16,6 +16,8 @@
 #include <OpenGL/gl3.h>
 #include "python_filter.h"
 #include "python_texture.h"
+#include "python_lens_projection.h"
+#include "python_quaternion.h"
 
 /*a Defines
  */
@@ -43,8 +45,10 @@ int gl_get_errors(const char *msg)
  */
 static PyMethodDef python_wrapper_module_methods[] =
 {
-    {"texture", (PyCFunction)python_texture, METH_VARARGS|METH_KEYWORDS, "Create a new texture object."},
-    {"filter",  (PyCFunction)python_filter, METH_VARARGS|METH_KEYWORDS, "Create a new filter object."},
+    {"texture",          (PyCFunction)python_texture, METH_VARARGS|METH_KEYWORDS, "Create a new texture object."},
+    {"filter",           (PyCFunction)python_filter, METH_VARARGS|METH_KEYWORDS, "Create a new filter object."},
+    {"quaternion",       (PyCFunction)python_quaternion, METH_VARARGS|METH_KEYWORDS, "Create a new quaternion object."},
+    {"lens_projection",  (PyCFunction)python_lens_projection, METH_VARARGS|METH_KEYWORDS, "Create a new lens projection object."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
@@ -55,6 +59,8 @@ extern "C" void initpython_wrapper( void )
     (void) Py_InitModule3("python_wrapper", python_wrapper_module_methods, "Python interface to wrapped thing" );
     python_texture_init();
     python_filter_init();
+    python_lens_projection_init();
+    python_quaternion_init();
 }
 
 /*a Editor preferences and notes

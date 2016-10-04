@@ -13,45 +13,15 @@ Ported from gjslib.math.quaternion python
 #include <stdarg.h>
 #include <math.h>
 #include "quaternion.h"
+#include "test.h"
 
-/*a Defines
+/*a Support functions
  */
-#define EPSILON (1E-12)
-#define STR(x) #x
-#define STRINGIFY(x) STR(x)
-#define WHERE ( __FILE__  STRINGIFY(__LINE__) )
-
-/*a Test infrastructure
- */
-static int failures=0;
-static void
-assert(int should_be_true, const char *where, const char *error_fmt, va_list ap)
+static void display(const char *msg, c_quaternion &a)
 {
     char buffer[256];
-    if (!should_be_true) {
-        vsnprintf(buffer, sizeof(buffer), error_fmt, ap);
-        printf("Failure at %s: %s\n", where, buffer);
-        failures++;
-    }
-}
-
-static void
-assert(int should_be_true, const char *where, const char *error_fmt, ...)
-{
-    va_list ap;
-    va_start(ap, error_fmt);
-    assert(should_be_true, where, error_fmt, ap);
-    va_end(ap);
-}
-
-static void
-assert_dbeq(double a, double b, const char *where, const char *error_fmt, ...)
-{
-    va_list ap;
-    va_start(ap, error_fmt);
-    double diff = fabs(a-b);
-    assert(diff<EPSILON, where, error_fmt, ap);
-    va_end(ap);
+    a.__str__(buffer, sizeof(buffer));
+    fprintf(stderr, "%s : %s\n",msg, buffer);
 }
 
 /*a Arithmetic tests
@@ -84,6 +54,75 @@ test_init(void)
     assert( (a.i()==3.0), WHERE, "Quaternion access");
     assert( (a.j()==2.0), WHERE, "Quaternion access");
     assert( (a.k()==1.0), WHERE, "Quaternion access");
+
+    a = c_quaternion::roll(0, 0);
+    assert( (a.r()==1.0), WHERE, "Quaternion init roll");
+    assert( (a.i()==0.0), WHERE, "Quaternion init roll");
+    assert( (a.j()==0.0), WHERE, "Quaternion init roll");
+    assert( (a.k()==0.0), WHERE, "Quaternion init roll");
+
+    a = c_quaternion::roll(90, 1);
+    assert_dbeq(a.r(), sqrt(0.5), WHERE, "Quaternion init roll");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init roll");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init roll");
+    assert_dbeq(a.k(), sqrt(0.5), WHERE, "Quaternion init roll");
+
+    a = c_quaternion::roll(45, 1);
+    assert( (a.modulus()==1.0),   WHERE, "Quaternion init roll");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init roll");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init roll");
+
+    a = c_quaternion::roll(45, 1) * c_quaternion::roll(-45, 1);
+    assert( (a.r()==1.0), WHERE, "Quaternion access");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init roll");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init roll");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init roll");
+
+    a = c_quaternion::pitch(90, 1);
+    assert_dbeq(a.r(), sqrt(0.5), WHERE, "Quaternion init pitch");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init pitch");
+    assert_dbeq(a.j(), sqrt(0.5), WHERE, "Quaternion init pitch");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init pitch");
+
+    a = c_quaternion::pitch(45, 1);
+    assert( (a.modulus()==1.0),   WHERE, "Quaternion init pitch");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init pitch");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init pitch");
+
+    a = c_quaternion::pitch(45, 1) * c_quaternion::pitch(-45, 1);
+    assert( (a.r()==1.0), WHERE, "Quaternion access");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init pitch");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init pitch");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init pitch");
+
+    a = c_quaternion::yaw(90, 1);
+    assert_dbeq(a.r(), sqrt(0.5), WHERE, "Quaternion init yaw");
+    assert_dbeq(a.i(), sqrt(0.5), WHERE, "Quaternion init yaw");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init yaw");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init yaw");
+
+    a = c_quaternion::yaw(45, 1);
+    assert( (a.modulus()==1.0),   WHERE, "Quaternion init yaw");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init yaw");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init yaw");
+
+    a = c_quaternion::yaw(45, 1) * c_quaternion::yaw(-45, 1);
+    assert( (a.r()==1.0), WHERE, "Quaternion access");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init yaw");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init yaw");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init yaw");
+
+    a = c_quaternion::rijk(6,5,4,3);
+    assert_dbeq(a.r(), 6,         WHERE, "Quaternion init rijk");
+    assert_dbeq(a.i(), 5,         WHERE, "Quaternion init rijk");
+    assert_dbeq(a.j(), 4,         WHERE, "Quaternion init rijk");
+    assert_dbeq(a.k(), 3,         WHERE, "Quaternion init rijk");
+
+    a = c_quaternion::identity();
+    assert_dbeq(a.r(), 1,         WHERE, "Quaternion init rijk");
+    assert_dbeq(a.i(), 0,         WHERE, "Quaternion init rijk");
+    assert_dbeq(a.j(), 0,         WHERE, "Quaternion init rijk");
+    assert_dbeq(a.k(), 0,         WHERE, "Quaternion init rijk");
 }
 
 /*f test_reals

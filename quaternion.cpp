@@ -9,12 +9,13 @@ Ported from gjslib.math.quaternion python
 /*a Includes
  */
 #include <math.h>
+#include <stdio.h>
 #include "quaternion.h"
 
 /*a Defines
  */
 #define EPSILON (1E-20)
-#define PI (3.141592838)
+#define PI (M_PI) //3.141592838)
 
 /*a Infix operator methods for doubles
  */
@@ -85,6 +86,8 @@ c_quaternion &c_quaternion::operator/=(const c_quaternion &other)
 
 /*a Constructors
  */
+/*f c_quaternion::c_quaternion (void) - null
+ */
 c_quaternion::c_quaternion(void)
 {
     quat.r = 0.0;
@@ -93,11 +96,15 @@ c_quaternion::c_quaternion(void)
     quat.k = 0.0;
 }
 
+/*f c_quaternion::c_quaternion(other) - copy from other
+ */
 c_quaternion::c_quaternion(const c_quaternion *other)
 {
     quat = other->quat;
 }
 
+/*f c_quaternion::c_quaternion(r,j,k,k)
+ */
 c_quaternion::c_quaternion(double r, double i, double j, double k)
 {
     quat.r = r;
@@ -106,15 +113,22 @@ c_quaternion::c_quaternion(double r, double i, double j, double k)
     quat.k = k;
 }
 
-c_quaternion *c_quaternion::copy(void)
+/*f c_quaternion::copy
+ */
+c_quaternion *c_quaternion::copy(void) const
 {
     c_quaternion *quat;
     quat = new c_quaternion(this);
     return quat;
 }
 
-static void __repr__(char *buffer, int buf_size)
+/*f c_quaternion::__str__
+ */
+void c_quaternion::__str__(char *buffer, int buf_size) const
 {
+    snprintf(buffer, buf_size, "(%lf, %lf, %lf, %lf)",
+             quat.r, quat.i, quat.j, quat.k );
+    buffer[buf_size-1] = 0;
 /*        if self.repr_fmt=="euler":
             result = ("quaternion(euler=("+self.fmt+","+self.fmt+","+self.fmt+"),degrees=True)") % self.to_euler(degrees=True)
             return result
@@ -129,8 +143,9 @@ static void __repr__(char *buffer, int buf_size)
 */
 }
 
-
-void c_quaternion::get_rijk(double rijk[4])
+/*f c_quaternion::get_rijk
+ */
+void c_quaternion::get_rijk(double rijk[4]) const
 {
     rijk[0] = quat.r;
     rijk[1] = quat.i;
@@ -138,6 +153,8 @@ void c_quaternion::get_rijk(double rijk[4])
     rijk[3] = quat.k;
 }
 
+/*f c_quaternion::from_euler
+ */
 c_quaternion *c_quaternion::from_euler(double roll, double pitch, double yaw, int degrees)
 {
     double cr, cp, cy;
@@ -165,7 +182,8 @@ c_quaternion *c_quaternion::from_euler(double roll, double pitch, double yaw, in
     quat.k = cy * sr * cp - sy * cr * sp;
     return this;
 }
-
+/*f More
+ */
 /*
     #f get_matrix_values
     def get_matrix_values( self ):
@@ -289,6 +307,8 @@ c_quaternion *c_quaternion::from_euler(double roll, double pitch, double yaw, in
         return self
 */
 
+/*f c_quaternion::from_rotation
+ */
 c_quaternion *c_quaternion::from_rotation(double angle, double axis[3], int degrees)
 {
     if (degrees) {
@@ -303,7 +323,9 @@ c_quaternion *c_quaternion::from_rotation(double angle, double axis[3], int degr
     return this;
 }
 
-double c_quaternion::as_rotation(double axis[3])
+/*f c_quaternion::as_rotation
+ */
+double c_quaternion::as_rotation(double axis[3]) const
 {
     double m=this->modulus();
     double angle = 2*acos(quat.r/m);
@@ -315,6 +337,8 @@ double c_quaternion::as_rotation(double axis[3])
     return angle;
 }
 
+/*f c_quaternion::conjugate
+ */
 c_quaternion *c_quaternion::conjugate(void)
 {
     quat.r = quat.r;
@@ -324,6 +348,8 @@ c_quaternion *c_quaternion::conjugate(void)
     return this;
 }
 
+/*f c_quaternion::reciprocal
+ */
 c_quaternion *c_quaternion::reciprocal(void)
 {
     this->conjugate();
@@ -332,6 +358,8 @@ c_quaternion *c_quaternion::reciprocal(void)
 }
 
 
+/*f c_quaternion::add_scaled
+ */
 c_quaternion *c_quaternion::add_scaled(const c_quaternion *other, double scale)
 {
     quat.r += other->quat.r*scale;
@@ -341,8 +369,9 @@ c_quaternion *c_quaternion::add_scaled(const c_quaternion *other, double scale)
     return this;
 }
 
-
-double c_quaternion::modulus_squared(void)
+/*f c_quaternion::modulus_squared
+ */
+double c_quaternion::modulus_squared(void) const
 {
     return (quat.r*quat.r + 
             quat.i*quat.i + 
@@ -350,7 +379,9 @@ double c_quaternion::modulus_squared(void)
             quat.k*quat.k);
 }
 
-double c_quaternion::modulus(void)
+/*f c_quaternion::modulus
+ */
+double c_quaternion::modulus(void) const
 {
     return sqrt( quat.r*quat.r + 
                  quat.i*quat.i + 
@@ -358,6 +389,8 @@ double c_quaternion::modulus(void)
                  quat.k*quat.k);
 }
 
+/*f c_quaternion::scale
+ */
 c_quaternion *c_quaternion::scale(double scale)
 {
     quat.r *= scale;
@@ -367,7 +400,8 @@ c_quaternion *c_quaternion::scale(double scale)
     return this;
 }
 
-
+/*f c_quaternion::normalize
+ */
 c_quaternion *c_quaternion::normalize(void)
 {
     double l = this->modulus();
@@ -376,6 +410,8 @@ c_quaternion *c_quaternion::normalize(void)
     return this->scale(1.0/l);
 }
 
+/*f c_quaternion::multiply
+ */
 c_quaternion *c_quaternion::multiply(const c_quaternion *other)
 {
     double r1, i1, j1, k1;
@@ -396,6 +432,8 @@ c_quaternion *c_quaternion::multiply(const c_quaternion *other)
     return this;
 }
 
+/*a Others
+ */
 
 /*
     #f rotation_multiply
@@ -452,42 +490,3 @@ c_quaternion *c_quaternion::multiply(const c_quaternion *other)
 }
 */
 
-/*a "Class methods"
- */
-/*f quaternion_identity - return identity quarternion
- */
-extern c_quaternion *
-quaternion_identity(void)
-{
-    return new c_quaternion();
-}
-
-extern c_quaternion *
-quaternion_pitch(double angle, int degrees)
-{
-    return (new c_quaternion())->from_euler(0,angle,0, degrees);
-}
-
-extern c_quaternion *
-quaternion_yaw(double angle, int degrees)
-{
-    return (new c_quaternion())->from_euler(0,0,angle, degrees);
-}
-
-extern c_quaternion *
-quaternion_roll(double angle, int degrees)
-{
-    return (new c_quaternion())->from_euler(angle,0,0, degrees);
-}
-
-extern c_quaternion *
-quaternion_of_euler(double roll, double pitch, double yaw, int degrees)
-{
-    return (new c_quaternion())->from_euler(roll, pitch, yaw, degrees);
-}
-
-extern c_quaternion *
-quaternion_from_rotation(double angle, double axis[3], int degrees)
-{
-    return (new c_quaternion())->from_rotation(angle, axis, degrees);
-}

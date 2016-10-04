@@ -48,7 +48,7 @@ Example
 //#define DIST_FACTOR (10.0)
 #define DIST_FACTOR (2.0)
 
-#define PI 3.1415926538
+#define PI (M_PI)
 #define DEG(a) (180/PI*(a))
 #define RAD(a) ((a)*PI/180)
 

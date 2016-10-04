@@ -17,6 +17,7 @@ endif
 
 PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o
 BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o
+PY_OBJS := python_wrapper.o python_texture.o python_filter.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o
 
 PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks
@@ -41,21 +42,29 @@ all: python_wrapper.so
 python_%.o: python_%.cpp
 	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@
 
-PY_OBJS := python_wrapper.o python_texture.o python_filter.o filter.o shader.o key_value.o texture.o image_io.o
 python_wrapper.so: ${PY_OBJS}
 	#c++ -L/opt/local/lib -bundle -undefined dynamic_lookup ${LOCAL_LINKFLAGS} -o
 	c++ -bundle -undefined dynamic_lookup -o python_wrapper.so ${PY_OBJS} -lpng16 -ljpeg -L/usr/local/lib 
 
-.PHONY: test_quaternion
+test: test_quaternion test_lens_projection
+
 test_quaternion: quaternion_test
 	./quaternion_test
 
-quaternion_test.o: quaternion.h quaternion_test.cpp
-
-quaternion.o: quaternion.h quaternion.cpp
+quaternion_test.o: quaternion.h quaternion_test.cpp test.h 
 
 quaternion_test: quaternion_test.o quaternion.o
 	$(LINK) quaternion_test.o quaternion.o $(LINKFLAGS) -o quaternion_test
+
+
+test_lens_projection: lens_projection_test
+	./lens_projection_test
+
+lens_projection_test.o: lens_projection.h lens_projection_test.cpp test.h 
+
+lens_projection_test: lens_projection_test.o lens_projection.o quaternion.o
+	$(LINK) lens_projection_test.o lens_projection.o quaternion.o $(LINKFLAGS) -o lens_projection_test
+
 
 prog: $(PROG_OBJS)
 	$(LINK) $(PROG_OBJS) $(LINKFLAGS) -o prog
@@ -212,7 +221,7 @@ blah7: prog
 
 
 
-test: gauss harris windowed_equalization sobel alu_constant alu_mult fft
+exercise: gauss harris windowed_equalization sobel alu_constant alu_mult fft
 
 alu_constant: prog
 	./prog -n 3 \

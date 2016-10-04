@@ -9,7 +9,6 @@
 #include <string.h>
 #include <math.h>
 #include "filter.h"
-#define PI 3.1415926538
 
 /*a Types
  */
@@ -792,7 +791,7 @@ int c_filter_find::do_execute(t_exec_context *ec)
     for (int i=0; (i<n) && (i<10); i++) {
         fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f)\n",
                 i, points[i].x, points[i].y, points[i].value,
-                180/PI*atan2(points[i].vec_y, points[i].vec_x),
+                180/M_PI*atan2(points[i].vec_y, points[i].vec_x),
                 points[i].vec_x, points[i].vec_y
             );
     }
@@ -948,7 +947,7 @@ int c_filter_find4::do_execute(t_exec_context *ec)
     }
     for (int i=0; (i<n) && (i<20); i++) {
         fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f) : %d %d %d\n", i, points[i].x, points[i].y, points[i].value,
-                -360*atan2(points[i].vec_y, points[i].vec_x)/2/PI,
+                -360*atan2(points[i].vec_y, points[i].vec_x)/2/M_PI,
                 points[i].vec_x, points[i].vec_y,
                 points[i].extra[0], points[i].extra[1], points[i].extra[2] );
     }

@@ -5,4 +5,4 @@
 *.png
 batch
 prog
-quaternion_test
+*_test

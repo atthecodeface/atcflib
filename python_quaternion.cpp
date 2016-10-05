@@ -247,6 +247,8 @@ python_quaternion_method_lookat(PyObject* self, PyObject* args, PyObject *kwds)
 
     if (py_obj->quaternion) {
         py_obj->quaternion->lookat(xyz_d, up_d);
+        Py_INCREF(py_obj);
+        return self;
     }
     Py_RETURN_NONE;
 }
@@ -269,6 +271,8 @@ python_quaternion_method_from_euler(PyObject* self, PyObject* args, PyObject *kw
 
     if (py_obj->quaternion) {
         py_obj->quaternion->from_euler(roll, pitch, yaw, degrees);
+        Py_INCREF(py_obj);
+        return self;
     }
     Py_RETURN_NONE;
 }
@@ -294,6 +298,8 @@ python_quaternion_method_from_rotation(PyObject* self, PyObject* args, PyObject 
     if (!PyArg_ParseTuple(axis, "ddd", &xyz_d[0], &xyz_d[1], &xyz_d[2])) return NULL;
     if (py_obj->quaternion) {
         py_obj->quaternion->from_rotation(angle, xyz_d, degrees);
+        Py_INCREF(py_obj);
+        return self;
     }
     Py_RETURN_NONE;
 }

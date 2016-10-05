@@ -260,7 +260,7 @@ python_lens_projection(PyObject* self, PyObject* args, PyObject *kwds)
     t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
     py_obj = PyObject_New(t_PyObject_lens_projection, &PyTypeObject_lens_projection_frame);
     py_obj->lens_projection = new c_lens_projection();
-    py_obj->lens_projection->set_lens(focal_length, frame_width, lp_type);
+    py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
     py_obj->lens_projection->set_sensor(width, width);
     return (PyObject *)py_obj;
 }

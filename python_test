@@ -84,6 +84,9 @@ class c_filter(object):
         pass
     pass
 
+class c_mandelbrot_filter(c_filter):
+    filter_text = 'glsl:mandelbrot(0,1)'
+
 class c_alu_filter(c_filter):
     filter_text = 'glsl:alu_buffers(0,0,0)'
 
@@ -145,17 +148,17 @@ class c_windowed_equalization_filter(c_filter):
 if False:
     print "ALU tests"
 
-    alu_test( [ ((2,2,0), "0.5", "test_constant_50.png"),
-                ((2,2,1), "0.8", "test_constant_80.png"),
+    alu_test( [ ((2,2,0), "vec4(0.5)", "test_constant_50.png"),
+                ((2,2,1), "vec4(0.8)", "test_constant_80.png"),
                 ((0,1,2), "src_a*src_b", "test_constant_40.png"),
                 ] )
 
-    alu_test( [ ((2,2,0), "(x*y)",    "test_xy.png"),
-                ((2,2,1), "(1-x)*y",  "test_x1y.png"),
-                ((0,1,2), "(1-4*src_a*src_b)", "test_xymult.png"),
+    alu_test( [ ((2,2,0), "vec4(x*y)",    "test_xy.png"),
+                ((2,2,1), "vec4((1-x)*y)",  "test_x1y.png"),
+                ((0,1,2), "vec4(1-4*src_a.r*src_b.r)", "test_xymult.png"),
                 ] )
 
-    alu_test( [ ((2,2,0), "abs(sin(200*x*y)*sin(200*(1-x)*y))",    "test_sin_xy.png"),
+    alu_test( [ ((2,2,0), "vec4(abs(sin(200*x*y)*sin(200*(1-x)*y)))",    "test_sin_xy.png"),
                 ] )
 
 
@@ -167,7 +170,7 @@ if False:
     gfy.execute((tb[1],tb[2]))
     save_as_png(tb[2],"test_gauss_sin_xy.png")
 
-    alu_test( [ ((0,2,3),"30*abs(src_a-src_b)","test_gauss_sin_xy_diff.png"),
+    alu_test( [ ((0,2,3),"vec4(30*abs(src_a.r-src_b.r))","test_gauss_sin_xy_diff.png"),
                 ] )
 
     circle_dft = c_circle_dft_filter(extra_defines={"SINGLE_COMPONENT":4, "COMPONENT_SCALE":4})
@@ -270,8 +273,10 @@ if True:
     lp_from.orient(quaternion().lookat((0,0,1),(1,0,0)))
     lp_to.orient(quaternion().lookat((0.3,0.3,1),(1,0,0)))
 
-    alu_test( [ ((2,2,0), "abs(sin(200*x*y)*sin(200*(1-x)*y))",    "test_sin_xy.png"),
-                ] )
+    mandel = c_mandelbrot_filter()
+    mandel.execute( (tb[1],tb[0]) )
+    #alu_test( [ ((2,2,0), "vec4(abs(sin(200*x*y)*sin(200*(1-x)*y)))",    "test_sin_xy.png"),
+    #            ] )
 
     copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
     copy_img.set_projections(projections=(lp_from,lp_to), num_x_divisions=20, num_y_divisions=20)

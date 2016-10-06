@@ -227,15 +227,15 @@ exercise: gauss harris windowed_equalization sobel alu_constant alu_mult fft
 
 alu_constant: prog
 	./prog -n 3 \
-		--filter='glsl:alu_buffers(1,1,0)&-DOP=0.5'  --filter='save:test_constant_50.png(0)' \
-		--filter='glsl:alu_buffers(0,0,1)&-DOP=0.8'  --filter='save:test_constant_80.png(0)' \
+		--filter='glsl:alu_buffers(1,1,0)&-DOP=vec4(0.5)'  --filter='save:test_constant_50.png(0)' \
+		--filter='glsl:alu_buffers(0,0,1)&-DOP=vec4(0.8)'  --filter='save:test_constant_80.png(0)' \
 		--filter='glsl:alu_buffers(1,0,2)&-DOP=src_a*src_b'  --filter='save:test_constant_40.png(2)'
 
 alu_mult: prog
 	./prog -n 3 \
-		--filter='glsl:alu_buffers(1,1,0)&-DOP=(x*y)'       --filter='save:test_xy.png(0)' \
-		--filter='glsl:alu_buffers(0,0,1)&-DOP=((1-x)*y)'   --filter='save:test_xy2.png(1)' \
-		--filter='glsl:alu_buffers(1,0,2)&-DOP=(1-4*src_a*src_b)' --filter='save:test_xymult.png(2)'
+		--filter='glsl:alu_buffers(1,1,0)&-DOP=vec4(x*y)'       --filter='save:test_xy.png(0)' \
+		--filter='glsl:alu_buffers(0,0,1)&-DOP=vec4((1-x)*y)'   --filter='save:test_xy2.png(1)' \
+		--filter='glsl:alu_buffers(1,0,2)&-DOP=vec4(1-4*src_a*src_b)' --filter='save:test_xymult.png(2)'
 
 windowed_equalization: prog
 	./prog -n 4 -i images/IMG_1854.JPG \

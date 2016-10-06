@@ -312,13 +312,17 @@ texture_draw_through_projections(c_lens_projection *projections[2], int num_x_di
         float vy = ((float)y)/num_y_divisions;
         for (int x=0; x<=num_x_divisions; x++) {
             float vx = ((float)x)/num_x_divisions;
+            double vxy[2], uv[2];
+            vxy[0] = vx-0.5; vxy[1]=vy-0.5;
+            c_quaternion q = projections[1]->orientation_of_xy(vxy);
+            projections[0]->xy_of_orientation(&q, uv);
             vertices[5*vn+0] = vx; // x
             vertices[5*vn+1] = vy; // y
             vertices[5*vn+2] = 0.0; // z
-            vertices[5*vn+3] = vx; // u
-            vertices[5*vn+4] = vy; // v
+            vertices[5*vn+3] = uv[0]+0.5; // u
+            vertices[5*vn+4] = uv[1]+0.5; // v
+            vn++;
         }
-        vn++;
     }
     short *indices = (short *)malloc(sizeof(short)*2*(num_x_divisions+1)*num_y_divisions);
     int in=0;
@@ -328,6 +332,7 @@ texture_draw_through_projections(c_lens_projection *projections[2], int num_x_di
             indices[in++] = x + (y+1)*(num_x_divisions+1);
         }
     }
+    fprintf(stderr, "%d %d %d %d\n",num_x_divisions, num_y_divisions, vn, in);
 
     GLuint VertexArrayID;
     GLuint vertex_buffer;
@@ -352,7 +357,7 @@ texture_draw_through_projections(c_lens_projection *projections[2], int num_x_di
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
     for (int y=0; y<num_y_divisions; y++) {
         // each row is 2*(num_x_divisions+1) indices, and 2*num_x_divisions triangles
-        glDrawElements(GL_TRIANGLE_STRIP, 2*(num_x_divisions+1), GL_UNSIGNED_SHORT, NULL);
+        glDrawElements(GL_TRIANGLE_STRIP, 2*(num_x_divisions+1), GL_UNSIGNED_SHORT, (void*)(y*2*(num_x_divisions+1)*sizeof(short)));
     }
 
     GL_GET_ERRORS;

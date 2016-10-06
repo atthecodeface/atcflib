@@ -32,6 +32,7 @@ test_init(void)
 {
     c_lens_projection lp;
     c_quaternion q;
+    double l;
 
     assert_dbeq(lp.get_orientation().r(), 1, WHERE, "LP init");
     assert_dbeq(lp.get_orientation().i(), 0, WHERE, "LP init");
@@ -39,12 +40,13 @@ test_init(void)
     assert_dbeq(lp.get_orientation().k(), 0, WHERE, "LP init");
 
     lp.orient(c_quaternion::rijk(2,3,4,5));
+    l = sqrt(2*2+3*3+4*4+5*5);
 
     display("Init", lp);
-    assert_dbeq(lp.get_orientation().r(), 2, WHERE, "LP init");
-    assert_dbeq(lp.get_orientation().i(), 3, WHERE, "LP init");
-    assert_dbeq(lp.get_orientation().j(), 4, WHERE, "LP init");
-    assert_dbeq(lp.get_orientation().k(), 5, WHERE, "LP init");
+    assert_dbeq(lp.get_orientation().r(), 2/l, WHERE, "LP init");
+    assert_dbeq(lp.get_orientation().i(), 3/l, WHERE, "LP init");
+    assert_dbeq(lp.get_orientation().j(), 4/l, WHERE, "LP init");
+    assert_dbeq(lp.get_orientation().k(), 5/l, WHERE, "LP init");
 
     lp.orient(c_quaternion::identity());
     assert_dbeq(lp.get_orientation().r(), 1, WHERE, "LP init");

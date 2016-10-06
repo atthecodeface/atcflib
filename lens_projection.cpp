@@ -50,7 +50,6 @@ void c_lens_projection::orient(const c_quaternion &orientation)
 {
     this->orientation = orientation;
     this->orientation.normalize();
-
 }
 
 /*f c_lens_projection::set_lens

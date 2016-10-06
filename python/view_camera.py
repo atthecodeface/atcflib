@@ -181,8 +181,6 @@ def test_object():
             dst_xy = (dst_w*xy[0],dst_w*xy[1])
             dst_q  = dst_camera.orientation_of_xy(dst_xy)
             src_xy = src_camera.xy_of_orientation(dst_q)
-            #rxyz = dst_q * quaternion(0,0,0,2) * ~dst_q
-            #xyz = rxyz.rijk[1:]
             xyz = (~dst_q).rotate_vector((0,0,2))
             dst_uvs.append(((src_xy[0]+1.0)/2,(1.0-src_xy[1])/2))
             dst_xyzs.append(xyz)
@@ -190,8 +188,6 @@ def test_object():
             # points for 'src' mesh - also uses 'src' as the image texture, hence needs uv in 'src' terms
             src_xy = (xy[0]*src_w, xy[1]*src_w)
             src_q = src_camera.orientation_of_xy(src_xy)
-            #rxyz = src_q * quaternion(0,0,0,8) * ~src_q
-            #xyz = rxyz.rijk[1:]
             xyz = (~src_q).rotate_vector((0,0,8))
             src_xyzs.append(xyz)
             src_uvs.append(((src_xy[0]+1.0)/2,(1.0-src_xy[1])/2))

@@ -295,8 +295,7 @@ fft2: prog
 	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=409f&-Uuv_base_y=652f' \
 	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=405f&-Uuv_base_y=648f' \
 	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=409f&-Uuv_base_y=644f' \
-						--filter='save:test_d.png(6)' \
-						--filter='fndf:a(6,7,8,9)' \
+						--filter='save:test_d.png(6)'
 
 fft3: prog
 	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1901_r90.JPG \
@@ -314,8 +313,7 @@ fft3: prog
 	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=413f&-Uuv_base_y=622f' \
 	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=409f&-Uuv_base_y=618f' \
 	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=413f&-Uuv_base_y=614f' \
-						--filter='save:test_d.png(6)' \
-						--filter='fndf:a(6,7,8,9)' \
+						--filter='save:test_d.png(6)'
 
 fft4: prog
 	./prog -n 12 -i images/IMG_1900.JPG -i images/IMG_1902.JPG \
@@ -333,8 +331,7 @@ fft4: prog
 	                    --filter='glsl:circle_dft_diff(4,5,7)&-Uuv_base_x=409f&-Uuv_base_y=652f' \
 	                    --filter='glsl:circle_dft_diff(4,5,8)&-Uuv_base_x=405f&-Uuv_base_y=648f' \
 	                    --filter='glsl:circle_dft_diff(4,5,9)&-Uuv_base_x=409f&-Uuv_base_y=644f' \
-						--filter='save:test_d.png(6)' \
-						--filter='fndf:a(6,7,8,9)' \
+						--filter='save:test_d.png(6)'
 
 
 fft5: prog

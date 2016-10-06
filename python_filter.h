@@ -28,8 +28,8 @@
 
 /*a External functions
  */
-extern void python_filter_init(void);
-extern PyObject *python_filter(PyObject* self, PyObject* args, PyObject *kwds);
+extern int python_filter_init_premodule(void);
+extern void python_filter_init_postmodule(PyObject *module);
 
 /*a Wrapper
  */

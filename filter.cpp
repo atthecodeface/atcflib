@@ -53,19 +53,37 @@ t_parameter_def c_filter_save::parameter_defns[] = {
         {NULL, 0, 0}
     };
 
+/*t t_filter_glsl_parameters
+ */
+typedef struct
+{
+    int num_x_divisions;
+    int num_y_divisions;
+} t_filter_glsl_parameters;
+
 /*t c_filter_glsl
  */
 class c_filter_glsl : public c_filter
 {
+    static t_parameter_def parameter_defns[];
 public:
     c_filter_glsl(t_len_string *filename, t_len_string *textures, t_len_string *parameter_string);
     ~c_filter_glsl();
     char *filter_filename;
     char *shader_defines;
+    t_filter_glsl_parameters parameters;
 
     virtual int do_compile(void);
     virtual int do_execute(t_exec_context *ec);
 };
+
+/*v c_filter_glsl::parameter_defns
+ */
+t_parameter_def c_filter_glsl::parameter_defns[] = {
+        {"num_x_divisions", 'i', offsetof(t_filter_glsl_parameters,num_x_divisions)},
+        {"num_y_divisions", 'i', offsetof(t_filter_glsl_parameters,num_y_divisions)},
+        {NULL, 0, 0}
+    };
 
 /*t c_filter_correlate
  */
@@ -132,6 +150,10 @@ c_filter::c_filter(t_len_string *textures, t_len_string *parameter_string)
         this->textures[i].texture = NULL;
         this->textures[i].sampler_id = -1;
         this->textures[i].ec_id = -1;
+    }
+    num_projections = 0;
+    for (int i=0; i<MAX_FILTER_PROJECTIONS; i++) {
+        this->projections[i] = NULL;
     }
 
     num_textures = read_int_list(textures, texture_ec_ids, MAX_FILTER_TEXTURES);
@@ -495,6 +517,8 @@ int c_filter::uniform_set(const char *uniform, float value)
 c_filter_glsl::c_filter_glsl(t_len_string *filename, t_len_string *textures, t_len_string *parameter_string)
     : c_filter(textures, parameter_string)
 {
+    parameters.num_x_divisions = 2;
+    parameters.num_y_divisions = 2;
     set_filename("shaders/", ".glsl", filename, &filter_filename);
     if (num_textures<2) {
         parse_error = "Failed to parse GLSL texture options - need at least '(<src>+,<dst>)' texture numbers";
@@ -534,13 +558,22 @@ int c_filter_glsl::do_compile(void)
 int c_filter_glsl::do_execute(t_exec_context *ec)
 {
     GL_GET_ERRORS;
+
+    set_parameters_from_map(parameter_defns, (void *)&parameters);
+
     texture_target_as_framebuffer(bound_texture(ec,num_textures-1));
     glUseProgram(filter_pid);
 
     set_shader_uniforms();
     set_texture_uniforms(ec, 1);
 
-    texture_draw();
+    if (projections[0] && projections[1]) {
+        texture_draw_through_projections(projections,
+                                         parameters.num_x_divisions,
+                                         parameters.num_y_divisions);
+    } else {
+        texture_draw();
+    }
 
     GL_GET_ERRORS;
 
@@ -580,9 +613,6 @@ int c_filter_correlate::do_compile(void)
         return 1;
     if (get_texture_uniform_ids(1))
         return 1;
-    //uniform_out_xy_id      = glGetUniformLocation(filter_pid, "out_xy");
-    //uniform_out_size_id    = glGetUniformLocation(filter_pid, "out_size");
-    //uniform_src_xy_id      = glGetUniformLocation(filter_pid, "src_xy");
     return 0;
 }
 

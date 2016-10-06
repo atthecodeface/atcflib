@@ -94,6 +94,11 @@ texture_draw_rectangle(void);
 extern void
 texture_draw_tidy(void);
 
+/*f texture_draw_through_projections
+ */
+extern void
+texture_draw_through_projections(class c_lens_projection *projections[2], int num_x_divisions, int num_y_divisions);
+
 /*f texture_draw
  */
 extern void

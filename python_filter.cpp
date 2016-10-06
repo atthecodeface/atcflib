@@ -30,20 +30,84 @@ typedef struct {
     t_exec_context ec;
 } t_PyObject_filter;
 
+/*a Forward function declarations
+ */
+static int python_filter_init(PyObject *self, PyObject *args, PyObject *kwds);
+static PyObject *python_filter_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+static void python_filter_dealloc(PyObject *self);
+static PyObject *python_filter_getattr(PyObject *self, char *attr);
+
+static PyObject *python_filter_method_compile(PyObject* self);
+static PyObject *python_filter_method_exec(PyObject* self);
+static PyObject *python_filter_method_define(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_filter_method_parameter(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_filter_method_textures(PyObject* self, PyObject* args, PyObject *kwds);
+
+/*a Static variables
+ */
+/*v python_filter_methods
+ */
+PyMethodDef python_filter_methods[] = {
+    {"textures", (PyCFunction)python_filter_method_textures, METH_VARARGS|METH_KEYWORDS},
+    {"define",   (PyCFunction)python_filter_method_define, METH_VARARGS|METH_KEYWORDS},
+    {"parameter",  (PyCFunction)python_filter_method_parameter, METH_VARARGS|METH_KEYWORDS},
+    {"compile",  (PyCFunction)python_filter_method_compile, METH_NOARGS},
+    {"execute",  (PyCFunction)python_filter_method_exec,    METH_NOARGS},
+    {NULL, NULL},
+};
+
+/*v PyTypeObject_filter
+ */
+static PyTypeObject PyTypeObject_filter = {
+    PyObject_HEAD_INIT(NULL)
+    0, // variable size
+    "filter", // type name
+    sizeof(t_PyObject_filter), // basic size
+    0, // item size - zero for static sized object types
+    python_filter_dealloc, //py_engine_dealloc, /*tp_dealloc*/
+    0, /*tp_print - basically deprecated */
+    python_filter_getattr, /*tp_getattr*/
+    0, /*tp_setattr*/
+    0, /*tp_compare*/
+    0, /*tp_repr - ideally a represenation that is python that recreates this object */
+    0, /*tp_as_number*/
+    0, /*tp_as_sequence*/
+    0, /*tp_as_mapping*/
+    0, /*tp_hash */
+	0, /* tp_call - called if the object itself is invoked as a method */
+	0, /* tp_str */
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    "Filter object",       /* tp_doc */
+    0,		                   /* tp_traverse */
+    0,		                   /* tp_clear */
+    0,		                   /* tp_richcompare */
+    0,		                   /* tp_weaklistoffset */
+    0,		                   /* tp_iter */
+    0,		                   /* tp_iternext */
+    python_filter_methods, /* tp_methods */
+    0, //python_quaternion_members, /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    python_filter_init,    /* tp_init */
+    0,                         /* tp_alloc */
+    python_filter_new,     /* tp_new */
+};
+
+/*a Python filter methods
+*/
 /*f python_filter_method_compile
  */
 static PyObject *
-python_filter_method_compile(PyObject* self, PyObject* args, PyObject *kwds)
+python_filter_method_compile(PyObject* self)
 {
     t_PyObject_filter *py_obj = (t_PyObject_filter *)self;
-    const char *filename = NULL;
-
-    static const char *kwlist[] = {"filename", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s", (char **)kwlist, 
-                                     &filename))
-        return NULL;
-
     if (py_obj->filter) {
         int err;
         err = py_obj->filter->compile();
@@ -58,17 +122,9 @@ python_filter_method_compile(PyObject* self, PyObject* args, PyObject *kwds)
 /*f python_filter_method_exec
  */
 static PyObject *
-python_filter_method_exec(PyObject* self, PyObject* args, PyObject *kwds)
+python_filter_method_exec(PyObject* self)
 {
     t_PyObject_filter *py_obj = (t_PyObject_filter *)self;
-    const char *filename = NULL;
-
-    static const char *kwlist[] = {"filename", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s", (char **)kwlist, 
-                                     &filename))
-        return NULL;
-
     if (py_obj->filter) {
         int err;
         py_obj->ec.use_ids = 0;
@@ -169,17 +225,6 @@ python_filter_method_textures(PyObject* self, PyObject* args, PyObject *kwds)
     Py_RETURN_NONE;
 }
 
-/*v python_filter_methods
- */
-PyMethodDef python_filter_methods[] = {
-    {"textures", (PyCFunction)python_filter_method_textures, METH_VARARGS|METH_KEYWORDS},
-    {"define",   (PyCFunction)python_filter_method_define, METH_VARARGS|METH_KEYWORDS},
-    {"parameter",  (PyCFunction)python_filter_method_parameter, METH_VARARGS|METH_KEYWORDS},
-    {"compile",  (PyCFunction)python_filter_method_compile, METH_VARARGS|METH_KEYWORDS},
-    {"execute",  (PyCFunction)python_filter_method_exec, METH_VARARGS|METH_KEYWORDS},
-    {NULL, NULL},
-};
-
 /*f python_filter_dealloc
  */
 static void
@@ -204,8 +249,8 @@ python_filter_getattr(PyObject *self, char *attr)
     if (!strcmp(attr, "num_points")) {
         return PyInt_FromLong(py_obj->ec.num_points);
     }
-    if (py_obj->ec.points) {
-        if (!strcmp(attr, "points")) {
+    if (!strcmp(attr, "points")) {
+        if (py_obj->ec.points) {
             PyObject *list;
             list = PyList_New(0);
             for (int i=0; i<py_obj->ec.num_points; i++) {
@@ -217,68 +262,71 @@ python_filter_getattr(PyObject *self, char *attr)
             }
             return list;
         }
+        Py_RETURN_NONE;
     }
     return Py_FindMethod(python_filter_methods, self, attr);
 }
 
-/*v PyTypeObject_filter_frame
+/*a Python object
  */
-static PyTypeObject PyTypeObject_filter_frame = {
-    PyObject_HEAD_INIT(NULL)
-    0, // variable size
-    "filter", // type name
-    sizeof(t_PyObject_filter), // basic size
-    0, // item size - zero for static sized object types
-    python_filter_dealloc, //py_engine_dealloc, /*tp_dealloc*/
-    0, /*tp_print - basically deprecated */
-    python_filter_getattr, /*tp_getattr*/
-    0, /*tp_setattr*/
-    0, /*tp_compare*/
-    0, /*tp_repr - ideally a represenation that is python that recreates this object */
-    0, /*tp_as_number*/
-    0, /*tp_as_sequence*/
-    0, /*tp_as_mapping*/
-    0, /*tp_hash */
-	0, /* tp_call - called if the object itself is invoked as a method */
-	0, /* tp_str */
-};
-
-/*f python_filter
+/*f python_filter_new
  */
-PyObject *
-python_filter(PyObject* self, PyObject* args, PyObject *kwds)
+static PyObject *
+python_filter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     t_PyObject_filter *py_obj;
+    py_obj = (t_PyObject_filter *)type->tp_alloc(type, 0);
+    if (py_obj) {
+        py_obj->filter = NULL;
+    }
+    return (PyObject *)py_obj;
+}
 
-    PyTypeObject_filter_frame.ob_type = &PyType_Type;
+/*f python_filter_init
+ */
+static int
+python_filter_init(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    t_PyObject_filter *py_obj = (t_PyObject_filter *)self;
 
     const char *filter = NULL;
-
     static const char *kwlist[] = {"filter", NULL};
-
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", (char **)kwlist, 
                                      &filter))
-        return NULL;
+        return -1;
 
-    py_obj = PyObject_New(t_PyObject_filter, &PyTypeObject_filter_frame);
     py_obj->filter = NULL;
     if (filter) {
         py_obj->filter = filter_from_string(filter);
         if (!py_obj->filter) {
             PyErr_SetString(PyExc_RuntimeError, "Failed to create filter");
-            return NULL;
+            return -1;
         }
     }
     if (py_obj->filter) {
         if (py_obj->filter->parse_error) {
             PyErr_SetString(PyExc_RuntimeError, py_obj->filter->parse_error);
-            return NULL;
+            return -1;
         }
     }
-    return (PyObject *)py_obj;
+    return 0;
 }
 
-void python_filter_init(void)
+/*f python_filter_init_premodule
+ */
+int python_filter_init_premodule(void)
 {
+    if (PyType_Ready(&PyTypeObject_filter) < 0)
+        return -1;
+    return 0;
 }
+
+/*f python_filter_init_postmodule
+ */
+void python_filter_init_postmodule(PyObject *module)
+{
+    Py_INCREF(&PyTypeObject_filter);
+    PyModule_AddObject(module, "filter", (PyObject *)&PyTypeObject_filter);
+}
+
 

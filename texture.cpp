@@ -5,6 +5,7 @@
 #include <OpenGL/gl3.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "lens_projection.h"
 #include "texture.h"
 #include "image_io.h"
 
@@ -176,6 +177,7 @@ texture_target_as_framebuffer(t_texture_ptr texture)
 /*f texture_draw_init
  */
 static GLuint texture_draw_buffers[2];
+static GLuint VertexArrayID;
 void
 texture_draw_init(void)
 {
@@ -216,7 +218,6 @@ texture_draw_init(void)
 
     GL_GET_ERRORS;
 
-    GLuint VertexArrayID;
     glGenVertexArrays(1,&VertexArrayID);
     glBindVertexArray(VertexArrayID);
 
@@ -264,6 +265,7 @@ texture_draw_prepare(void)
 {
     GL_GET_ERRORS;
 
+    glBindVertexArray(VertexArrayID);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, texture_draw_buffers[0]);
@@ -298,6 +300,69 @@ void texture_draw_tidy(void)
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D,0);
     glActiveTexture(GL_TEXTURE0);
+}
+
+/*f texture_draw_through_projections*/
+void
+texture_draw_through_projections(c_lens_projection *projections[2], int num_x_divisions, int num_y_divisions)
+{
+    float *vertices = (float *)malloc(5*sizeof(float)*(num_x_divisions+1)*(num_y_divisions+1));
+    int vn = 0;
+    for (int y=0; y<=num_y_divisions; y++) {
+        float vy = ((float)y)/num_y_divisions;
+        for (int x=0; x<=num_x_divisions; x++) {
+            float vx = ((float)x)/num_x_divisions;
+            vertices[5*vn+0] = vx; // x
+            vertices[5*vn+1] = vy; // y
+            vertices[5*vn+2] = 0.0; // z
+            vertices[5*vn+3] = vx; // u
+            vertices[5*vn+4] = vy; // v
+        }
+        vn++;
+    }
+    short *indices = (short *)malloc(sizeof(short)*2*(num_x_divisions+1)*num_y_divisions);
+    int in=0;
+    for (int y=0; y<num_y_divisions; y++) {
+        for (int x=0; x<=num_x_divisions; x++) {
+            indices[in++] = x + y*(num_x_divisions+1);
+            indices[in++] = x + (y+1)*(num_x_divisions+1);
+        }
+    }
+
+    GLuint VertexArrayID;
+    GLuint vertex_buffer;
+    GLuint index_buffer;
+    glGenVertexArrays(1,&VertexArrayID);
+    glBindVertexArray(VertexArrayID);
+
+    glGenBuffers(1, &vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, vn*5*sizeof(float), vertices, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &index_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, in*sizeof(unsigned short), indices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(0*sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3*sizeof(float)));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+    for (int y=0; y<num_y_divisions; y++) {
+        // each row is 2*(num_x_divisions+1) indices, and 2*num_x_divisions triangles
+        glDrawElements(GL_TRIANGLE_STRIP, 2*(num_x_divisions+1), GL_UNSIGNED_SHORT, NULL);
+    }
+
+    GL_GET_ERRORS;
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+
+    glDeleteBuffers(1, &vertex_buffer);
+    glDeleteBuffers(1, &index_buffer);
+    glDeleteVertexArrays(1,&VertexArrayID);
 }
 
 /*f texture_draw

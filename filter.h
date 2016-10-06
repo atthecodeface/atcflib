@@ -33,6 +33,7 @@
 /*a Defines
  */
 #define MAX_FILTER_TEXTURES 8
+#define MAX_FILTER_PROJECTIONS 2
 
 /*a Types
  */
@@ -136,11 +137,14 @@ public:
     const char *parse_error;
     GLuint filter_pid;
 
+    int bind_projection(int n, class c_lens_projection *projection);
     int bind_texture(int n, t_texture_ptr texture);
     t_texture_ptr bound_texture(t_exec_context *ec, int n);
 
     int num_textures;
     t_filter_texture textures[MAX_FILTER_TEXTURES];
+    int num_projections;
+    class c_lens_projection *projections[MAX_FILTER_PROJECTIONS];
 };
 
 /*a External functions

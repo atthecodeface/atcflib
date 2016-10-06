@@ -203,7 +203,7 @@ if False:
         save_as_png(tb[5],"img_dft_%d.png"%i)
     pass
 
-if False:
+if True:
     print "Diff images"
 
     imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),

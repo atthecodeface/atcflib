@@ -265,6 +265,19 @@ python_lens_projection(PyObject* self, PyObject* args, PyObject *kwds)
     return (PyObject *)py_obj;
 }
 
+/*f python_lens_projection_data
+ */
+int
+python_lens_projection_data(PyObject* self, int id, void *data_ptr)
+{
+    t_PyObject_lens_projection *py_obj = (t_PyObject_lens_projection *)self;
+    if (!PyObject_TypeCheck(self, &PyTypeObject_lens_projection_frame))
+        return 0;
+
+    ((c_lens_projection **)data_ptr)[0] = py_obj->lens_projection;
+    return 1;
+}
+
 void python_lens_projection_init(void)
 {
 }

@@ -30,6 +30,7 @@
  */
 extern void python_lens_projection_init(void);
 extern PyObject *python_lens_projection(PyObject* self, PyObject* args, PyObject *kwds);
+extern int python_lens_projection_data(PyObject* self, int id, void *data_ptr);
 
 /*a Wrapper
  */

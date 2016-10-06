@@ -14,6 +14,7 @@
  */
 #include <Python.h>
 #include "python_filter.h"
+#include "python_lens_projection.h"
 #include "python_texture.h"
 #include "filter.h"
 
@@ -42,12 +43,14 @@ static PyObject *python_filter_method_exec(PyObject* self);
 static PyObject *python_filter_method_define(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_filter_method_parameter(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_filter_method_textures(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_filter_method_projections(PyObject* self, PyObject* args, PyObject *kwds);
 
 /*a Static variables
  */
 /*v python_filter_methods
  */
 PyMethodDef python_filter_methods[] = {
+    {"projections", (PyCFunction)python_filter_method_projections, METH_VARARGS|METH_KEYWORDS},
     {"textures", (PyCFunction)python_filter_method_textures, METH_VARARGS|METH_KEYWORDS},
     {"define",   (PyCFunction)python_filter_method_define, METH_VARARGS|METH_KEYWORDS},
     {"parameter",  (PyCFunction)python_filter_method_parameter, METH_VARARGS|METH_KEYWORDS},
@@ -221,6 +224,34 @@ python_filter_method_textures(PyObject* self, PyObject* args, PyObject *kwds)
             }
         }
         Py_DECREF(tuple);
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_filter_method_projections
+ */
+static PyObject *
+python_filter_method_projections(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_filter *py_obj = (t_PyObject_filter *)self;
+    PyObject *from, *to;
+
+    static const char *kwlist[] = {"from", "to", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", (char **)kwlist, 
+                                     &from, &to))
+        return NULL;
+
+    if (py_obj->filter) {
+        class c_lens_projection *to_proj, *from_proj;
+        if ( (python_lens_projection_data(from, 0, (void *)&from_proj)) &&
+             (python_lens_projection_data(to,   0, (void *)&to_proj)) ) {
+            py_obj->filter->bind_projection(0, from_proj);
+            py_obj->filter->bind_projection(1, to_proj);
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Non-projection object in tuple");
+            return NULL;
+        }
     }
     Py_RETURN_NONE;
 }

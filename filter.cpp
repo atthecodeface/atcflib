@@ -424,6 +424,17 @@ t_texture_ptr c_filter::bound_texture(t_exec_context *ec, int n)
     return texture;
 }
 
+/*f c_filter::bind_texture
+ */
+int c_filter::bind_projection(int n, class c_lens_projection *projection)
+{
+    if ((n>=0) && (n<=MAX_FILTER_PROJECTIONS)) {
+        projections[n] = projection;
+        return 0;
+    }
+    return -1;
+}
+
 /*f c_filter::set_texture_uniforms
  */
 int c_filter::set_texture_uniforms(t_exec_context *ec, int num_dest)

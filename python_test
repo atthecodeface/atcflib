@@ -73,6 +73,11 @@ class c_filter(object):
             self.f.parameter(p,parameters[p])
             pass
         pass
+    def set_projections(self, projections=(None,None), num_x_divisions=None, num_y_divisions=None):
+        if projections[0] and projections[1]: self.f.projections(projections[0], projections[1])
+        if num_x_divisions: self.f.parameter("num_x_divisions",num_x_divisions)
+        if num_y_divisions: self.f.parameter("num_x_divisions",num_y_divisions)
+        pass
     def execute(self,textures):
         self.f.textures(textures)
         self.f.execute()
@@ -203,7 +208,7 @@ if False:
         save_as_png(tb[5],"img_dft_%d.png"%i)
     pass
 
-if True:
+if False:
     print "Diff images"
 
     imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),
@@ -259,6 +264,14 @@ if True:
 if True:
     lens_projection = gjslib_c.lens_projection
     quaternion      = gjslib_c.quaternion
+
+    lp_20 = lens_projection(frame_width=36.0, focal_length=20.0, lens_type="rectilinear")
+    lp_30 = lens_projection(frame_width=36.0, focal_length=30.0, lens_type="rectilinear")
+    lp_20.orient(quaternion().lookat((0,0,1),(1,0,0)))
+    lp_30.orient(quaternion().lookat((0,0,1),(1,0,0)))
+    copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
+    copy_img.set_projections(projections=(lp_20,lp_30), num_x_divisions=3)
+    copy_img.execute((tb[1],tb[1],tb[2]))
 
     a = quaternion.roll(60, degrees=1)
     print a.rotate_vector((1,0,3))

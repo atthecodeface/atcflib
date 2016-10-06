@@ -17,7 +17,7 @@ endif
 
 PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o
 BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o
-PY_OBJS := python_wrapper.o python_texture.o python_filter.o python_lens_projection.o python_quaternion.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o quaternion.o
+PY_OBJS := gjslib_c.o python_texture.o python_filter.o python_lens_projection.o python_quaternion.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o quaternion.o
 
 PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks
@@ -37,14 +37,16 @@ PYTHON=python2.7
 FRAMEWORK_PATH := /Library/Frameworks
 PYTHON_INCLUDES := -I${FRAMEWORK_PATH}/Python.framework/Versions/Current/include/${PYTHON}
 
-all: python_wrapper.so
+all: gjslib_c.so
 
 python_%.o: python_%.cpp
 	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@
 
-python_wrapper.so: ${PY_OBJS}
-	#c++ -L/opt/local/lib -bundle -undefined dynamic_lookup ${LOCAL_LINKFLAGS} -o
-	c++ -bundle -undefined dynamic_lookup -o python_wrapper.so ${PY_OBJS} -lpng16 -ljpeg -L/usr/local/lib 
+gjslib_%.o: gjslib_%.cpp
+	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@
+
+gjslib_c.so: ${PY_OBJS}
+	c++ -bundle -undefined dynamic_lookup -o gjslib_c.so ${PY_OBJS} -lpng16 -ljpeg -L/usr/local/lib 
 
 test: test_quaternion test_lens_projection
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from OpenGL.GLUT import *
 from OpenGL.GL import *
-import python_wrapper
+import gjslib_c
 
 def init_opengl():
         glutInit(sys.argv)
@@ -11,24 +11,24 @@ def init_opengl():
 
 print "init opengl"        
 init_opengl()
-#a = python_wrapper.texture(filename='images/IMG_2162.JPG')
+#a = gjslib_c.texture(filename='images/IMG_2162.JPG')
 
 print "Create textures"
 tb = []
 size = 1024
 for i in range(12):
-        tb.append(python_wrapper.texture(width=size, height=size))
+        tb.append(gjslib_c.texture(width=size, height=size))
         pass
 print tb[0].width, tb[0].height
 
 
-#b = python_wrapper.filter(filter="glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0")
+#b = gjslib_c.filter(filter="glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0")
 #b.define("INTENSITY_YSCALE","3.0")
 #b.define("INTENSITY_YSCALE",remove=1)
 #b.compile()
 
 def save_as_png(texture, filename):
-        b = python_wrapper.filter(filter="save:%s(0)"%filename)
+        b = gjslib_c.filter(filter="save:%s(0)"%filename)
         b.textures([texture])
         b.compile()
         b.execute()
@@ -38,7 +38,7 @@ def save_as_png(texture, filename):
 
 def alu_test(ops):
     for (ts, op, save_filename) in ops:
-            b = python_wrapper.filter(filter="glsl:alu_buffers(0,0,0)")
+            b = gjslib_c.filter(filter="glsl:alu_buffers(0,0,0)")
             b.define("OP",op)
             b.compile()
             b.textures( [tb[i] for i in ts] )
@@ -52,7 +52,7 @@ class c_filter(object):
     defines = {}
     parameters = {}
     def __init__(self, extra_parameters={}, extra_defines={}):
-        self.f = python_wrapper.filter(filter=self.filter_text)
+        self.f = gjslib_c.filter(filter=self.filter_text)
         for u in extra_parameters:
             self.f.parameter(u,extra_parameters[u])
         for u in self.parameters:
@@ -90,7 +90,7 @@ if False:
                             extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
                                            "GL_POSITION":"vec4(ysc*y+yc,xsc*x+xc,0,1)",
                                            })
-    img = python_wrapper.texture(filename='images/IMG_2162.JPG')
+    img = gjslib_c.texture(filename='images/IMG_2162.JPG')
     to_rgb.f.parameter("ysc",4.0)
     to_rgb.f.parameter("xsc",4.0)
     to_rgb.f.parameter("yc",-2.0)
@@ -169,7 +169,7 @@ if False:
     circle_dft.execute((tb[2],tb[3]))
     save_as_png(tb[3],"test_gauss_sin_xy_dft.png")
 
-    f = python_wrapper.filter(filter='find:a(10)')
+    f = gjslib_c.filter(filter='find:a(10)')
     f.compile()
     f.textures((tb[3],))
     f.parameter("minimum",0.87)
@@ -180,7 +180,7 @@ if False:
 if False:
     print "DFT images"
 
-    img = python_wrapper.texture(filename='images/IMG_2162.JPG')
+    img = gjslib_c.texture(filename='images/IMG_2162.JPG')
     to_rgb = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float(img.width)),
                                            "INTENSITY_YSCALE":"1.0",
                                            "INTENSITY_YOFS":"0.0",
@@ -206,8 +206,8 @@ if False:
 if False:
     print "Diff images"
 
-    imgs = ( python_wrapper.texture(filename='images/IMG_1900.JPG'),
-             python_wrapper.texture(filename='images/IMG_1901_r10.JPG') )
+    imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),
+             gjslib_c.texture(filename='images/IMG_1901_r10.JPG') )
 
     to_rgb = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
                             extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
@@ -257,9 +257,16 @@ if False:
     pass
 
 if True:
-    lens_projection = python_wrapper.lens_projection
-    quaternion      = python_wrapper.quaternion
+    lens_projection = gjslib_c.lens_projection
+    quaternion      = gjslib_c.quaternion
+
+    a = quaternion.roll(60, degrees=1)
+    print a.rotate_vector((1,0,3))
+    print a.rotate_vector((0,1,3))
+
     lp_20 = lens_projection(frame_width=36.0, focal_length=20.0, lens_type="rectilinear")
+    print quaternion.roll(60,degrees=1)
+    print quaternion().identity()
     a = quaternion()
     b = quaternion()
     c = quaternion(r=1.0)

@@ -63,6 +63,7 @@ public:
     c_quaternion &operator/=(const c_quaternion &other);
     inline c_quaternion operator+(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs += rhs; return lhs; }
     inline c_quaternion operator-(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs -= rhs; return lhs; }
+    inline c_quaternion operator-(void) const { c_quaternion lhs=*this; lhs.quat.r=-lhs.quat.r;lhs.quat.i=-lhs.quat.i;lhs.quat.j=-lhs.quat.j;lhs.quat.k=-lhs.quat.k; return lhs; }
     inline c_quaternion operator*(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs *= rhs; return lhs; }
     inline c_quaternion operator/(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs /= rhs; return lhs; }
 
@@ -82,12 +83,13 @@ public:
     double modulus(void) const;
     c_quaternion *scale(double scale);
     c_quaternion *normalize(void);
-    c_quaternion *multiply(const c_quaternion *other);
+    c_quaternion *multiply(const c_quaternion *other, int premultiply=0);
 
-    c_quaternion *from_euler(double roll, double pitch, double yaw, int degrees);
+    c_quaternion *from_euler(double roll, double pitch, double yaw, int degrees=0);
     c_quaternion *lookat(double xyz[3], double up[3]);
-    c_quaternion *from_rotation(double angle, double axis[3], int degrees);
+    c_quaternion *from_rotation(double angle, double axis[3], int degrees=0);
     double as_rotation(double axis[3]) const;
+    void as_euler(double rpy[3]) const;
     void get_rijk(double rijk[4]) const;
     void __str__(char *buffer, int buf_size) const;
     

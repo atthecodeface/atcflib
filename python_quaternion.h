@@ -25,11 +25,13 @@
 
 /*a Includes
  */
+#include <Python.h>
 #include "quaternion.h"
 
 /*a External functions
  */
-extern void python_quaternion_init(void);
+extern int python_quaternion_init_premodule(void);
+extern void python_quaternion_init_postmodule(PyObject *module);
 extern PyObject *python_quaternion(PyObject* self, PyObject* args, PyObject *kwds);
 extern PyObject *python_quaternion_from_c(c_quaternion *quaternion);
 extern int python_quaternion_data(PyObject* self, int id, void *data_ptr);

@@ -31,17 +31,44 @@ typedef struct t_PyObject_quaternion {
 
 /*a Forward declarations
  */
-static PyObject *python_quaternion_getattr(PyObject *self, char *attr);
+static PyObject *python_quaternion_class_method_of_euler(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_class_method_of_rotation(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_class_method_of_sequence(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_class_method_identity(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_class_method_pitch(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_class_method_yaw(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_class_method_roll(PyObject* self, PyObject* args, PyObject *kwds);
+
+static PyObject *python_quaternion_method_copy(PyObject* self);
+static PyObject *python_quaternion_method_conjugate(PyObject* self);
+static PyObject *python_quaternion_method_reciprocal(PyObject* self);
+static PyObject *python_quaternion_method_modulus(PyObject* self);
+static PyObject *python_quaternion_method_modulus_squared(PyObject* self);
+static PyObject *python_quaternion_method_normalize(PyObject* self);
+static PyObject *python_quaternion_method_get(PyObject* self);
+
 static PyObject *python_quaternion_method_scale(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_lookat(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_add(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_multiply(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_rotate_vector(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_from_euler(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_to_euler(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_from_rotation(PyObject* self, PyObject* args, PyObject *kwds);
-static PyObject *python_quaternion_method_add(PyObject* self, PyObject* b);
-static PyObject *python_quaternion_method_subtract(PyObject* self, PyObject* b);
-static PyObject *python_quaternion_method_multiply(PyObject* self, PyObject* b);
-static PyObject *python_quaternion_method_divide(PyObject* self, PyObject* b);
-static PyObject *python_quaternion_method_abs(PyObject* self);
-static PyObject *python_quaternion_method_conjugate(PyObject* self);
+static PyObject *python_quaternion_method_to_rotation(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_from_sequence(PyObject* self, PyObject* args, PyObject *kwds);
+
+static PyObject *python_quaternion_method_binary_add(PyObject* self, PyObject* b);
+static PyObject *python_quaternion_method_binary_subtract(PyObject* self, PyObject* b);
+static PyObject *python_quaternion_method_binary_multiply(PyObject* self, PyObject* b);
+static PyObject *python_quaternion_method_binary_divide(PyObject* self, PyObject* b);
+
+static PyObject *python_quaternion_method_unary_abs(PyObject* self);
+static int       python_quaternion_method_unary_nonzero(PyObject* self);
+static PyObject *python_quaternion_method_unary_invert(PyObject* self);
+static PyObject *python_quaternion_method_unary_negate(PyObject* self);
+
+static PyObject *python_quaternion_getattr(PyObject *self, char *attr);
 static PyObject *python_quaternion_str(PyObject *self);
 static void      python_quaternion_dealloc(PyObject *self);
 
@@ -51,28 +78,99 @@ static void      python_quaternion_dealloc(PyObject *self);
 /*v python_quaternion_methods
  */
 static PyMethodDef python_quaternion_methods[] = {
-    {"scale",      (PyCFunction)python_quaternion_method_scale,      METH_VARARGS|METH_KEYWORDS},
-    {"lookat",     (PyCFunction)python_quaternion_method_lookat,     METH_VARARGS|METH_KEYWORDS},
-    {"from_euler", (PyCFunction)python_quaternion_method_from_euler, METH_VARARGS|METH_KEYWORDS},
-    {"from_rotation", (PyCFunction)python_quaternion_method_from_rotation, METH_VARARGS|METH_KEYWORDS},
+    {"roll",          (PyCFunction)python_quaternion_class_method_roll,           METH_CLASS|METH_VARARGS|METH_KEYWORDS},
+    {"pitch",         (PyCFunction)python_quaternion_class_method_pitch,          METH_CLASS|METH_VARARGS|METH_KEYWORDS},
+    {"yaw",           (PyCFunction)python_quaternion_class_method_yaw,            METH_CLASS|METH_VARARGS|METH_KEYWORDS},
+    {"identity",      (PyCFunction)python_quaternion_class_method_identity,       METH_CLASS|METH_VARARGS|METH_KEYWORDS},
+    {"of_euler",      (PyCFunction)python_quaternion_class_method_of_euler,       METH_CLASS|METH_VARARGS|METH_KEYWORDS},
+    {"of_rotation",   (PyCFunction)python_quaternion_class_method_of_rotation,    METH_CLASS|METH_VARARGS|METH_KEYWORDS},
+    {"of_sequence",   (PyCFunction)python_quaternion_class_method_of_sequence,    METH_CLASS|METH_VARARGS|METH_KEYWORDS},
+
+    {"copy",          (PyCFunction)python_quaternion_method_copy,              METH_NOARGS},
+    {"conjugate",     (PyCFunction)python_quaternion_method_conjugate,         METH_NOARGS},
+    {"reciprocal",    (PyCFunction)python_quaternion_method_reciprocal,        METH_NOARGS},
+    {"modulus",       (PyCFunction)python_quaternion_method_modulus,           METH_NOARGS},
+    {"modulus_squared", (PyCFunction)python_quaternion_method_modulus_squared, METH_NOARGS},
+    {"normalize",     (PyCFunction)python_quaternion_method_normalize,         METH_NOARGS},
+    {"get",           (PyCFunction)python_quaternion_method_get,               METH_NOARGS},
+    {"get_matrix",    (PyCFunction)python_quaternion_method_scale,             METH_NOARGS},//
+    {"get_matrix_as_lists",(PyCFunction)python_quaternion_method_scale,        METH_NOARGS},//
+
+    {"scale",         (PyCFunction)python_quaternion_method_scale,          METH_VARARGS|METH_KEYWORDS},
+    {"lookat",        (PyCFunction)python_quaternion_method_lookat,         METH_VARARGS|METH_KEYWORDS},
+    {"from_sequence", (PyCFunction)python_quaternion_method_from_sequence,  METH_VARARGS|METH_KEYWORDS},
+    {"from_euler",    (PyCFunction)python_quaternion_method_from_euler,     METH_VARARGS|METH_KEYWORDS},
+    {"from_rotation", (PyCFunction)python_quaternion_method_from_rotation,  METH_VARARGS|METH_KEYWORDS},
+    {"to_euler",      (PyCFunction)python_quaternion_method_to_euler,       METH_VARARGS|METH_KEYWORDS},
+    {"to_rotation",   (PyCFunction)python_quaternion_method_to_rotation,    METH_VARARGS|METH_KEYWORDS},
+    {"add",           (PyCFunction)python_quaternion_method_add,            METH_VARARGS|METH_KEYWORDS},
+    {"multiply",      (PyCFunction)python_quaternion_method_multiply,       METH_VARARGS|METH_KEYWORDS},
+    {"rotate_vector", (PyCFunction)python_quaternion_method_rotate_vector,  METH_VARARGS|METH_KEYWORDS},
+    {"interpolate",   (PyCFunction)python_quaternion_method_scale,      METH_VARARGS|METH_KEYWORDS},//
     {NULL, NULL},
 };
 
-/*v PyTypeObject_quaternion_frame
+/*f python_quaternion_new
+ */
+static PyObject *
+python_quaternion_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj;
+    py_obj = (t_PyObject_quaternion *)type->tp_alloc(type, 0);
+    if (py_obj) {
+        py_obj->quaternion = NULL;
+    }
+    return (PyObject *)py_obj;
+}
+
+/*f python_quaternion_init
+ */
+static int
+python_quaternion_init(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+
+    static const char *kwlist[] = {"quat", "euler", "degrees", "r", "i", "j", "k", NULL};
+    PyObject *quat=NULL, *euler=NULL;
+    int degrees;
+    double r=0.0, i=0.0, j=0.0, k=0.0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O!Oidddd", (char **)kwlist, 
+                                     &PyDict_Type, &quat, &euler, &degrees,
+                                     &r, &i, &j, &k))
+        return -1;
+    if (quat) {
+        PyObject *obj;
+        if ( (obj=PyDict_GetItemString(quat,"r"))!=NULL ) r = PyInt_AsLong(obj);
+        if ( (obj=PyDict_GetItemString(quat,"i"))!=NULL ) i = PyInt_AsLong(obj);
+        if ( (obj=PyDict_GetItemString(quat,"j"))!=NULL ) j = PyInt_AsLong(obj);
+        if ( (obj=PyDict_GetItemString(quat,"k"))!=NULL ) k = PyInt_AsLong(obj);
+        if (PyErr_Occurred()) return -1;
+    }
+    py_obj->quaternion = new c_quaternion(r,i,j,k);
+    if (euler) {
+        double rpy[3];
+        if (!PyArg_ParseTuple(euler, "ddd", &rpy[0], &rpy[1], &rpy[2])) return -1;
+        py_obj->quaternion->from_euler(rpy[0], rpy[1], rpy[2], degrees);
+    }
+
+    return 0;
+}
+
+/*v python_quaternion_number_methods
  */
 static PyNumberMethods python_quaternion_number_methods = {
-    python_quaternion_method_add,
-    python_quaternion_method_subtract,
-    python_quaternion_method_multiply,
-    python_quaternion_method_divide,
+    python_quaternion_method_binary_add,
+    python_quaternion_method_binary_subtract,
+    python_quaternion_method_binary_multiply,
+    python_quaternion_method_binary_divide,
     0,               /* binaryfunc nb_remainder;    __mod__ */
     0,               /* binaryfunc nb_divmod;       __divmod__ */
     0,               /* ternaryfunc nb_power;       __pow__ */
-    0,               /* unaryfunc nb_negative;      __neg__ */
+    python_quaternion_method_unary_negate,
     0,               /* unaryfunc nb_positive;      __pos__ */
-    python_quaternion_method_abs,
-    0,               /* inquiry nb_nonzero;         __nonzero__ */
-    python_quaternion_method_conjugate,    /* unaryfunc nb_invert;        ~ __invert__ */
+    python_quaternion_method_unary_abs,
+    python_quaternion_method_unary_nonzero,
+    python_quaternion_method_unary_invert,
     0,               /* binaryfunc nb_lshift;       __lshift__ */
     0,               /* binaryfunc nb_rshift;       __rshift__ */
     0,               /* binaryfunc nb_and;          __and__ */
@@ -86,6 +184,8 @@ static PyNumberMethods python_quaternion_number_methods = {
     0,               /* unaryfunc nb_hex;           __hex__ */
 };
 
+/*v PyTypeObject_quaternion_frame
+ */
 static PyTypeObject PyTypeObject_quaternion_frame = {
     PyObject_HEAD_INIT(NULL)
     0, // variable size
@@ -103,11 +203,239 @@ static PyTypeObject PyTypeObject_quaternion_frame = {
     0, /*tp_as_mapping*/
     0, /*tp_hash */
 	0, /* tp_call - called if the object itself is invoked as a method */
-	python_quaternion_str, /* tp_str */
+	python_quaternion_str,     /* tp_str */
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    "Quaternion objects",       /* tp_doc */
+    0,		                   /* tp_traverse */
+    0,		                   /* tp_clear */
+    0,		                   /* tp_richcompare */
+    0,		                   /* tp_weaklistoffset */
+    0,		                   /* tp_iter */
+    0,		                   /* tp_iternext */
+    python_quaternion_methods, /* tp_methods */
+    0, //python_quaternion_members, /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    python_quaternion_init,    /* tp_init */
+    0,                         /* tp_alloc */
+    python_quaternion_new,     /* tp_new */
 };
 
-/*a Python quaternion methods
+/*a Python quaternion class methods
  */
+/*f python_quaternion_class_method_of_euler
+ */
+static PyObject *
+python_quaternion_class_method_of_euler(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    double roll, pitch, yaw;
+    int degrees=0;
+    c_quaternion *q;
+    static const char *kwlist[] = {"roll", "pitch", "yaw", "degrees", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|dddi", (char **)kwlist, 
+                                     &roll, &pitch, &yaw, &degrees))
+        return NULL;
+    q = new c_quaternion();
+    q->from_euler(roll,pitch,yaw,degrees);
+    return python_quaternion_from_c(q);
+}
+
+/*f python_quaternion_class_method_of_rotation
+ */
+static PyObject *
+python_quaternion_class_method_of_rotation(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    PyObject *obj = PyObject_CallObject((PyObject *) &PyTypeObject_quaternion_frame, NULL);
+    if (!obj) { return Py_None; }
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)obj;
+    py_obj->quaternion = new c_quaternion();
+    python_quaternion_method_from_rotation(obj, args, kwds);
+    Py_DECREF(obj);
+    return obj;
+}
+
+/*f python_quaternion_class_method_of_sequence
+ */
+static PyObject *
+python_quaternion_class_method_of_sequence(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    PyObject *obj = PyObject_CallObject((PyObject *) &PyTypeObject_quaternion_frame, NULL);
+    if (!obj) { return Py_None; }
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)obj;
+    py_obj->quaternion = new c_quaternion();
+    python_quaternion_method_from_sequence(obj, args, kwds);
+    Py_DECREF(obj);
+    return obj;
+}
+
+/*f python_quaternion_class_method_roll
+ */
+static PyObject *
+python_quaternion_class_method_roll(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    double angle;
+    int degrees=0;
+    c_quaternion *q;
+    static const char *kwlist[] = {"angle", "degrees", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "d|i", (char **)kwlist, 
+                                     &angle, &degrees))
+        return NULL;
+    q = new c_quaternion();
+    q->from_euler(angle,0,0,degrees);
+    return python_quaternion_from_c(q);
+}
+
+/*f python_quaternion_class_method_yaw
+ */
+static PyObject *
+python_quaternion_class_method_yaw(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    double angle;
+    int degrees=0;
+    c_quaternion *q;
+    static const char *kwlist[] = {"angle", "degrees", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "d|i", (char **)kwlist, 
+                                     &angle, &degrees))
+        return NULL;
+    q = new c_quaternion();
+    q->from_euler(0,0,angle,degrees);
+    return python_quaternion_from_c(q);
+}
+
+/*f python_quaternion_class_method_pitch
+ */
+static PyObject *
+python_quaternion_class_method_pitch(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    double angle;
+    int degrees=0;
+    c_quaternion *q;
+    static const char *kwlist[] = {"angle", "degrees", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "d|i", (char **)kwlist, 
+                                     &angle, &degrees))
+        return NULL;
+    q = new c_quaternion();
+    q->from_euler(0,angle,0,degrees);
+    return python_quaternion_from_c(q);
+}
+
+/*f python_quaternion_class_method_identity
+ */
+static PyObject *
+python_quaternion_class_method_identity(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    c_quaternion *q;
+    static const char *kwlist[] = {NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "", (char **)kwlist))
+        return NULL;
+    q = new c_quaternion(1.0,0.0,0.0,0.0);
+    return python_quaternion_from_c(q);
+}
+
+/*a Python quaternion object methods
+ */
+/*f python_quaternion_method_copy
+ */
+static PyObject *
+python_quaternion_method_copy(PyObject* self)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    if (py_obj->quaternion) {
+        c_quaternion *q = new c_quaternion(py_obj->quaternion);
+        return python_quaternion_from_c(q);
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_conjugate
+ */
+static PyObject *
+python_quaternion_method_conjugate(PyObject* self)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    if (py_obj->quaternion) {
+        py_obj->quaternion->conjugate();
+        Py_INCREF(py_obj);
+        return self;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_reciprocal
+ */
+static PyObject *
+python_quaternion_method_reciprocal(PyObject* self)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    if (py_obj->quaternion) {
+        py_obj->quaternion->reciprocal();
+        Py_INCREF(py_obj);
+        return self;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_modulus
+ */
+static PyObject *
+python_quaternion_method_modulus(PyObject* self)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    if (py_obj->quaternion) {
+        return PyFloat_FromDouble(py_obj->quaternion->modulus());
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_modulus_squared
+ */
+static PyObject *
+python_quaternion_method_modulus_squared(PyObject* self)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    if (py_obj->quaternion) {
+        return PyFloat_FromDouble(py_obj->quaternion->modulus_squared());
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_normalize
+ */
+static PyObject *
+python_quaternion_method_normalize(PyObject* self)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    if (py_obj->quaternion) {
+        py_obj->quaternion->normalize();
+        Py_INCREF(py_obj);
+        return self;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_get
+ */
+static PyObject *
+python_quaternion_method_get(PyObject* self)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    if (py_obj->quaternion) {
+        return Py_BuildValue("dddd",
+                             py_obj->quaternion->r(),
+                             py_obj->quaternion->i(),
+                             py_obj->quaternion->j(),
+                             py_obj->quaternion->k());
+    }
+    Py_RETURN_NONE;
+}
+
 /*f python_quaternion_method_scale
  */
 static PyObject *
@@ -128,10 +456,10 @@ python_quaternion_method_scale(PyObject* self, PyObject* args, PyObject *kwds)
     Py_RETURN_NONE;
 }
 
-/*f python_quaternion_method_add
+/*f python_quaternion_method_binary_add
  */
 static PyObject *
-python_quaternion_method_add(PyObject* self, PyObject* b)
+python_quaternion_method_binary_add(PyObject* self, PyObject* b)
 {
     t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
     t_PyObject_quaternion *quat_b = (t_PyObject_quaternion *)b;
@@ -145,10 +473,10 @@ python_quaternion_method_add(PyObject* self, PyObject* b)
     Py_RETURN_NONE;
 }
 
-/*f python_quaternion_method_subtract
+/*f python_quaternion_method_binary_subtract
  */
 static PyObject *
-python_quaternion_method_subtract(PyObject* self, PyObject* b)
+python_quaternion_method_binary_subtract(PyObject* self, PyObject* b)
 {
     t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
     t_PyObject_quaternion *quat_b = (t_PyObject_quaternion *)b;
@@ -162,10 +490,10 @@ python_quaternion_method_subtract(PyObject* self, PyObject* b)
     Py_RETURN_NONE;
 }
 
-/*f python_quaternion_method_multiply
+/*f python_quaternion_method_binary_multiply
  */
 static PyObject *
-python_quaternion_method_multiply(PyObject* self, PyObject* b)
+python_quaternion_method_binary_multiply(PyObject* self, PyObject* b)
 {
     t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
     t_PyObject_quaternion *quat_b = (t_PyObject_quaternion *)b;
@@ -179,10 +507,10 @@ python_quaternion_method_multiply(PyObject* self, PyObject* b)
     Py_RETURN_NONE;
 }
 
-/*f python_quaternion_method_divide
+/*f python_quaternion_method_binary_divide
  */
 static PyObject *
-python_quaternion_method_divide(PyObject* self, PyObject* b)
+python_quaternion_method_binary_divide(PyObject* self, PyObject* b)
 {
     t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
     t_PyObject_quaternion *quat_b = (t_PyObject_quaternion *)b;
@@ -196,25 +524,10 @@ python_quaternion_method_divide(PyObject* self, PyObject* b)
     Py_RETURN_NONE;
 }
 
-/*f python_quaternion_method_abs
+/*f python_quaternion_method_unary_invert
  */
 static PyObject *
-python_quaternion_method_abs(PyObject* self)
-{
-    t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
-
-    if (quat_a->quaternion) {
-        c_quaternion *q = new(c_quaternion);
-        *q = (*quat_a->quaternion);
-        return python_quaternion_from_c(q->normalize());
-    }
-    Py_RETURN_NONE;
-}
-
-/*f python_quaternion_method_conjugate
- */
-static PyObject *
-python_quaternion_method_conjugate(PyObject* self)
+python_quaternion_method_unary_invert(PyObject* self)
 {
     t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
 
@@ -222,6 +535,127 @@ python_quaternion_method_conjugate(PyObject* self)
         c_quaternion *q = new(c_quaternion);
         *q = (*quat_a->quaternion);
         return python_quaternion_from_c(q->conjugate());
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_unary_negate
+ */
+static PyObject *
+python_quaternion_method_unary_negate(PyObject* self)
+{
+    t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
+
+    if (quat_a->quaternion) {
+        c_quaternion *q = new(c_quaternion);
+        *q = (*quat_a->quaternion);
+        *q = -*q;
+        return python_quaternion_from_c(q);
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_unary_nonzero
+ */
+static int
+python_quaternion_method_unary_nonzero(PyObject* self)
+{
+    t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
+
+    if (quat_a->quaternion) {
+        if (quat_a->quaternion->r()!=0) return 1;
+        if (quat_a->quaternion->i()!=0) return 1;
+        if (quat_a->quaternion->j()!=0) return 1;
+        if (quat_a->quaternion->k()!=0) return 1;
+        return 0;
+    }
+    return 0;
+}
+
+/*f python_quaternion_method_unary_abs
+ */
+static PyObject *
+python_quaternion_method_unary_abs(PyObject* self)
+{
+    t_PyObject_quaternion *quat_a = (t_PyObject_quaternion *)self;
+
+    if (quat_a->quaternion) {
+        return PyFloat_FromDouble(quat_a->quaternion->modulus());
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_add
+ */
+static PyObject *
+python_quaternion_method_add(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+
+    t_PyObject_quaternion *quat_b;
+    double scale=1.0;
+    static const char *kwlist[] = {"other", "scale", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|d", (char **)kwlist, &quat_b, &scale))
+        return NULL;
+
+    if (!PyObject_TypeCheck((PyObject *)quat_b, &PyTypeObject_quaternion_frame))
+        return NULL;
+    if (py_obj->quaternion && quat_b->quaternion) {
+        py_obj->quaternion->add_scaled(quat_b->quaternion, scale);
+        Py_INCREF(py_obj);
+        return self;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_multiply
+ */
+static PyObject *
+python_quaternion_method_multiply(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+
+    t_PyObject_quaternion *quat_b;
+    int premultiply=0;
+    static const char *kwlist[] = {"other", "premultiply", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|i", (char **)kwlist, &quat_b, &premultiply))
+        return NULL;
+
+    if (!PyObject_TypeCheck((PyObject *)quat_b, &PyTypeObject_quaternion_frame))
+        return NULL;
+    if (py_obj->quaternion && quat_b->quaternion) {
+        py_obj->quaternion->multiply(quat_b->quaternion,premultiply);
+        Py_INCREF(py_obj);
+        return self;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_rotate_vector
+ */
+static PyObject *
+python_quaternion_method_rotate_vector(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    PyObject *vector;
+    static const char *kwlist[] = {"vector", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", (char **)kwlist, &vector))
+        return NULL;
+
+    if (py_obj->quaternion) {
+        PyObject *tuple = PySequence_Fast(vector, "Vector must be a 3-tuple");
+        double xyz[3];
+        int len = PySequence_Size(tuple);
+        for (int i=0; (i<len) && (i<3); i++) {
+            PyObject *value = PySequence_Fast_GET_ITEM(tuple, i);
+            xyz[i] = PyFloat_AsDouble(value);
+        }
+        Py_DECREF(tuple);
+        if (PyErr_Occurred()) return NULL;
+        c_quaternion v;
+        v = c_quaternion(0,xyz[0],xyz[1],xyz[2]) * *(py_obj->quaternion);
+        v =*( py_obj->quaternion->copy()->conjugate()) * v;
+        return Py_BuildValue("ddd",v.i(),v.j(),v.k());
     }
     Py_RETURN_NONE;
 }
@@ -247,6 +681,41 @@ python_quaternion_method_lookat(PyObject* self, PyObject* args, PyObject *kwds)
 
     if (py_obj->quaternion) {
         py_obj->quaternion->lookat(xyz_d, up_d);
+        Py_INCREF(py_obj);
+        return self;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_from_sequence
+ */
+static PyObject *
+python_quaternion_method_from_sequence(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    PyObject *rotations;
+    int degrees=0;
+    static const char *kwlist[] = {"rotations", "degrees", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|d", (char **)kwlist, 
+                                     &rotations, &degrees))
+        return NULL;
+
+    if (py_obj->quaternion) {
+        (*py_obj->quaternion) = 1.0;
+        PyObject *seq = PySequence_Fast(rotations, "Rotations must be a sequence of (type, angle)'s");
+        int len = PySequence_Size(seq);
+        for (int i=0; i<len; i++) {
+            PyObject *item = PySequence_Fast_GET_ITEM(seq, i);
+            double angle;
+            const char *rot_type;
+            if (PyArg_ParseTuple(item, "sd", &rot_type, &angle)) {
+                if (!strcmp(rot_type, "roll"))   py_obj->quaternion->multiply(c_quaternion().from_euler(angle,0,0,degrees),1);
+                if (!strcmp(rot_type, "pitch"))  py_obj->quaternion->multiply(c_quaternion().from_euler(0,angle,0,degrees),1);
+                if (!strcmp(rot_type, "yaw"))    py_obj->quaternion->multiply(c_quaternion().from_euler(0,0,angle,degrees),1);
+            }
+        }
+        Py_DECREF(seq);
         Py_INCREF(py_obj);
         return self;
     }
@@ -304,6 +773,47 @@ python_quaternion_method_from_rotation(PyObject* self, PyObject* args, PyObject 
     Py_RETURN_NONE;
 }
 
+/*f python_quaternion_method_to_euler
+ */
+static PyObject *
+python_quaternion_method_to_euler(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    int degrees=0;
+    static const char *kwlist[] = {"degrees", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|i", (char **)kwlist, &degrees))
+        return NULL;
+    if (py_obj->quaternion) {
+        double rpy[3];
+        double scale=1.0;
+        py_obj->quaternion->as_euler(rpy);
+        if (degrees) scale=180.0/M_PI;
+        return Py_BuildValue("ddd",scale*rpy[0],scale*rpy[1],scale*rpy[2]);
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_to_rotation
+ */
+static PyObject *
+python_quaternion_method_to_rotation(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    int degrees=0;
+    static const char *kwlist[] = {"degrees", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|i", (char **)kwlist, &degrees))
+        return NULL;
+    if (py_obj->quaternion) {
+        double axis[3];
+        double angle = py_obj->quaternion->as_rotation(axis);
+        if (degrees) angle*=180.0/M_PI;
+        return Py_BuildValue("dO",angle,Py_BuildValue("ddd",axis[0],axis[1],axis[2]));
+    }
+    Py_RETURN_NONE;
+}
+
+/*a Python quaternion infrastructure mthods
+ */
 /*f python_quaternion_str
  */
 static PyObject *
@@ -369,34 +879,31 @@ PyObject *
 python_quaternion_from_c(c_quaternion *quaternion)
 {
     t_PyObject_quaternion *py_obj;
-
-    PyTypeObject_quaternion_frame.ob_type = &PyType_Type;
-
-    py_obj = PyObject_New(t_PyObject_quaternion, &PyTypeObject_quaternion_frame);
+    PyObject *obj = PyObject_CallObject((PyObject *) &PyTypeObject_quaternion_frame, NULL);
+    if (!obj) {
+        return Py_None;
+    }
+    py_obj = (t_PyObject_quaternion *)obj;
     py_obj->quaternion = quaternion;
 
-    return (PyObject *)py_obj;
+    return obj;
 }
 
-
-/*f python_quaternion
+/*f python_quaternion_init_premodule
  */
-PyObject *
-python_quaternion(PyObject* self, PyObject* args, PyObject *kwds)
+int python_quaternion_init_premodule(void)
 {
-    t_PyObject_quaternion *py_obj;
+    if (PyType_Ready(&PyTypeObject_quaternion_frame) < 0)
+        return -1;
+    return 0;
+}
 
-    PyTypeObject_quaternion_frame.ob_type = &PyType_Type;
-
-    static const char *kwlist[] = {"r", "i", "j", "k", NULL};
-    double r=0.0, i=0.0, j=0.0, k=0.0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|dddd", (char **)kwlist, 
-                                     &r, &i, &j, &k))
-        return NULL;
-    py_obj = PyObject_New(t_PyObject_quaternion, &PyTypeObject_quaternion_frame);
-    py_obj->quaternion = new c_quaternion(r,i,j,k);
-
-    return (PyObject *)py_obj;
+/*f python_quaternion_init_postmodule
+ */
+void python_quaternion_init_postmodule(PyObject *module)
+{
+    Py_INCREF(&PyTypeObject_quaternion_frame);
+    PyModule_AddObject(module, "quaternion", (PyObject *)&PyTypeObject_quaternion_frame);
 }
 
 /*a Data sharing with other objects
@@ -413,8 +920,3 @@ extern int python_quaternion_data(PyObject* self, int id, void *data_ptr)
     return 1;
 }
 
-/*f python_quaternion_init
- */
-void python_quaternion_init(void)
-{
-}

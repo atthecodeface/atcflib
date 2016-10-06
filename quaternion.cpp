@@ -200,6 +200,32 @@ c_quaternion *c_quaternion::lookat(double xyz[3], double up[3])
     return this->from_euler(-roll, -pitch, -yaw, 0)->conjugate();
 }
 
+/*f c_quaternion::as_euler
+ */
+void c_quaternion::as_euler(double rpy[3]) const
+{
+    double l=modulus();
+    double r=quat.r;
+    double i=quat.i;
+    double j=quat.j;
+    double k=quat.k;
+    double roll, pitch, yaw;
+    if (l>1E-9) {
+        r/=l; i/=l; j/=l; k/=l;
+    }
+
+    yaw = atan2(2*(r*i+j*k), 1-2*(i*i+j*j));
+    if ((2*(r*j-i*k)<-1) || (2*(r*j-i*k)>1)) {
+        pitch = asin(1.0);
+    } else {
+        pitch = asin(2*(r*j-i*k));
+    }
+    roll  = atan2(2*(r*k+i*j), 1-2*(j*j+k*k));
+    rpy[0] = roll;
+    rpy[1] = pitch;
+    rpy[2] = yaw;
+}
+
 /*f More
  */
 /*
@@ -257,39 +283,6 @@ c_quaternion *c_quaternion::lookat(double xyz[3], double up[3])
 
         self.matrix = m
         pass
-    #f to_euler
-    def to_euler( self, include_modulus=False, degrees=False ):
-        """
-        Euler angles are roll, pitch and yaw.
-        The rotations are performed in the order 
-        """
-        r = self.quat["r"]
-        i = self.quat["i"]
-        j = self.quat["j"]
-        k = self.quat["k"]
-        l = math.sqrt(r*r+i*i+j*j+k*k)
-        if (l>1E-9):
-            r=r/l
-            i=i/l
-            j=j/l
-            k=k/l
-            pass
-        yaw   = math.atan2(2*(r*i+j*k), 1-2*(i*i+j*j))
-        if 2*(r*j-i*k)<-1 or 2*(r*j-i*k)>1:
-            pitch = math.asin( 1.0 )
-            pass
-        else:
-            pitch = math.asin( 2*(r*j-i*k))
-            pass
-        roll  = math.atan2(2*(r*k+i*j), 1-2*(j*j+k*k))
-        if degrees:
-            roll  = 180.0/3.14159265 * roll
-            pitch = 180.0/3.14159265 * pitch
-            yaw   = 180.0/3.14159265 * yaw
-            pass
-        if include_modulus:
-            return (roll, pitch, yaw, self.modulus())
-        return (roll, pitch, yaw)
     #f from_matrix
     def from_matrix( self, matrix, epsilon=1E-6 ):
         """
@@ -430,18 +423,25 @@ c_quaternion *c_quaternion::normalize(void)
 
 /*f c_quaternion::multiply
  */
-c_quaternion *c_quaternion::multiply(const c_quaternion *other)
+c_quaternion *c_quaternion::multiply(const c_quaternion *other, int premultiply)
 {
     double r1, i1, j1, k1;
     double r2, i2, j2, k2;
-    r1 = this->quat.r;
-    i1 = this->quat.i;
-    j1 = this->quat.j;
-    k1 = this->quat.k;
-    r2 = other->quat.r;
-    i2 = other->quat.i;
-    j2 = other->quat.j;
-    k2 = other->quat.k;
+    const c_quaternion *a, *b;
+    a=this; b=other;
+    if (premultiply) {
+        a=other; b=this;
+    }
+
+    r1 = a->quat.r;
+    i1 = a->quat.i;
+    j1 = a->quat.j;
+    k1 = a->quat.k;
+
+    r2 = b->quat.r;
+    i2 = b->quat.i;
+    j2 = b->quat.j;
+    k2 = b->quat.k;
 
     this->quat.r = r1*r2 - i1*i2 - j1*j2 - k1*k2;
     this->quat.i = r1*i2 + i1*r2 + j1*k2 - k1*j2;

@@ -1,6 +1,6 @@
 /*a Copyright
   
-  This file 'python_wrapper.cpp' copyright Gavin J Stark 2016
+  This file 'gjslib_c.cpp' copyright Gavin J Stark 2016
   
   This is free software; you can redistribute it and/or modify it however you wish,
   with no obligations
@@ -41,26 +41,35 @@ int gl_get_errors(const char *msg)
 
 /*a Statics
  */
-/*v python_wrapper_module_methods
+/*v gjslib_c_module_methods
  */
-static PyMethodDef python_wrapper_module_methods[] =
+static PyMethodDef gjslib_c_module_methods[] =
 {
     {"texture",          (PyCFunction)python_texture, METH_VARARGS|METH_KEYWORDS, "Create a new texture object."},
     {"filter",           (PyCFunction)python_filter, METH_VARARGS|METH_KEYWORDS, "Create a new filter object."},
-    {"quaternion",       (PyCFunction)python_quaternion, METH_VARARGS|METH_KEYWORDS, "Create a new quaternion object."},
+//    {"quaternion",       (PyCFunction)python_quaternion, METH_VARARGS|METH_KEYWORDS, "Create a new quaternion object."},
     {"lens_projection",  (PyCFunction)python_lens_projection, METH_VARARGS|METH_KEYWORDS, "Create a new lens projection object."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
-/*a C code for python_wrapper
+/*a C code for gjslib_c
  */
-extern "C" void initpython_wrapper( void )
+extern "C" void initgjslib_c( void )
 {
-    (void) Py_InitModule3("python_wrapper", python_wrapper_module_methods, "Python interface to wrapped thing" );
+    PyObject *module;
+    if (python_quaternion_init_premodule()) {
+        fprintf(stderr,"Failed initialization of classes\n");
+        return;
+    }
+    module =  Py_InitModule3("gjslib_c", gjslib_c_module_methods, "C version of gjslib" );
+    if (!module) {
+        fprintf(stderr,"Failed initialization of module\n");
+        return;
+    }
     python_texture_init();
     python_filter_init();
     python_lens_projection_init();
-    python_quaternion_init();
+    python_quaternion_init_postmodule(module);
 }
 
 /*a Editor preferences and notes

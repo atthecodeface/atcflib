@@ -9,7 +9,7 @@ import math
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
-import python_wrapper
+import gjslib_c
 
 #a Classes
 #c c_view_obj
@@ -136,8 +136,8 @@ def conjugation(q,p):
 def test_object():
     obj = opengl_obj.c_opengl_obj()
 
-    lens_projection = python_wrapper.lens_projection
-    quaternion      = python_wrapper.quaternion
+    lens_projection = gjslib_c.lens_projection
+    quaternion      = gjslib_c.quaternion
 
     dst_w = 1024.0
     src_w = 2.0
@@ -181,16 +181,18 @@ def test_object():
             dst_xy = (dst_w*xy[0],dst_w*xy[1])
             dst_q  = dst_camera.orientation_of_xy(dst_xy)
             src_xy = src_camera.xy_of_orientation(dst_q)
-            rxyz = dst_q * quaternion(0,0,0,2) * ~dst_q
-            xyz = rxyz.rijk[1:]
+            #rxyz = dst_q * quaternion(0,0,0,2) * ~dst_q
+            #xyz = rxyz.rijk[1:]
+            xyz = (~dst_q).rotate_vector((0,0,2))
             dst_uvs.append(((src_xy[0]+1.0)/2,(1.0-src_xy[1])/2))
             dst_xyzs.append(xyz)
 
             # points for 'src' mesh - also uses 'src' as the image texture, hence needs uv in 'src' terms
             src_xy = (xy[0]*src_w, xy[1]*src_w)
             src_q = src_camera.orientation_of_xy(src_xy)
-            rxyz = src_q * quaternion(0,0,0,8) * ~src_q
-            xyz = rxyz.rijk[1:]
+            #rxyz = src_q * quaternion(0,0,0,8) * ~src_q
+            #xyz = rxyz.rijk[1:]
+            xyz = (~src_q).rotate_vector((0,0,8))
             src_xyzs.append(xyz)
             src_uvs.append(((src_xy[0]+1.0)/2,(1.0-src_xy[1])/2))
             pass

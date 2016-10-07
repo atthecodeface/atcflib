@@ -45,10 +45,6 @@ int gl_get_errors(const char *msg)
  */
 static PyMethodDef gjslib_c_module_methods[] =
 {
-    {"texture",          (PyCFunction)python_texture, METH_VARARGS|METH_KEYWORDS, "Create a new texture object."},
-//    {"filter",           (PyCFunction)python_filter, METH_VARARGS|METH_KEYWORDS, "Create a new filter object."},
-//    {"quaternion",       (PyCFunction)python_quaternion, METH_VARARGS|METH_KEYWORDS, "Create a new quaternion object."},
-    {"lens_projection",  (PyCFunction)python_lens_projection, METH_VARARGS|METH_KEYWORDS, "Create a new lens projection object."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
@@ -58,6 +54,8 @@ extern "C" void initgjslib_c( void )
 {
     PyObject *module;
     if ( python_quaternion_init_premodule() ||
+         python_texture_init_premodule() ||
+         python_lens_projection_init_premodule() ||
          python_filter_init_premodule() ) {
         fprintf(stderr,"Failed initialization of classes\n");
         return;
@@ -67,8 +65,8 @@ extern "C" void initgjslib_c( void )
         fprintf(stderr,"Failed initialization of module\n");
         return;
     }
-    python_texture_init();
-    python_lens_projection_init();
+    python_lens_projection_init_postmodule(module);
+    python_texture_init_postmodule(module);
     python_filter_init_postmodule(module);
     python_quaternion_init_postmodule(module);
 }

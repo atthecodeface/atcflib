@@ -16,6 +16,7 @@ CPPFLAGS  = -std=c++11 -DGLM_FORCE_RADIANS -DGL_GLEXT_PROTOTYPES -g -Wall -I$(GL
 endif
 
 PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o
+# image_correlator.o
 BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o
 PY_OBJS := gjslib_c.o python_texture.o python_filter.o python_lens_projection.o python_quaternion.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o quaternion.o
 

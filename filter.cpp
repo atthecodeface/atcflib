@@ -489,10 +489,6 @@ int c_filter::set_shader_uniforms(void)
             }
             if (fpi->second.valid_values & fp_valid_real) {
                 glUniform1f(fpi->second.gl_id, fpi->second.real);
-                fprintf(stderr,"Set shader id %s %d to %f\n",
-                        fpi->first.c_str(),
-                        fpi->second.gl_id,
-                        fpi->second.real); 
             }
         }
     }

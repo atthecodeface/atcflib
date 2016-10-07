@@ -32,8 +32,11 @@ typedef struct t_PyObject_texture {
     int handle;
 } t_PyObject_texture;
 
-/*a Forward declarations
+/*a Forward function declarations
  */
+static int       python_texture_init(PyObject *self, PyObject *args, PyObject *kwds);
+static PyObject *python_texture_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+static void      python_texture_dealloc(PyObject *self);
 static PyObject *python_texture_getattr(PyObject *self, char *attr);
 static PyObject *python_texture_method_save(PyObject* self, PyObject* args, PyObject *kwds);
 static void      python_texture_dealloc(PyObject *self);
@@ -52,9 +55,9 @@ static PyMethodDef python_texture_methods[] = {
     {NULL, NULL},
 };
 
-/*v PyTypeObject_texture_frame
+/*v PyTypeObject_texture
  */
-static PyTypeObject PyTypeObject_texture_frame = {
+static PyTypeObject PyTypeObject_texture = {
     PyObject_HEAD_INIT(NULL)
     0, // variable size
     "texture", // type name
@@ -72,6 +75,28 @@ static PyTypeObject PyTypeObject_texture_frame = {
     0, /*tp_hash */
 	0, /* tp_call - called if the object itself is invoked as a method */
 	0, /* tp_str */
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    "Texture object",       /* tp_doc */
+    0,		                   /* tp_traverse */
+    0,		                   /* tp_clear */
+    0,		                   /* tp_richcompare */
+    0,		                   /* tp_weaklistoffset */
+    0,		                   /* tp_iter */
+    0,		                   /* tp_iternext */
+    python_texture_methods, /* tp_methods */
+    0, //python_quaternion_members, /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    python_texture_init,    /* tp_init */
+    0,                         /* tp_alloc */
+    python_texture_new,     /* tp_new */
 };
 
 /*a Python texture methods
@@ -82,7 +107,7 @@ static PyObject *
 python_texture_method_save(PyObject* self, PyObject* args, PyObject *kwds)
 {
     t_PyObject_texture *py_obj = (t_PyObject_texture *)self;
-    int components, conversion;
+    //int components, conversion;
     const char *filename = NULL;
 
     static const char *kwlist[] = {"filename", NULL};
@@ -109,6 +134,7 @@ python_texture_dealloc(PyObject *self)
     if (py_obj->texture) {
         texture_destroy(py_obj->texture);
         py_obj->texture = NULL;
+        texture_list.remove(py_obj);
     }
 }
 
@@ -138,17 +164,46 @@ python_texture_getattr(PyObject *self, char *attr)
 
 /*a Python object
  */
-/*f python_texture
+/*f python_texture_init_premodule
  */
-PyObject *
-python_texture(PyObject* self, PyObject* args, PyObject *kwds)
+int python_texture_init_premodule(void)
+{
+    if (PyType_Ready(&PyTypeObject_texture) < 0)
+        return -1;
+    return 0;
+}
+
+/*f python_texture_init_postmodule
+ */
+void python_texture_init_postmodule(PyObject *module)
+{
+    Py_INCREF(&PyTypeObject_texture);
+    PyModule_AddObject(module, "texture", (PyObject *)&PyTypeObject_texture);
+}
+
+/*f python_texture_new
+ */
+static PyObject *
+python_texture_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     t_PyObject_texture *py_obj;
-
-    PyTypeObject_texture_frame.ob_type = &PyType_Type;
-
     shader_init();
     texture_draw_init();
+    py_obj = (t_PyObject_texture *)type->tp_alloc(type, 0);
+    if (py_obj) {
+        py_obj->texture = NULL;
+        py_obj->handle = texture_uid++;
+        texture_list.push_front(py_obj);
+    }
+    return (PyObject *)py_obj;
+}
+
+/*f python_texture_init
+ */
+static int
+python_texture_init(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    t_PyObject_texture *py_obj = (t_PyObject_texture *)self;
 
     int width=0, height=0, components, precision;
     const char *filename = NULL;
@@ -157,34 +212,28 @@ python_texture(PyObject* self, PyObject* args, PyObject *kwds)
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|iisii", (char **)kwlist, 
                                      &width, &height, &filename, &components, &precision))
-        return NULL;
+        return -1;
 
-    py_obj = PyObject_New(t_PyObject_texture, &PyTypeObject_texture_frame);
-    py_obj->texture = NULL;
     if (filename) {
         py_obj->texture = texture_load(filename,0);
         if (!py_obj->texture) {
             PyErr_SetString(PyExc_RuntimeError, "Failed to load texture");
-            return NULL;
+            return -1;
         }
     } else {
         if ((width<1) || (width>64*1024) ||
             (height<1) || (height>64*1024)) {
             PyErr_SetString(PyExc_RuntimeError, "Bad height or width for texture");
-            return NULL;
+            return -1;
         }
         py_obj->texture = texture_create(width, height);
         if (!py_obj->texture) {
             PyErr_SetString(PyExc_RuntimeError, "Failed to create texture");
-            return NULL;
+            return -1;
         }
     }
-    py_obj->handle = texture_uid++;
-    texture_list.push_front(py_obj);
-
-    return (PyObject *)py_obj;
+    return 0;
 }
-
 
 /*a Data sharing with other objects
  */
@@ -208,15 +257,10 @@ int
 python_texture_data(PyObject* self, int id, void *data_ptr)
 {
     t_PyObject_texture *py_obj = (t_PyObject_texture *)self;
-    if (!PyObject_TypeCheck(self, &PyTypeObject_texture_frame))
+    if (!PyObject_TypeCheck(self, &PyTypeObject_texture))
         return 0;
 
     ((t_texture_ptr *)data_ptr)[0] = py_obj->texture;
     return 1;
 }
 
-/*f python_texture_init
- */
-void python_texture_init(void)
-{
-}

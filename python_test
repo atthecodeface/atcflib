@@ -211,7 +211,7 @@ if False:
         save_as_png(tb[5],"img_dft_%d.png"%i)
     pass
 
-if False:
+if True:
     print "Diff images"
 
     imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),
@@ -248,19 +248,50 @@ if False:
     circle_dft.execute((tb[1],tb[3]))
     find_corners.execute( (tb[4],) )
 
+    quaternion      = gjslib_c.quaternion
+    lp_20 = gjslib_c.lens_projection(width=1024.0, frame_width=36.0, focal_length=20.0, lens_type="rectilinear")
+    lp_20.orient(quaternion().lookat((0,0,1),(1,0,0)))
     print find_corners.f.num_points
-    print find_corners.f.points[:10]
-
-    pt = find_corners.f.points[0]
-    xy = (pt[0],pt[1])
-    for i, dxy in [(0,(4,0)), (1,(0,4)), (2,(-4,0)), (3,(0,-4))]:
-        circle_dft_diff.set_parameters( {"uv_base_x":xy[0]+dxy[0], "uv_base_y":xy[1]+dxy[1]} )
-        circle_dft_diff.execute( (tb[2], tb[3], tb[5+i]) )
+    corners = find_corners.f.points[:3]
+    matches = {}
+    for i in range(len(corners)):
+        pt = corners[i]
+        xy = (pt[0],pt[1])
+        for i, dxy in [(0,(4,0)), (1,(0,4)), (2,(-4,0)), (3,(0,-4))]:
+            circle_dft_diff.set_parameters( {"uv_base_x":xy[0]+dxy[0], "uv_base_y":xy[1]+dxy[1]} )
+            circle_dft_diff.execute( (tb[2], tb[3], tb[5+i]) )
+            pass
+        circle_dft_diff_combine.execute( (tb[5], tb[6], tb[7], tb[8], tb[9]) )
+        find_matches.execute( (tb[9],) )
+        matches[xy] = find_matches.f.points[0]
         pass
-    circle_dft_diff_combine.execute( (tb[5], tb[6], tb[7], tb[8], tb[9]) )
-    find_matches.execute( (tb[9],) )
-    for i in range(10):
-        save_as_png(tb[i],"img_dft_%d.png"%i)
+    def q_inner_product(q1,q2):
+        s = 0
+        for i in range(4):
+            s += q1.rijk[i]*q2.rijk[i]
+            pass
+        a1 = q1.rotate_vector((0,0,1))
+        a2 = q2.rotate_vector((0,0,1))
+        s = 0
+        for i in range(3):
+            s += a1[i]*a2[i]
+        return s
+    import math
+    matches[(512,512)]=(500,582)
+    for xy in matches.keys():
+        print xy," -> ",matches[xy]
+        src_q = lp_20.orientation_of_xy((xy[0]-512,xy[1]-512))
+        dst_q = lp_20.orientation_of_xy((matches[xy][0]-512,matches[xy][1]-512))
+        print src_q, dst_q
+        q1q2 = q_inner_product(src_q,dst_q)
+        print q1q2, 180/math.pi*math.acos(q1q2)
+        #print 2*q1q2*q1q2-1, 180/math.pi*math.acos(2*q1q2*q1q2-1)
+        pass
+    if False:
+        for i in range(10):
+            save_as_png(tb[i],"img_dft_%d.png"%i)
+            pass
+        pass
 
     pass
 

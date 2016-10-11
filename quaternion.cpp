@@ -5,6 +5,46 @@ Ported from gjslib.math.quaternion python
     # pitch + = nose up inside looking forward
     # yaw + = nose left inside looking forward
     # when given roll, pitch, yaw the order applies is roll(pitch(yaw())) - i.e. yaw is applied first
+
+Note that quaternion q = w + xi + yj + zk maps (0,0,1) to (2*(z*x-w*y), 2*(w*x+y*z), w*w-x*x-y*y+z*z)
+
+Note that a quaternion can be represented also as q0 + q_  (i.e. real and 'ijk' parts)
+A unit quatnernion has q0 = cos(theta/2), |q_| as sin(theta/2), and the axis of rotation is q_.
+
+Now p * q = (p0 + p_) * (q0 + q_) = p0q0-p_.q_ + p0q_ + q0p_ + p_ x q_
+
+Consider q . (0,0,1) . q* = (-qz + q0.(0,0,1) + q_ x (0,0,1)) . q*
+ = (-qz + (0,0,q0) + q_ x (0,0,1) ) . (q0 - q_)
+q_ = (qx,qy,qz)
+q_ x (0,0,1) = (qy, -qx, 0)
+q . (0,0,1) . q* = (-qz + (qy, -qx, q0)) . (q0 - q_)
+                 = -q0.qz+q_.(qy, -qx, q0) + "p0q_+q0p_+p+xq_"
+                 = (-q0.qz+qx.qy-qx.qy+qz.q0) + "p0q_+q0p_+p+xq_"
+                 = "p0q_+q0p_+p+xq_"
+                 = qz.q_ + q0.(qy, -qx, q0) - (qy, -qx, q0)x(qx,qy,qz)
+(qy, -qx, q0)x(qx,qy,qz) = (-qx.qz-q0.qy, q0.qx-qy.qz, qy.qy+qx.qx)
+Hence
+q . (0,0,1) . q* = (qx.qz, qy.qz, qz.qz) + (q0.qy, -q0.qx, q0.q0) - (-qx.qz-q0.qy, q0.qx-qy.qz, qy.qy+qx.qx) 
+                 = (2qx.qz + 2q0.qy,   2qy.qz - 2q0.qx, q0.q0-qx.qx-qy.qy+qz.qz)
+                 = (2qx.qz + 2q0.qy,   2qy.qz - 2q0.qx, 2q0.q0 + 2qz.qz - 1)
+
+Note that if we do the inverse rotation, we have q0,-qx,-qy,-qz and hence
+q* . (0,0,1) . q = (2qx.qz - 2q0.qy,   2qy.qz + 2q0.qx, 2q0.q0 + 2qz.qz - 1)
+
+
+for w in range(4):
+    for x in range(4):
+        for y in range(4):
+           for z in range(4):
+               q = quaternion(r=w,i=x,j=y,k=z)
+               r = q.rotate_vector((0,0,1))
+               print r, (2*(z*x-w*y), 2*(w*x+y*z), w*w-x*x-y*y+z*z)
+               pass
+           pass
+        pass
+    pass
+pass
+
  */
 /*a Includes
  */

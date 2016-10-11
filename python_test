@@ -1,32 +1,20 @@
 #!/usr/bin/env python
+
+#a Imports
 from OpenGL.GLUT import *
 from OpenGL.GL import *
 import gjslib_c
+import math
 
+#a Support functions
+#f init_opengl
 def init_opengl():
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_3_2_CORE_PROFILE |GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
         glutInitWindowSize(64,64)
         glutCreateWindow("self.window_title")
 
-print "init opengl"        
-init_opengl()
-#a = gjslib_c.texture(filename='images/IMG_2162.JPG')
-
-print "Create textures"
-tb = []
-size = 1024
-for i in range(12):
-        tb.append(gjslib_c.texture(width=size, height=size))
-        pass
-print tb[0].width, tb[0].height
-
-
-#b = gjslib_c.filter(filter="glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0")
-#b.define("INTENSITY_YSCALE","3.0")
-#b.define("INTENSITY_YSCALE",remove=1)
-#b.compile()
-
+#f save_as_png
 def save_as_png(texture, filename):
         b = gjslib_c.filter(filter="save:%s(0)"%filename)
         b.textures([texture])
@@ -34,8 +22,7 @@ def save_as_png(texture, filename):
         b.execute()
         pass
 
-#save_as_png(tb[0], "test_black.png")
-
+#f alu_test
 def alu_test(ops):
     for (ts, op, save_filename) in ops:
             b = gjslib_c.filter(filter="glsl:alu_buffers(0,0,0)")
@@ -47,6 +34,27 @@ def alu_test(ops):
             pass
     pass
 
+#a Toplevel 1
+print "init opengl"        
+init_opengl()
+# a = gjslib_c.texture(filename='images/IMG_2162.JPG')
+
+print "Create textures"
+tb = []
+size = 1024
+for i in range(12):
+        tb.append(gjslib_c.texture(width=size, height=size))
+        pass
+print tb[0].width, tb[0].height
+
+
+# b = gjslib_c.filter(filter="glsl:yuv_from_rgb(1,3)&-DINTENSITY_YSCALE=(3456.0/5184.0)&-DINTENSITY_XOFS=0.0&-DINTENSITY_XSCALE=1.0&-DINTENSITY_YOFS=0.0")
+# b.define("INTENSITY_YSCALE","3.0")
+# b.define("INTENSITY_YSCALE",remove=1)
+# b.compile()
+
+#a Filter classes
+#c c_filter
 class c_filter(object):
     filter_text = 'glsl:yuv_from_rgb(1,2)'
     defines = {}
@@ -84,68 +92,134 @@ class c_filter(object):
         pass
     pass
 
+#c c_mandelbrot_filter
 class c_mandelbrot_filter(c_filter):
     filter_text = 'glsl:mandelbrot(0,1)'
 
+#c c_alu_filter
 class c_alu_filter(c_filter):
     filter_text = 'glsl:alu_buffers(0,0,0)'
 
+#c c_yuv_from_rgb
 class c_yuv_from_rgb(c_filter):
     filter_text = 'glsl:yuv_from_rgb(1,2)'
 
-if False:
-    to_rgb = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
-                            extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
-                                           "GL_POSITION":"vec4(ysc*y+yc,xsc*x+xc,0,1)",
-                                           })
-    img = gjslib_c.texture(filename='images/IMG_2162.JPG')
-    to_rgb.f.parameter("ysc",4.0)
-    to_rgb.f.parameter("xsc",4.0)
-    to_rgb.f.parameter("yc",-2.0)
-    to_rgb.f.parameter("xc",-2.0)
-    to_rgb.execute((img,tb[4]))
-    save_as_png(tb[4],"img_rgb2.png")
-    die
-
+#c c_gauss_filter_y
 class c_gauss_filter_y(c_filter):
     filter_text = 'glsl:gauss(1,2)'
     defines = {"X_NOT_Y":"false", "NUM_WEIGHTS":"9", "WEIGHTS":"gauss_offset_weights9"}
 
+#c c_gauss_filter_x
 class c_gauss_filter_x(c_filter):
     filter_text = 'glsl:gauss(1,2)'
     defines = {"X_NOT_Y":"true", "NUM_WEIGHTS":"9", "WEIGHTS":"gauss_offset_weights9"}
         
+#c c_sobel_filter
 class c_sobel_filter(c_filter):
     filter_text = 'glsl:convolve_2d(1,2)'
     defines = {"NUM_WEIGHTS":"9", "OFFSET_WEIGHTS":"sobel_weights"}
 
+#c c_harris_filter
 class c_harris_filter(c_filter):
     filter_text = 'glsl:harris(1,2)'
     defines = {"NUM_OFFSETS":"25", "OFFSETS":"offsets_2d_25"}
 
+#c c_circle_dft_filter
 class c_circle_dft_filter(c_filter):
     filter_text = "glsl:circle_dft(2,4)"
     defines = { "NUM_CIRCLE_STEPS":"8", 
                 "DFT_CIRCLE_RADIUS":"8",
                 "CIRCLE_COMPONENT":"r" }
 
+#c c_circle_dft_diff_filter
 class c_circle_dft_diff_filter(c_filter):
     filter_text = "glsl:circle_dft_diff(2,4,5)"
     parameters = {"uv_base_x":0.0, "uv_base_y":0.0}
 
+#c c_circle_dft_diff_combine_filter
 class c_circle_dft_diff_combine_filter(c_filter):
     filter_text = "glsl:circle_dft_diff_combine(1,2,3,4,0)"
     defines = {"DISCRETE_CIRCLE_OFS":"discrete_circle_offsets_4_32",
                "NUM_OFFSETS":32}
 
+#c c_find_filter
 class c_find_filter(c_filter):
     filter_text = "find:a(1)"
 
+#c c_windowed_equalization_filter
 class c_windowed_equalization_filter(c_filter):
     filter_text = 'glsl:windowed_equalization(2,4)'
     defines = {"NUM_OFFSETS":81, "OFFSETS":"offsets_2d_81"}
 
-if False:
+#a Match classes
+#c c_image_match
+class c_image_match(object):
+    radius=4
+    windowed_equalization = False
+    max_corners=3
+    def __init__(self, radius=4):
+        # radius must be 4 at the moment as circle_dft_diff_combine_filter is fixed    
+        self.copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
+        self.equalize = c_windowed_equalization_filter()
+        self.harris = c_harris_filter()
+        self.find_corners = c_find_filter(extra_parameters={"min_distance":10.0, "max_elements":20})
+        self.find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.1, "max_elements":100})
+        self.circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":self.radius,
+                                                             "CIRCLE_COMPONENT":"r",
+                                                             })
+        self.circle_dft_diff         = c_circle_dft_diff_filter()
+        self.circle_dft_diff_combine = c_circle_dft_diff_combine_filter()
+        pass
+    def get_matches(self, tb):
+        """tb must be at least 10 textures, and the first is the source image, second is the target image"""
+        self.harris.execute( (tb[0],tb[4]) )
+
+        if self.windowed_equalization: # do windowed equalization to remove brightness and contrastiness dependence - with loss of information
+                self.copy_img.execute((tb[0],tb[0],tb[2]))
+                self.equalize.execute((tb[2],tb[0]))
+                self.copy_img.execute((tb[1],tb[1],tb[2]))
+                self.equalize.execute((tb[2],tb[1]))
+                pass
+        self.circle_dft.execute((tb[0],tb[2]))
+        self.circle_dft.execute((tb[1],tb[3]))
+        self.find_corners.execute( (tb[4],) )
+
+        print "Found %d corners"%(self.find_corners.f.num_points)
+        corners = self.find_corners.f.points[:self.max_corners]
+        matches = {}
+        for i in range(len(corners)):
+            pt = corners[i]
+            xy = (pt[0],pt[1])
+            for i, dxy in [(0,(1,0)), (1,(0,1)), (2,(-1,0)), (3,(0,-1))]:
+                self.circle_dft_diff.set_parameters( {"uv_base_x":xy[0]+dxy[0]*self.radius,
+                                                      "uv_base_y":xy[1]+dxy[1]*self.radius} )
+                self.circle_dft_diff.execute( (tb[2], tb[3], tb[5+i]) )
+                pass
+            self.circle_dft_diff_combine.execute( (tb[5], tb[6], tb[7], tb[8], tb[9]) )
+            self.find_matches.execute( (tb[9],) )
+            matches[xy] = self.find_matches.f.points[0:3]
+            pass
+        return matches
+    pass
+
+#a Testy functions
+#f test_to_yuv
+def test_to_yuv():
+    to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+                            extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
+                                           "GL_POSITION":"vec4(ysc*y+yc,xsc*x+xc,0,1)",
+                                           })
+    img = gjslib_c.texture(filename='images/IMG_2162.JPG')
+    to_yuv.f.parameter("ysc",4.0)
+    to_yuv.f.parameter("xsc",4.0)
+    to_yuv.f.parameter("yc",-2.0)
+    to_yuv.f.parameter("xc",-2.0)
+    to_yuv.execute((img,tb[4]))
+    save_as_png(tb[4],"img_rgb2.png")
+    pass
+
+#f test_alu
+def test_alu():
     print "ALU tests"
 
     alu_test( [ ((2,2,0), "vec4(0.5)", "test_constant_50.png"),
@@ -161,8 +235,8 @@ if False:
     alu_test( [ ((2,2,0), "vec4(abs(sin(200*x*y)*sin(200*(1-x)*y)))",    "test_sin_xy.png"),
                 ] )
 
-
-if False:
+#f test_gauss
+def test_gauss():
     print "Gauss filter and find test"
     gfx = c_gauss_filter_x()
     gfy = c_gauss_filter_y()
@@ -185,15 +259,16 @@ if False:
     print f.num_points
     print f.points
 
-if False:
+#f test_dft_images
+def test_dft_images():
     print "DFT images"
 
     img = gjslib_c.texture(filename='images/IMG_2162.JPG')
-    to_rgb = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float(img.width)),
+    to_yuv = c_yuv_from_rgb(extra_defines={"INTENSITY_XSCALE":"%f"%(img.height/float(img.width)),
                                            "INTENSITY_YSCALE":"1.0",
                                            "INTENSITY_YOFS":"0.0",
                                            "INTENSITY_XOFS":"0.0",})
-    to_rgb.execute((img,tb[4]))
+    to_yuv.execute((img,tb[4]))
     save_as_png(tb[4],"img_rgb.png")
 
     for (i,sc) in [(0,1), (1,6), (2,5), (3,3.5), (4,2), (5,2), (6,2)]:
@@ -211,13 +286,287 @@ if False:
         save_as_png(tb[5],"img_dft_%d.png"%i)
     pass
 
-if True:
+#f test_diff_image_and_match
+def test_diff_image_and_match():
+    print "Diff images and map matches"
+
+    quaternion      = gjslib_c.quaternion
+    lp_35 = gjslib_c.lens_projection(width=1024.0*5184/3456, frame_width=22.3, focal_length=35.0, lens_type="rectilinear")
+    lp_35.orient(quaternion().lookat((0,0,1),(1,0,0)))
+
+    to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+                            extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
+                                           "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
+                                           })
+    im = c_image_match()
+
+    imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),
+             gjslib_c.texture(filename='images/IMG_1901.JPG') )
+
+    ar = float(imgs[0].width)/imgs[0].height
+    to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0*ar} )
+    to_yuv.execute((imgs[0],tb[0]))
+    to_yuv.execute((imgs[1],tb[1]))
+    ic = gjslib_c.image_correlator()
+    print "points ",ic.points,"max corners",im.max_corners
+    matches = im.get_matches(tb)
+    for m in matches:
+        print "Match ",m,matches[m]
+        ic.add_point(str(m),m[0],m[1])
+        n=0
+        for mm in matches[m]:
+            ic.add_mapping(str(m),"map%s.%d"%(str(m),n),mm[0],mm[1],mm[2],mm[3],mm[4])
+            n+=1
+            pass
+        pass
+    print "points ",ic.points
+    for pt in ic.points:
+        mappings = ic.mappings(pt)
+        print "  mapping ",pt,mappings
+        for m in mappings:
+            print "    ",m,ic.get_mapping(pt,m)    
+        pass
+    for pt in ic.points:
+        print "Num propositions before creation for", pt,  ic.propositions(pt)
+    ic.create_propositions(min_strength=0)
+    for pt in ic.points:
+        n = ic.propositions(pt)
+        print "Num propositions after creation for", pt, n
+        for i in range(n):
+            print "   Proposition",i,ic.get_proposition(pt,i)
+            pass
+        pass
+    best_mapping=ic.find_best_mapping()
+    print "Best mapping", best_mapping
+    (dx,dy,rotation,scale) = best_mapping[1]
+    #(dx,dy,rotation,scale) = (156.4246678601715, -63.62960520116849, 0.22949442458934716, 0.9982186254612156)
+    cosang = math.cos(rotation)
+    sinang = math.sin(rotation)
+    for m in matches:
+        (x,y) = m[:2]
+        tgt_x = dx+(x*cosang-y*sinang)*scale
+        tgt_y = dy+(y*cosang+x*sinang)*scale
+        print m[:2],"maps to",(tgt_x,tgt_y)
+        pass
+    pass
+
+#f test_diff_image_quaternion
+def test_diff_image_quaternion():
+    print "Diff images with quaternions"
+
+    quaternion      = gjslib_c.quaternion
+    #lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=36.0, focal_length=28.0, lens_type="rectilinear")
+    # frame_width corresponds to 5184 pixels
+    # width corresponds to frame_width pixels, but the image is 3456 pixels
+    # Hence image/width should go from -0.35 to +0.35 or thereabouts
+    # Hence width is 5184/3456*1024
+    lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
+    lp_35.orient(quaternion().lookat((0,0,1),(1,0,0)))
+
+    src_orientation = quaternion().from_euler(yaw=0,degrees=True) * quaternion().from_euler(pitch=-30,degrees=True)
+    dst_orientation = quaternion().lookat((0,2,1),(0,1,0))
+    dst_orientation = quaternion(r=0.950655, i=-0.122744, j=-0.245672, k=-0.144343)
+    dst_orientation = quaternion(r=0.957717, i=0.023461, j=-0.264079, k=-0.111759)
+
+    src_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
+    dst_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
+
+    src_lp_35.orient(src_orientation)
+    dst_lp_35.orient(dst_orientation)
+
+    lp_20 = gjslib_c.lens_projection(width=5184, frame_width=22.3, focal_length=20.0, lens_type="rectilinear")
+    lp_20.orient(quaternion().lookat((0,0,1),(1,0,0)))
+    ##At 20mm img_2335, (x,y) of (0.500,0) = (2592/5184,0) is (105 21/74 - 73 10/16) = 31.658" = 28.79 degrees
+    #print 180.0/math.pi*math.acos(lp_20.orientation_of_xy((2592,0)).r)*2
+    ##At 20mm img_2335, (x,y) of (0.423,0) = (2194/5184,0) is (100  0/16 - 73 10/16) = 26.375" = 24.64 degrees
+    #print 180.0/math.pi*math.acos(lp_20.orientation_of_xy((2194,0)).r)*2
+    ##At 20mm img_2335, (x,y) of (0.362,0) = (1876/5184,0) is ( 95 15/16 - 73 10/16) = 22.313" = 21.21 degrees
+    #print 180.0/math.pi*math.acos(lp_20.orientation_of_xy((1876,0)).r)*2
+    ##At 20mm img_2335, (x,y) of (0.174,0) = ( 900/5184,0) is ( 84  0/16 - 73 10/16) = 10.375" = 10.23 degrees
+    #print 180.0/math.pi*math.acos(lp_20.orientation_of_xy((900,0)).r)*2
+    ##At 20mm img_2335, (x,y) of (0.107,0) = ( 555/5184,0) is ( 80  0/16 - 73 10/16) =  6.375" =  6.32 degrees
+    #print 180.0/math.pi*math.acos(lp_20.orientation_of_xy((555,0)).r)*2
+
+    matches = { (153, 648): [(158, 601, 2.6332292556762695, 0.39847052097320557, -0.07614506036043167), (383, 601, 1.890303373336792, -0.33280304074287415, -0.08594240993261337), (160, 604, 1.5802757740020752, 0.3009982109069824, 0.09037318825721741)],
+                (373, 599): [(383, 603, 2.8567652702331543, 0.41004934906959534, -0.10201644897460938), (212, 611, 2.1395456790924072, -0.3097648620605469, -0.19433820247650146), (158, 601, 1.9155364036560059, -0.3277343511581421, 0.11095592379570007)],
+                (462, 654): [(457, 677, 2.8595187664031982, 0.3991236686706543, -0.13935643434524536), (158, 600, 2.1425795555114746, -0.3310011327266693, 0.1560431867837906), (158, 603, 1.785965085029602, -0.33332252502441406, -0.022779682651162148)]
+                }
+    matches = { (153, 648): [(158, 601, 2.6332292556762695, 0.39847052097320557, -0.07614506036043167)],
+                (373, 599): [(383, 603, 2.8567652702331543, 0.41004934906959534, -0.10201644897460938)],
+                (462, 654): [(457, 677, 2.8595187664031982, 0.3991236686706543, -0.13935643434524536)],
+                }
+
+    if False:
+        to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+                                extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
+                                               "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
+                                               })
+        im = c_image_match()
+
+        imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),
+                 gjslib_c.texture(filename='images/IMG_1901.JPG') )
+
+        ar = float(imgs[0].width)/imgs[0].height
+        to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0*ar} )
+        to_yuv.execute((imgs[0],tb[0]))
+        to_yuv.execute((imgs[1],tb[1]))
+        matches = im.get_matches(tb)
+        print matches
+        save_as_png(tb[0],"a.png")
+        pass
+
+    # Presumably for any two points on source image there is a great circle rotation to go from one to the other
+    # The same rotation must match that for the corresponding target positions
+    # So, what is the great circle rotation to go from one position to another?
+    # We know for each point on an image a quaternion 'q' that maps (0,0,1) to the location in 'image sphere space'
+    # Hence we have two points in 'image sphere space' p0 and p1, where pn = qn.(0,0,1).qn'
+    # What quaternion maps p0 to p1?
+    # The axis of rotation is in direction; p0 x p1; and cos(rot) = p0.p1 (and sin(rot)=|p0 x p1|)
+    # Note that p0.p1 = p0 p1 = q0.(0,0,1).q0'.q1'.(0,0,1).q1
+    # If q0 = w0,x0,y0,z0, and q1 is w1,x1,y1,z1 then p0.p1 = 4(z0x0-w0y0)(z1x1-w1y1) + 4(w0x0+y0z0)(w1x1+y1z1) + (w0w0-x0x0-y0y0+z0z0)(w1w1-x1x1-y1y1+z1z1)
+    # Now if the great circle rotation is represented as a quaternion then its w is the cos of the angle of rotation, i.e. p0.p1
+    # Now note also that p0 = q0(0,0,1)
+    # Hence q0'(p0) = (0,0,1)
+    # Hence q1(q0'(p0)) = p1
+    # Hence q1.q0' is the mapping from p0 to p1
+    # Now q1.q0' = (w1w0, -w1x0, -w1y0, -w1z0) + i(x1w0, -x1x0, -x1y0, -x1z0) + j(y1w0, -y1x0, -y1y0, -y1z0) + k(z1w0, -z1x0, -z1y0, -z1z0)
+    #            = (w1w0, -w1x0, -w1y0, -w1z0) +  (x1x0,  x1w0,  x1z0, -x1y0) +  (y1y0, -y1z0,  y1w0,  y1x0) +  (z1z0,  z1y0, -z1x0,  z1w0)
+    #            = (w1w0+x0x1+y0y1+z0z1, x1w0-w1x0+z1y0-y1z0, y1w0-w1y0+x1z0-z1x0, w0z1-w1z0+z0x1-z1x0)
+    data = {}
+    for m in matches:
+        print "Match ",m,matches[m],(m[0]-512,m[1]-512)
+        src_q = src_lp_35.orientation_of_xy((m[0]-512,m[1]-512))
+        data[src_q] = ((m[0]-512,m[1]-512),[])
+        n=0
+        for mm in matches[m]:
+            tgt_q = dst_lp_35.orientation_of_xy((mm[0]-512,mm[1]-512))
+            fft_rot = 180/math.pi*math.atan2(mm[3],mm[4])
+            n+=1
+            data[src_q][1].append( (tgt_q, fft_rot, mm[2], mm[0], mm[1]) )
+            pass
+        pass
+    for src_q in data:
+        print "Source:", src_q,data[src_q][0]
+        for (tgt_q, fft_rot, fft_pwr, x, y) in data[src_q][1]:
+            print tgt_q
+            pass
+        pass
+    def dot_product(p0,p1):
+        r = 0
+        for i in range(len(p0)):
+            r += p0[i]*p1[i]
+            pass
+        return r
+    def vector_product(p0,p1):
+        r = ( p0[1]*p1[2] - p0[2]*p1[1],
+              p0[2]*p1[0] - p0[0]*p1[2],
+              p0[0]*p1[1] - p0[1]*p1[0])
+        return r
+    def vector_length(p):
+        l=0
+        for d in p: l+=d*d
+        return math.sqrt(l)
+    def vector_normalize(p):
+        l=vector_length(p)
+        r=[]
+        for d in p: r.append(d/l)
+        return tuple(r)
+    # got cosA and cosB
+    # what is a measure of A-B?
+    # cos(A-B) = cosAcosB - sinAsinB
+    # sin(A-B) = sinAcosB - cosAsinB
+    # (-359,136) = (153, 648) maps to (158.0, 601.0) (-354,89)
+    # (-139,87)  = (373, 599) maps to (382.97722918433374, 603.3273029931845) (-129, 91)
+    # (-50,142)  = (462, 654) maps to (457.0, 677.0) (-55,165)
+    results = {}
+    for src_q0 in data:
+        for src_q1 in data:
+            if src_q0 == src_q1: continue
+            print "Sources:", src_q0, src_q1, data[src_q0][0], data[src_q1][0],(src_q0/src_q1).r,360/math.pi*math.acos((src_q0/src_q1).r)
+            sp0 = src_q0.rotate_vector((0,0,1))
+            sp1 = src_q1.rotate_vector((0,0,1))
+            src_axis = vector_product(sp0,sp1)
+            src_angle = math.atan2(vector_length(src_axis),dot_product(sp0,sp1))
+            src_axis = vector_normalize(src_axis)
+            src_lookat_q = quaternion().lookat(sp0,((sp1[0]-sp0[0],sp1[1]-sp0[1],sp1[2]-sp0[2])))
+            print "  Src axis/angle",src_axis,180.0/math.pi*src_angle
+            for t0 in data[src_q0][1]:
+                for t1 in data[src_q1][1]:
+                    if abs(t0[0]-t1[0])<1E-8: continue
+                    tp0 = t0[0].rotate_vector((0,0,1))
+                    tp1 = t1[0].rotate_vector((0,0,1))
+                    tgt_lookat_q = quaternion().lookat(tp0,((tp1[0]-tp0[0],tp1[1]-tp0[1],tp1[2]-tp0[2])))
+                    tgt_axis = vector_product(tp0,tp1)
+                    tgt_angle = math.atan2(vector_length(tgt_axis),dot_product(tp0,tp1))
+                    tgt_axis  = vector_normalize(tgt_axis)
+                    if abs(180.0/math.pi*(src_angle-tgt_angle))<0.3:
+                        tgt_q = quaternion.of_rotation(tgt_axis, tgt_angle)
+                        src_q = quaternion.of_rotation(src_axis, src_angle)
+
+                        diff_axis = vector_product(src_axis, tgt_axis)
+                        diff_angle = math.atan2(vector_length(diff_axis),dot_product(src_axis,tgt_axis))
+                        diff_axis  = vector_normalize(diff_axis)
+
+                        src_angle_sp0 = math.atan2(vector_length(vector_product(sp0,diff_axis)),dot_product(sp0,diff_axis))
+                        dst_angle_tp0 = math.atan2(vector_length(vector_product(tp0,diff_axis)),dot_product(tp0,diff_axis))
+                        src_sp0_orient_to_diff_axis = quaternion.of_rotation(src_axis, -src_angle_sp0)
+                        dst_tp0_orient_to_diff_axis = quaternion.of_rotation(tgt_axis, -dst_angle_tp0)
+
+                        # diff_axis === src_sp0_orient_to_diff_axis.rotate_vector(sp0)
+                        # diff_axis === dst_tp0_orient_to_diff_axis.rotate_vector(tp0)
+
+                        #tp1 === tgt_q.rotate_vector(tp0)
+                        #tp1 == {dst_lp_35.orient(tgt_q*dst_orientation), (dst_lp_35.orientation_of_xy((t0[3]-512,t0[4]-512))).rotate_vector((0,0,1))
+                        #sp1 == {src_lp_35.orient(src_q*src_orientation), (src_lp_35.orientation_of_xy(data[src_q0][0])).rotate_vector((0,0,1))
+                        # dst_orient_gc_aligned = quaternion.of_rotation(axis=diff_axis, angle=-diff_angle, degrees=0) * dst_orientation
+                        # dst_lp_35.orient(dst_orient_gc_aligned)
+                        # t0p = dst_lp_35.orientation_of_xy((t0[3]-512,t0[4]-512))
+                        # t1p = dst_lp_35.orientation_of_xy((t1[3]-512,t1[4]-512))
+                        # tp0 = t0p.rotate_vector((0,0,1))
+                        # tp1 = t1p.rotate_vector((0,0,1))
+                        # tgt_axis = vector_product(tp0,tp1)
+                        # tgt_axis = vector_normalize(tgt_axis)
+
+                        #print "    tp0.tp1",dot_product(tp0,tp1),"angle",180.0/math.pi*dst_angle, (t0[3],t0[4]), (t1[3],t1[4]),(t0[0]/t1[0]).r,360/math.pi*math.acos((t0[0]/t1[0]).r)
+                        #print "    ",180.0/math.pi*(src_angle-dst_angle)
+                        print "    Tgt axis/angle",tgt_axis,180.0/math.pi*tgt_angle
+                        print "        diff axis/angle",diff_axis,180/math.pi*diff_angle
+
+                        dst_orient_gc_aligned = ~src_sp0_orient_to_diff_axis * quaternion.of_rotation(axis=diff_axis, angle=-diff_angle, degrees=0) * dst_tp0_orient_to_diff_axis * dst_orientation
+                        print "       ",dst_orient_gc_aligned
+                        results[(data[src_q0][0], data[src_q1][0], (t0[3]-512,t0[4]-512), (t1[3]-512,t1[4]-512))] = dst_orient_gc_aligned
+                        if True:
+                            dst_lp_35.orient(dst_orient_gc_aligned)
+
+                            t0p = dst_lp_35.orientation_of_xy((t0[3]-512,t0[4]-512))
+                            t1p = dst_lp_35.orientation_of_xy((t1[3]-512,t1[4]-512))
+                            tp0 = t0p.rotate_vector((0,0,1))
+                            tp1 = t1p.rotate_vector((0,0,1))
+                            tgt_axis = vector_product(tp0,tp1)
+                            tgt_axis = vector_normalize(tgt_axis)
+                            tgt_angle = math.acos(dot_product(tp0,tp1))
+
+                            print "    eq?",tgt_axis, src_axis, src_angle, tgt_angle
+                            print "    eq?",tp0, sp0,  tp1, sp1
+                            pass
+                        pass
+                    pass
+                pass
+            pass
+        pass
+    for m in results:
+        (s0,s1,t0,t1) = m
+        print s0,s1,t0,t1,results[m]
+    pass
+
+#f test_diff_image
+def test_diff_image():
     print "Diff images"
 
     imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),
              gjslib_c.texture(filename='images/IMG_1901_r10.JPG') )
 
-    to_rgb = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+    to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
                             extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
                                            "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
                                            })
@@ -233,9 +582,9 @@ if True:
     circle_dft_diff_combine = c_circle_dft_diff_combine_filter()
 
     ar = float(imgs[0].width)/imgs[0].height
-    to_rgb.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0-ar*0} )
-    to_rgb.execute((imgs[0],tb[0]))
-    to_rgb.execute((imgs[1],tb[1]))
+    to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0-ar*0} )
+    to_yuv.execute((imgs[0],tb[0]))
+    to_yuv.execute((imgs[1],tb[1]))
     harris.execute( (tb[0],tb[4]) )
 
     if False: # do windowed equalization to remove brightness and contrastiness dependence - with loss of information
@@ -276,7 +625,6 @@ if True:
         for i in range(3):
             s += a1[i]*a2[i]
         return s
-    import math
     matches[(512,512)]=(500,582)
     for xy in matches.keys():
         print xy," -> ",matches[xy]
@@ -295,7 +643,8 @@ if True:
 
     pass
 
-if True:
+#f test_mandel_projection
+def test_mandel_projection():
     lens_projection = gjslib_c.lens_projection
     quaternion      = gjslib_c.quaternion
 
@@ -315,7 +664,8 @@ if True:
     for i in range(3):
         save_as_png(tb[i],"img_proj_%d.png"%i)
 
-if False:
+#f test_lens_projection
+def test_lens_projection():
     lens_projection = gjslib_c.lens_projection
     quaternion      = gjslib_c.quaternion
 
@@ -363,3 +713,57 @@ if False:
     a.scale(2)
     print a
     print lp_20.orientation
+    pass
+
+#f test_quaternion_rotation_z
+def test_quaternion_rotation_z():
+    quaternion = gjslib_c.quaternion
+    for w in range(4):
+        for x in range(4):
+            for y in range(4):
+               for z in range(4):
+                   q = quaternion(r=w,i=x,j=y,k=z)
+                   r = q.rotate_vector((0,0,1))
+                   r2 = (2*(z*x-w*y), 2*(w*x+y*z), w*w-x*x-y*y+z*z)
+                   for i in range(3):
+                       if abs(r[i]-r2[i])>0.000001:
+                           print "Error in quaternion rotation"
+                           pass
+                       pass
+                   pass
+               pass
+            pass
+        pass
+    pass
+
+#a Toplevel
+if False:
+    test_to_yuv()
+
+if False:
+    test_alu()
+
+if False:
+    test_gauss()
+
+if False:
+    test_dft_images()
+
+if False:
+    test_diff_image()
+
+if False:
+    test_diff_image_and_match()
+
+if False:
+    test_mandel_projection()
+
+if False:
+    test_lens_projection()
+
+if True:
+    test_diff_image_quaternion()
+
+        
+
+

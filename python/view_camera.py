@@ -15,13 +15,12 @@ import gjslib_c
 #c c_view_obj
 class c_view_obj(opengl_app.c_opengl_camera_app):
     #f __init__
-    def __init__(self, obj, texture_filename, **kwargs):
+    def __init__(self, obj, **kwargs):
         opengl_app.c_opengl_camera_app.__init__(self, **kwargs)
-        self.obj = obj
+        self.objects = obj
         self.xxx = 0.0
         self.yyy = 0.0
         self.window_title = "Viewing object"
-        self.texture_filename = texture_filename
         self.camera["position"] = [0,0,0]
         self.zNear=0.2
         #self.camera["facing"]   = quaternion.pitch(90,degrees=True) * self.camera["facing"]
@@ -32,8 +31,11 @@ class c_view_obj(opengl_app.c_opengl_camera_app):
     def opengl_post_init(self):
         import OpenGL.arrays.vbo as vbo
         import numpy
-        self.texture = opengl_utils.texture_from_png(self.texture_filename)
-        self.obj.create_opengl_surface()
+        self.tick = 0
+        for o in self.objects:
+            o["texture"] = opengl_utils.texture_from_png(o["texture_filename"])
+            o["obj"].create_opengl_surface()
+            pass
         vector_list = []
         for xyz in [(0,0,4), (0,4,0), (4,0,0)]:
             vector_list.extend( [0.0, 0.0, 0.0] )
@@ -111,13 +113,20 @@ class c_view_obj(opengl_app.c_opengl_camera_app):
         glDrawArrays( GL_LINES, 0, len(self.opengl_lines)/3 )
         self.opengl_lines.unbind()
 
-        glBindTexture(GL_TEXTURE_2D, self.texture)
-        self.matrix_push()
-        self.shader_use("texture_standard")
-        self.matrix_use()
-        self.obj.draw_opengl_surface(self)
+        n = 0
+        for o in self.objects:
+            n = n + 1
+            if (((self.tick/1)+n) % len(self.objects))!=0: continue
+            glBindTexture(GL_TEXTURE_2D, o["texture"])
+            self.matrix_push()
+            self.shader_use("texture_standard")
+            self.matrix_use()
+            o["obj"].draw_opengl_surface(self)
+            self.matrix_pop()
+            pass
+
         self.matrix_pop()
-        self.matrix_pop()
+        self.tick = self.tick+1
 
         glutSwapBuffers()
         return
@@ -134,20 +143,27 @@ def conjugation(q,p):
     #print r
     return r.get()[1:]
 def test_object():
-    obj = opengl_obj.c_opengl_obj()
 
     lens_projection = gjslib_c.lens_projection
     quaternion      = gjslib_c.quaternion
 
     dst_w = 1024.0
-    src_w = 2.0
+    src_w = 1.0
 
-    src_orientation = quaternion().from_euler(yaw=-60,degrees=True) * quaternion().from_euler(pitch=-30,degrees=True)
-    src_camera      = lens_projection(focal_length=20.0, lens_type="rectilinear", frame_width=36.0, width=src_w)
+    src_orientation = quaternion().from_euler(yaw=0,degrees=True) * quaternion().from_euler(pitch=-30,degrees=True)
+    src_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*3456/5148, width=src_w)
     src_camera.orient(src_orientation)
 
-    dst_orientation = quaternion().from_euler(yaw=-70,degrees=True) * quaternion().from_euler(pitch=-40,degrees=True)
-    dst_camera      = lens_projection(focal_length=80.0, lens_type="rectilinear", frame_width=36.0, width=dst_w)
+    src2_orientation =  quaternion(r=0.957717, i=0.023461, j=-0.264079, k=-0.111759)
+
+    src2_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*3456/5148, width=src_w)
+    src2_camera.orient(src2_orientation)
+
+    src2_camera.orient(src2_orientation)
+    src_camera.orient( src_orientation)
+
+    dst_orientation = quaternion().from_euler(yaw=-10,degrees=True) * quaternion().from_euler(pitch=-74,degrees=True)
+    dst_camera      = lens_projection(focal_length=80.0, lens_type="stereographic", frame_width=22.3, width=dst_w*3456/5148)
     dst_camera.orient(dst_orientation)
 
     #src = camera(width=2.0, height=2.0*3456.0/5184.0, focal_length=20.0, projection="rectilinear")
@@ -159,7 +175,7 @@ def test_object():
                           ]
 
     triangles = []
-    n = 8
+    n = 32
     for x in range(n):
         for y in range(n):
             x0 = (x/float(n)-0.5)
@@ -171,37 +187,57 @@ def test_object():
             pass
         pass
 
+    obj1 = opengl_obj.c_opengl_obj()
+    obj2 = opengl_obj.c_opengl_obj()
+    obj3 = opengl_obj.c_opengl_obj()
     for triangle in triangles:
         dst_xyzs = []
         src_xyzs = []
+        src2_xyzs = []
         dst_uvs = []
         src_uvs = []
+        src2_uvs = []
         for xy in triangle:
             # points for 'destination' mesh - uses 'src' as the image texture, hence needs uv in 'src' terms
             dst_xy = (dst_w*xy[0],dst_w*xy[1])
             dst_q  = dst_camera.orientation_of_xy(dst_xy)
             src_xy = src_camera.xy_of_orientation(dst_q)
-            xyz = (~dst_q).rotate_vector((0,0,2))
+            xyz = dst_q.rotate_vector((0,0,2))
             dst_uvs.append(((src_xy[0]+1.0)/2,(1.0-src_xy[1])/2))
             dst_xyzs.append(xyz)
 
             # points for 'src' mesh - also uses 'src' as the image texture, hence needs uv in 'src' terms
             src_xy = (xy[0]*src_w, xy[1]*src_w)
             src_q = src_camera.orientation_of_xy(src_xy)
-            xyz = (~src_q).rotate_vector((0,0,8))
+            xyz = src_q.rotate_vector((0,0,8))
             src_xyzs.append(xyz)
-            src_uvs.append(((src_xy[0]+1.0)/2,(1.0-src_xy[1])/2))
+            src_uvs.append(((xy[0]+1.0/2)/1,(1.0/2+xy[1])/1))
+
+            # points for second 'src' mesh - also uses 'src' as the image texture, hence needs uv in 'src' terms
+            src_xy = (xy[0]*src_w, xy[1]*src_w)
+            src_q = src2_camera.orientation_of_xy(src_xy)
+            xyz = src_q.rotate_vector((0,0,4))
+            src2_xyzs.append(xyz)
+            src2_uvs.append(((xy[0]+1.0/2)/1,(1.0/2+xy[1])/1))
             pass
-        obj.add_triangle( xyz_list = dst_xyzs,
+        obj1.add_triangle( xyz_list = dst_xyzs,
                           uv_list = dst_uvs )
-        obj.add_triangle( xyz_list = src_xyzs,
+        obj2.add_triangle( xyz_list = src_xyzs,
                           uv_list = src_uvs )
+        obj3.add_triangle( xyz_list = src2_xyzs,
+                          uv_list = src2_uvs )
         pass
         
-    texture_filename = "../../gjslib_data/camera/IMG_2159_25.PNG"
+    objects = [ {"obj":obj1,"texture_filename":"../../gjslib_data/camera/IMG_2159_25.PNG"},
+                {"obj":obj2,"texture_filename":"../../gjslib_data/camera/IMG_2159_25.PNG"},
+                {"obj":obj3,"texture_filename":"../../gjslib_data/camera/IMG_2159_25.PNG"},
+                  ]
+    objects = [ {"obj":obj1,"texture_filename":"../images/IMG_1900.PNG"},
+                {"obj":obj2,"texture_filename":"../images/IMG_1900.PNG"},
+                {"obj":obj3,"texture_filename":"../images/IMG_1901.PNG"},
+                  ]
 
-    og = c_view_obj(obj=obj,
-                    texture_filename=texture_filename,
+    og = c_view_obj(obj=objects,
                     window_size=(1000,1000))
     og.init_opengl()
     og.seal_hack = True

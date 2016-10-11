@@ -10,6 +10,24 @@
         for rectilinear lenses there has to be a distortion applied
         See also http://michel.thoby.free.fr/Fisheye_history_short/Projections/Models_of_classical_projections.html
 
+  canon 20-35mm lens on rebel t2i (aps-c)
+  image taken from 57.5 inches
+  center should be on 72 inches
+  Pictures taken at f/22, shutter about 2 seconds
+  img_2333, 2334 focus at 1m
+  img_2335, 2336 focus at 3m
+  At 35mm img_2333 about 906.462mm across 35.6875" 91 9/16 - 55 14/16 at distance of 1460.5mm
+    tan(fov/2) = 0.3103 => fov = 34.47 degrees
+  At 35mm img_2336 about 92 13/16 - 56 14/16 = 912.825mm at distance of 1460.5mm
+    tan(fov/2) = 0.3125 => fov = 34.70 degrees
+  At 20mm img_2335 105 21/74 - (47-271/84) = (middle is at 73 10/16) (right half is 31.658", left is 29.85" - trust right more)
+    tan(fov/2) = 0.550 => fov = 57.57 degrees
+  These figures tie in well with Bob Atkins calculate (to within half a degree)
+  At 20mm img_2335, (x,y) of (0.500,0) = (2592/5184,0) is (105 21/74 - 73 10/16) = 31.658" = 57.57 degrees
+  At 20mm img_2335, (x,y) of (0.423,0) = (2194/5184,0) is (100  0/16 - 73 10/16) = 26.375" = 49.28 degrees
+  At 20mm img_2335, (x,y) of (0.362,0) = (1876/5184,0) is ( 95 15/16 - 73 10/16) = 22.313" = 42.42 degrees
+  At 20mm img_2335, (x,y) of (0.174,0) = ( 900/5184,0) is ( 84  0/16 - 73 10/16) = 10.375" = 20.46 degrees
+  At 20mm img_2335, (x,y) of (0.107,0) = ( 555/5184,0) is ( 80  0/16 - 73 10/16) =  6.375" = 12.65 degrees
  */
 /*a Includes
  */

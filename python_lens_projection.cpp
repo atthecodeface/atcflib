@@ -102,6 +102,7 @@ static PyTypeObject PyTypeObject_lens_projection = {
 };
 
 /*a Python lens_projection object methods
+ */
 /*f python_lens_projection_method_set_lens
  */
 static PyObject *
@@ -187,6 +188,7 @@ python_lens_projection_method_orientation_of_xy(PyObject* self, PyObject* args, 
         return NULL;
 
     if (!PyArg_ParseTuple(xy, "dd", &xy_d[0], &xy_d[1])) return NULL;
+
     if (py_obj->lens_projection) {
         c_quaternion *q = new c_quaternion();
         *q = py_obj->lens_projection->orientation_of_xy(xy_d);

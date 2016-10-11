@@ -256,8 +256,10 @@ python_quaternion_class_method_of_rotation(PyObject* cls, PyObject* args, PyObje
     if (!obj) { return Py_None; }
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)obj;
     py_obj->quaternion = new c_quaternion();
-    python_quaternion_method_from_rotation(obj, args, kwds);
-    Py_DECREF(obj);
+    if (!python_quaternion_method_from_rotation(obj, args, kwds)) {
+        Py_DECREF(py_obj);
+        return NULL;
+    }
     return obj;
 }
 
@@ -270,8 +272,10 @@ python_quaternion_class_method_of_sequence(PyObject* cls, PyObject* args, PyObje
     if (!obj) { return Py_None; }
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)obj;
     py_obj->quaternion = new c_quaternion();
-    python_quaternion_method_from_sequence(obj, args, kwds);
-    Py_DECREF(obj);
+    if (!python_quaternion_method_from_sequence(obj, args, kwds)) {
+        Py_DECREF(py_obj);
+        return NULL;
+    }
     return obj;
 }
 
@@ -653,8 +657,7 @@ python_quaternion_method_rotate_vector(PyObject* self, PyObject* args, PyObject 
         Py_DECREF(tuple);
         if (PyErr_Occurred()) return NULL;
         c_quaternion v;
-        v = c_quaternion(0,xyz[0],xyz[1],xyz[2]) * *(py_obj->quaternion);
-        v =*( py_obj->quaternion->copy()->conjugate()) * v;
+        v = *(py_obj->quaternion) * c_quaternion(0,xyz[0],xyz[1],xyz[2]) * *(py_obj->quaternion->copy()->conjugate());
         return Py_BuildValue("ddd",v.i(),v.j(),v.k());
     }
     Py_RETURN_NONE;
@@ -765,6 +768,7 @@ python_quaternion_method_from_rotation(PyObject* self, PyObject* args, PyObject 
         return NULL;
 
     if (!PyArg_ParseTuple(axis, "ddd", &xyz_d[0], &xyz_d[1], &xyz_d[2])) return NULL;
+
     if (py_obj->quaternion) {
         py_obj->quaternion->from_rotation(angle, xyz_d, degrees);
         Py_INCREF(py_obj);

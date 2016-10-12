@@ -748,8 +748,8 @@ def test_diff_image_quaternion():
 def test_diff_image_quaternion_2():
     #b Init
     print "Diff images with quaternions (two)"
-    imgs = ( gjslib_c.texture(filename='images/IMG_1901.JPG'),
-             gjslib_c.texture(filename='images/IMG_1902.JPG') )
+    imgs = ( gjslib_c.texture(filename='images/IMG_1900.JPG'),
+             gjslib_c.texture(filename='images/IMG_1901.JPG') )
 
 
     quaternion      = gjslib_c.quaternion
@@ -863,6 +863,7 @@ def test_diff_image_quaternion_2():
 
     best_other_target_matches = {}
     global_min_d = 1000
+    min_used = len(data)/2
     for src_q0 in match_qs:
         for tgt_q0 in match_qs[src_q0]:
             match = (src_q0, tgt_q0)
@@ -871,7 +872,7 @@ def test_diff_image_quaternion_2():
             for (src_q1, tgt_q1) in results[match]:
                 src_from_tgt_q = results[(src_q0, src_q1, tgt_q0, tgt_q1)]
                 (min_d, max_d, matches_used) = blah(match_qs, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q)
-                if (max_d < global_min_d) and len(matches_used)==len(data):
+                if (max_d < global_min_d) and (len(matches_used)>=min_used):
                     global_min_d = max_d
                     pass
                 matches_used["max"] = max_d
@@ -887,7 +888,7 @@ def test_diff_image_quaternion_2():
         #if src_q0 is not data.keys()[0]:continue
         match = best_other_target_matches[mapping]
         if match["max"] > 1.1*global_min_d: continue
-        if len(match)<len(data)+1: continue
+        if len(match)<=min_used: continue
         rq = results[mapping] * dst_orientation
         print match["max"], "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(match)
         for sq in match:

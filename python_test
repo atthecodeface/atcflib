@@ -554,6 +554,7 @@ class c_vector(object):
     @staticmethod
     def vector_normalize(p):
         l=c_vector.vector_length(p)
+        if abs(l)<1E-10:l=1.0
         r=[]
         for d in p: r.append(d/l)
         return tuple(r)
@@ -747,19 +748,14 @@ def test_diff_image_quaternion():
 def test_diff_image_quaternion_2():
     #b Init
     print "Diff images with quaternions (two)"
+    imgs = ( gjslib_c.texture(filename='images/IMG_1901.JPG'),
+             gjslib_c.texture(filename='images/IMG_1902.JPG') )
+
 
     quaternion      = gjslib_c.quaternion
 
-    src_orientation = quaternion().from_euler(yaw=0,degrees=True) * quaternion().from_euler(pitch=-30,degrees=True)
-    dst_orientation = quaternion().lookat((0,2,1),(0,1,0))
-    #1901
-    dst_orientation = quaternion(r=0.950655, i=-0.122744, j=-0.245672, k=-0.144343)
-    src_orientation = quaternion(r=0.957717, i=0.023461, j=-0.264079, k=-0.111759)
-
-    dst_orientation = src_orientation.copy()
-    dst_orientation = quaternion(r= 0.944475566984 ,i= 0.0447487819047 ,j= -0.266229671597 ,k= -0.18731046914 )
-    dst_orientation = quaternion(r= 0.943603209908 ,i= 0.0363628448403 ,j= -0.266600675443 ,k= -0.192911393184 )
-    dst_orientation = src_orientation.copy()
+    src_orientation = quaternion(r=1)
+    dst_orientation = quaternion(r=1)
 
     src_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
     dst_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
@@ -776,9 +772,6 @@ def test_diff_image_quaternion_2():
         im = c_image_match()
         im.max_corners=15
         im.max_matches_per_corner=8
-
-        imgs = ( gjslib_c.texture(filename='images/IMG_1901.JPG'),
-                 gjslib_c.texture(filename='images/IMG_1902.JPG') )
 
         ar = float(imgs[0].width)/imgs[0].height
         to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0*ar} )
@@ -808,37 +801,38 @@ def test_diff_image_quaternion_2():
     #            = (w1w0, -w1x0, -w1y0, -w1z0) +  (x1x0,  x1w0,  x1z0, -x1y0) +  (y1y0, -y1z0,  y1w0,  y1x0) +  (z1z0,  z1y0, -z1x0,  z1w0)
     #            = (w1w0+x0x1+y0y1+z0z1, x1w0-w1x0+z1y0-y1z0, y1w0-w1y0+x1z0-z1x0, w0z1-w1z0+z0x1-z1x0)
     data = {}
+    match_qs = {}
     for m in matches:
         mxy = (m[0]-tb[0].width/2,m[1]-tb[0].height/2)
         print "Match ", m, matches[m],mxy
         src_q = src_lp_35.orientation_of_xy(mxy)
         data[src_q] = (mxy,[])
+        match_qs[src_q] = []
         for mm in matches[m]:
             mmxy = (mm[0]-tb[1].width/2,mm[1]-tb[1].height/2)
             tgt_q = dst_lp_35.orientation_of_xy(mmxy)
             fft_rot = 180/math.pi*math.atan2(mm[3],mm[4])
             data[src_q][1].append( (tgt_q, fft_rot, mm[2], mmxy) )
+            match_qs[src_q].append(tgt_q)
             pass
         pass
+
     #b Build results as dictionary of quaternion matches
     results = {}
     for src_q0 in data:
         for src_q1 in data:
             if src_q0 == src_q1: continue
-            for t0 in data[src_q0][1]:
-                if (src_q0, t0) not in results:
-                    results[(src_q0, t0)] = []
+            for tgt_q0 in match_qs[src_q0]:
+                if (src_q0, tgt_q0) not in results:
+                    results[(src_q0, tgt_q0)] = []
                     pass
-                for t1 in data[src_q1][1]:
-                    if abs(t0[0]-t1[0])<1E-8: continue
-                    tgt_q0 = t0[0]
-                    tgt_q1 = t1[0]
+                for tgt_q1 in match_qs[src_q1]:
                     qm = c_quaternion_match.test_add(src_qs=(src_q0,src_q1),
                                                      tgt_qs=(tgt_q0,tgt_q1),
                                                      max_angle_diff=0.3)
                     if qm is not None:
-                        results[(src_q0, src_q1, t0, t1)] = qm.src_from_tgt_orient# * dst_orientation
-                        results[(src_q0, t0)].append( (src_q1, t1) )
+                        results[(src_q0, src_q1, tgt_q0, tgt_q1)] = qm.src_from_tgt_orient# * dst_orientation
+                        results[(src_q0, tgt_q0)].append( (src_q1, tgt_q1) )
                         pass
                     pass
                 pass
@@ -846,42 +840,42 @@ def test_diff_image_quaternion_2():
         pass
 
     #b Find 'best other target matches' for each source match
+    def blah(match_qs, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q, min_distance=0.001):
+        matches_used = {src_q0:(0.0,tgt_q0), src_q1:(0.0,tgt_q1)}
+        max_d = None
+        for src_qx in match_qs:
+            if src_qx in matches_used: continue
+            min_d = (None, None)
+            for tgt_qx in match_qs[src_qx]:
+                d = c_vector.vector_diff(v_of_q(src_qx), v_of_q(src_from_tgt_q*tgt_qx))
+                d = c_vector.vector_length(d)
+                if (min_d[0] is None) or (min_d[0]>d):
+                    min_d = (d, tgt_qx)
+                    pass
+                pass
+            if min_d[0] is None: continue
+            if min_d[0]>min_distance: continue
+            matches_used[src_qx] = min_d
+            if (max_d is None) or (max_d<min_d[0]):
+                max_d = min_d[0]
+            pass
+        return (min_d, max_d, matches_used)
+
     best_other_target_matches = {}
     global_min_d = 1000
-    for src_q0 in data:
-        for t0 in data[src_q0][1]:
-            match = (src_q0, t0)
+    for src_q0 in match_qs:
+        for tgt_q0 in match_qs[src_q0]:
+            match = (src_q0, tgt_q0)
             if len(results[match])==0:
                 continue
-            for (src_q1,t1) in results[match]:
-                src_from_tgt_q = results[(src_q0, src_q1, t0, t1)]
-                matches_used = {src_q0:(0.0,t0), src_q1:(0.0,t1)}
-                for src_qx in data:
-                    if src_qx in matches_used: continue
-                    min_d = (None, None)
-                    for tx in data[src_qx][1]:
-                        d = c_vector.vector_diff(v_of_q(src_qx), v_of_q(src_from_tgt_q*tx[0]))
-                        d = c_vector.vector_length(d)
-                        if (min_d[0] is None) or (min_d[0]>d):
-                            min_d = (d, tx)
-                            pass
-                        pass
-                    if min_d[0] is None: continue
-                    if min_d[0]>0.001: continue
-                    matches_used[src_qx] = min_d
-                    pass
-                if (len(matches_used)<=2): continue
-                max_d = None
-                for i in matches_used:
-                    if (max_d is None) or (max_d<matches_used[i][0]):
-                        max_d=matches_used[i][0]
-                        pass
-                    pass
-                matches_used["max"] = max_d
+            for (src_q1, tgt_q1) in results[match]:
+                src_from_tgt_q = results[(src_q0, src_q1, tgt_q0, tgt_q1)]
+                (min_d, max_d, matches_used) = blah(match_qs, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q)
                 if (max_d < global_min_d) and len(matches_used)==len(data):
                     global_min_d = max_d
                     pass
-                best_other_target_matches[(src_q0, src_q1, t0, t1)] = matches_used
+                matches_used["max"] = max_d
+                best_other_target_matches[(src_q0, src_q1, tgt_q0, tgt_q1)] = matches_used
                 pass
             pass
         pass
@@ -889,20 +883,21 @@ def test_diff_image_quaternion_2():
     #b Do clusters
     print len(data), global_min_d
     for mapping in best_other_target_matches:
-        (src_q0, src_q1, t0, t1) = mapping
+        (src_q0, src_q1, tgt_q0, tgt_q1) = mapping
         #if src_q0 is not data.keys()[0]:continue
         match = best_other_target_matches[mapping]
         if match["max"] > 1.1*global_min_d: continue
         if len(match)<len(data)+1: continue
-        print results[mapping] * dst_orientation,len(match)
+        rq = results[mapping] * dst_orientation
+        print match["max"], "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(match)
         for sq in match:
             if sq == "max": continue
             if sq is src_q0: continue
             if sq is src_q1: continue
-            tx = match[sq][1]
+            tgt_qx = match[sq][1]
             txy = "None"
             for t in data[sq][1]:
-                if t is tx:
+                if t[0] is tgt_qx:
                     txy = str(t[3])
                     pass
                 pass

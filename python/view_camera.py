@@ -194,6 +194,7 @@ def test_object():
     src2_orientation = quaternion(r=0.957717, i=0.023461, j=-0.264079, k=-0.111759)
     src3_orientation = quaternion(r=0.942792, i=0.044963, j=-0.263449, k=-0.199253)
     src3_orientation = quaternion(r= 0.94237245764 ,i= 0.0375693347907 ,j= -0.26661993336 ,k= -0.198586271682 )
+    src3_orientation = quaternion(r=0.942231, i=0.037577, j=-0.266521, k=-0.199388)
 
     src_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
     src_camera.orient(src_orientation)

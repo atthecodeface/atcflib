@@ -199,9 +199,8 @@ def test_object():
     src3_orientation = quaternion(r=0.942233, i=0.041486, j=-0.264881, k=-0.200781)
     src3_orientation = quaternion(r= 0.941914727814 ,i= 0.0378860519544 ,j= -0.266469274966 ,k= -0.200886580173 )
     # evening
-    src3_orientation = quaternion(r= 0.942498018027 ,i= 0.0379959562372 ,j= -0.266313195572 ,k= -0.198320637326 )
-
-
+    src3_orientation = quaternion(r= 0.942501606805 ,i= 0.0373909474349 ,j= -0.266643643963 ,k= -0.197974254272 )
+    src3_orientation = quaternion(r= 0.943603209908 ,i= 0.0363628448403 ,j= -0.266600675443 ,k= -0.192911393184 )
     src_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
     src_camera.orient(src_orientation)
 

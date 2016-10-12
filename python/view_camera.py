@@ -193,14 +193,8 @@ def test_object():
     src_orientation = quaternion().from_euler(yaw=0,degrees=True) * quaternion().from_euler(pitch=-30,degrees=True)
     src2_orientation = quaternion(r=0.957717, i=0.023461, j=-0.264079, k=-0.111759)
     src3_orientation = quaternion(r=0.942792, i=0.044963, j=-0.263449, k=-0.199253)
-    src3_orientation = quaternion(r=0.942618, i=0.038782, j=-0.265809, k=-0.198256)
-    src3_orientation = quaternion(r=0.942579, i=0.039081, j=-0.265648, k=-0.198577)
-    src3_orientation = quaternion(r=0.942554, i=0.039265, j=-0.265529, k=-0.198860)
-    src3_orientation = quaternion(r=0.942233, i=0.041486, j=-0.264881, k=-0.200781)
-    src3_orientation = quaternion(r= 0.941914727814 ,i= 0.0378860519544 ,j= -0.266469274966 ,k= -0.200886580173 )
-    # evening
-    src3_orientation = quaternion(r= 0.942501606805 ,i= 0.0373909474349 ,j= -0.266643643963 ,k= -0.197974254272 )
-    src3_orientation = quaternion(r= 0.943603209908 ,i= 0.0363628448403 ,j= -0.266600675443 ,k= -0.192911393184 )
+    src3_orientation = quaternion(r= 0.94237245764 ,i= 0.0375693347907 ,j= -0.26661993336 ,k= -0.198586271682 )
+
     src_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
     src_camera.orient(src_orientation)
 

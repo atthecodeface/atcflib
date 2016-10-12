@@ -9,10 +9,10 @@ import math
 #a Support functions
 #f init_opengl
 def init_opengl():
-        glutInit(sys.argv)
-        glutInitDisplayMode(GLUT_3_2_CORE_PROFILE |GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
-        glutInitWindowSize(64,64)
-        glutCreateWindow("self.window_title")
+    glutInit(sys.argv)
+    glutInitDisplayMode(GLUT_3_2_CORE_PROFILE |GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
+    glutInitWindowSize(64,64)
+    glutCreateWindow("self.window_title")
 
 #f save_as_png
 def save_as_png(texture, filename):
@@ -237,11 +237,8 @@ class c_quaternion_match(object):
         if False:
             print "  Src/tgt axis/angle",src_axis,src_angle*180/math.pi,tgt_axis,tgt_angle*180/math.pi
             pass
-        #dq = src_qs[0]*tgt_qs[1]-src_qs[1]*tgt_qs[0]
-        #print "Abs:",abs(dq),dq
-        #dq = c_vector.vector_diff((src_qs[0]/src_qs[1]).rotate_vector((0,0,1)),(tgt_qs[0]/tgt_qs[1]).rotate_vector((0,0,1)))
         dq = c_vector.vector_diff((src_qs[0]/tgt_qs[0]).rotate_vector((0,0,1)),(src_qs[1]/tgt_qs[1]).rotate_vector((0,0,1)))
-        print "Abs:",c_vector.vector_length(dq),"   ",180.0/math.pi*abs(src_angle-tgt_angle),"  ",dq
+        #print "Abs:",c_vector.vector_length(dq),"   ",180.0/math.pi*abs(src_angle-tgt_angle),"  ",dq
         dq = c_vector.vector_length(dq)
         if abs(dq)>0.2: return None
         return cls(src_qs, tgt_qs, src_axis_angle=(src_axis, src_angle), tgt_axis_angle=(tgt_axis,tgt_angle))
@@ -293,6 +290,86 @@ class c_quaternion_match(object):
 
         self.src_from_tgt_orient = ~src_sp0_orient_to_diff_axis * gjslib_c.quaternion.of_rotation(axis=diff_axis, angle=-diff_angle, degrees=0) * dst_tp0_orient_to_diff_axis
         pass
+    pass
+
+#c c_quaternion_cluster
+class c_quaternion_cluster(object):
+    #f __init__
+    def __init__(self, results):
+        self.results = results
+        pass
+    #f find_centers
+    def find_centers(self, qs, cxy, min_dist, min_min_dist, min_number, scale, max_iter):
+        def q_dist_from_v(q,v):
+            return c_vector.vector_length(c_vector.vector_diff(v_of_q(q),v))
+        if max_iter==0:
+            return (qs[:], cxy, min_dist, len(qs), max_iter)
+        if min_dist < min_min_dist:
+            return (qs[:], cxy, min_dist, len(qs), max_iter)
+        max_min = 0
+        allowed_qs = []
+        
+        for q in qs:
+            d = q_dist_from_v(q,cxy)
+            if (d<min_dist):
+                if (d>max_min): max_min=d
+                allowed_qs.append(q)
+                pass
+            pass
+        if len(allowed_qs)<min_number:
+            return (qs[:], cxy, min_dist, len(allowed_qs), max_iter)
+        tq = quaternion_average(allowed_qs)
+        return self.find_centers(allowed_qs, v_of_q(tq), max_min*scale, min_min_dist, min_number, scale, max_iter-1)
+    #f find_clusters
+    def find_clusters(self):
+        #b Produce list of results from valid results
+        qs = []
+        for m in self.results:
+            qs.append(self.results[m])
+            pass
+
+        #b Find best centers from results
+        handled_results = []
+        remaining_qs = qs[:]
+        fcs = []
+        while len(remaining_qs)>0:
+            q = remaining_qs[0]
+            v = v_of_q(q)
+            fc = self.find_centers(remaining_qs, v, 0.5, 0.005, len(qs)/10, 0.9, 40)
+            fcs.append(fc)
+            for q in fc[0]:
+                handled_results.append(q)
+                remaining_qs.remove(q)
+                pass
+            pass
+
+        #b Sort list of centers
+        def fc_cmp(x,y):
+            if x[2]/len(x[0])<y[2]/len(y[0]): return -1
+            return 1
+        fcs.sort(cmp=fc_cmp)
+        if False:
+            for fc in fcs:
+                print fc[2], fc[1], fc[3], fc[4]
+                n = 0
+                for q in fc[0]:
+                    print "  ",q
+                    n+=1
+                    if n>30:
+                        print "  ...."
+                        break
+                    pass
+                pass
+            pass
+
+        #b Display list of centers
+        agreed_orientations = []
+        for fc in fcs:
+            tq = quaternion_average(fc[0])
+            print "distance",fc[2],"num_in_range",fc[3],"/",len(fc[0]),"iterations left",fc[4], "center (r=",tq.r,",i=",tq.i,",j=",tq.j,",k=",tq.k,")"
+            agreed_orientations.append( {"quaternion":tq, "error":fc[2]/len(fc[0])} )
+            pass
+        return agreed_orientations
     pass
 
 #a Testy functions
@@ -664,80 +741,9 @@ def test_diff_image_quaternion():
 
     #b Bucket up quaternions to find numerous near-matches
     valid_results = validate_buckets(results)
-
-    #b find_centers
-    def find_centers(qs, cxy, min_dist, min_min_dist, min_number, scale, max_iter):
-        def q_dist_from_v(q,v):
-            return c_vector.vector_length(c_vector.vector_diff(v_of_q(q),v))
-        if max_iter==0:
-            return (qs[:], cxy, min_dist, len(qs), max_iter)
-        if min_dist < min_min_dist:
-            return (qs[:], cxy, min_dist, len(qs), max_iter)
-        max_min = 0
-        allowed_qs = []
-        
-        for q in qs:
-            d = q_dist_from_v(q,cxy)
-            if (d<min_dist):
-                if (d>max_min): max_min=d
-                allowed_qs.append(q)
-                pass
-            pass
-        if len(allowed_qs)<min_number:
-            return (qs[:], cxy, min_dist, len(allowed_qs), max_iter)
-        tq = quaternion_average(allowed_qs)
-        return find_centers(allowed_qs, v_of_q(tq), max_min*scale, min_min_dist, min_number, scale, max_iter-1)
-
-    #b Produce list of results from valid results
-    qs = []
-    for m in valid_results:
-        if False:
-            print valid_results[m], m
-            pass
-        qs.append(valid_results[m])
-        pass
-    print len(valid_results)
-
-    #b Find best centers from results
-    handled_results = []
-    remaining_qs = qs[:]
-    fcs = []
-    while len(remaining_qs)>0:
-        q = remaining_qs[0]
-        v = v_of_q(q)
-        #fc = find_centers(remaining_qs, v, 0.5, 0.001, len(qs)/30, 0.9, 60)
-        fc = find_centers(remaining_qs, v, 0.5, 0.005, len(qs)/10, 0.9, 40)
-        fcs.append(fc)
-        for q in fc[0]:
-            handled_results.append(q)
-            remaining_qs.remove(q)
-            pass
-        pass
-
-    #b Sort list of centers
-    def fc_cmp(x,y):
-        if x[2]<y[2]: return -1
-        return 1
-    fcs.sort(cmp=fc_cmp)
-    if False:
-        for fc in fcs:
-            print fc[2], fc[1], fc[3], fc[4]
-            n = 0
-            for q in fc[0]:
-                print "  ",q
-                n+=1
-                if n>30:
-                    print "  ...."
-                    break
-                pass
-            pass
-        pass
-
-    #b Display list of centers
-    for fc in fcs:
-        tq = quaternion_average(fc[0])
-        print "distance",fc[2],"num_in_range",fc[3],"/",len(fc[0]),"iterations left",fc[4], "center (r=",tq.r,",i=",tq.i,",j=",tq.j,",k=",tq.k,")"
-        pass
+    #b Do clusters
+    qc = c_quaternion_cluster(valid_results)
+    print qc.find_clusters()
     pass
 
 #f test_diff_image

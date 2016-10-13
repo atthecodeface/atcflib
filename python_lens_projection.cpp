@@ -133,14 +133,16 @@ python_lens_projection_method_set_sensor(PyObject* self, PyObject* args, PyObjec
     t_PyObject_lens_projection *py_obj = (t_PyObject_lens_projection *)self;
 
     double width;
-    static const char *kwlist[] = {"width", NULL};
+    double height=0.0;
+    static const char *kwlist[] = {"width", "height", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "d", (char **)kwlist, 
-                                     &width))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "d|d", (char **)kwlist, 
+                                     &width, &height))
         return NULL;
 
+    height = (height==0)?width:height;
     if (py_obj->lens_projection) {
-        py_obj->lens_projection->set_sensor(width, width);
+        py_obj->lens_projection->set_sensor(width, height);
     }
     Py_RETURN_NONE;
 }
@@ -319,14 +321,15 @@ python_lens_projection_init(PyObject *self, PyObject *args, PyObject *kwds)
     t_PyObject_lens_projection *py_obj = (t_PyObject_lens_projection *)self;
 
     double width = 1.0;
+    double height = 0.0;
     double focal_length = 35.0;
     double frame_width = 36.0;
     const char *lens_type=NULL;
 
-    static const char *kwlist[] = {"width", "focal_length", "frame_width", "lens_type", NULL};
+    static const char *kwlist[] = {"width", "height", "focal_length", "frame_width", "lens_type", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ddds", (char **)kwlist, 
-                                     &width, &focal_length, &frame_width, &lens_type))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|dddds", (char **)kwlist, 
+                                     &width, &height, &focal_length, &frame_width, &lens_type))
         return NULL;
 
     t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
@@ -336,7 +339,8 @@ python_lens_projection_init(PyObject *self, PyObject *args, PyObject *kwds)
         return -1;
 
     py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
-    py_obj->lens_projection->set_sensor(width, width);
+    height = (height==0)?width:height;
+    py_obj->lens_projection->set_sensor(width, height);
 
     return 0;
 }

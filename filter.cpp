@@ -424,7 +424,7 @@ t_texture_ptr c_filter::bound_texture(t_exec_context *ec, int n)
     return texture;
 }
 
-/*f c_filter::bind_texture
+/*f c_filter::bind_projection
  */
 int c_filter::bind_projection(int n, class c_lens_projection *projection)
 {
@@ -789,12 +789,14 @@ int c_filter_find::do_execute(t_exec_context *ec)
             }
         }
     }
-    for (int i=0; (i<n) && (i<10); i++) {
-        fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f)\n",
-                i, points[i].x, points[i].y, points[i].value,
-                180/M_PI*atan2(points[i].vec_y, points[i].vec_x),
-                points[i].vec_x, points[i].vec_y
-            );
+    if (0) {
+        for (int i=0; (i<n) && (i<10); i++) {
+            fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f)\n",
+                    i, points[i].x, points[i].y, points[i].value,
+                    180/M_PI*atan2(points[i].vec_y, points[i].vec_x),
+                    points[i].vec_x, points[i].vec_y
+                );
+        }
     }
     if (ec->points) free(ec->points);
     ec->points = points;

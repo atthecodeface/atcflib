@@ -160,9 +160,9 @@ double c_lens_projection::angle_to_offset_stereographic(double angle) const
  */
 void c_lens_projection::xy_to_roll_yaw(const double xy[2], double ry[2]) const
 {
-    double r = sqrt(xy[0]*xy[0]+xy[1]*xy[1]);
-    double roll = atan2(xy[1], xy[0]);
-    double yaw  = (this->*offset_to_angle)(r/width); 
+    double r = sqrt(xy[0]*xy[0]/width/width+xy[1]*xy[1]/height/height);
+    double roll = atan2(xy[1]*width, xy[0]*height);
+    double yaw  = (this->*offset_to_angle)(r); 
     ry[0] = roll;
     ry[1] = yaw;
 }
@@ -172,9 +172,9 @@ void c_lens_projection::xy_to_roll_yaw(const double xy[2], double ry[2]) const
  */
 void c_lens_projection::roll_yaw_to_xy(const double ry[2], double xy[2]) const
 {
-    double r = width * (this->*angle_to_offset)(ry[1]);
-    xy[0] = r*cos(ry[0]);
-    xy[1] = r*sin(ry[0]);
+    double r = (this->*angle_to_offset)(ry[1]);
+    xy[0] = width  * r * cos(ry[0]);
+    xy[1] = height * r * sin(ry[0]);
 }
 
 /*f c_lens_projection::orientation_of_xy

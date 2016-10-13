@@ -5,6 +5,7 @@ from OpenGL.GLUT import *
 from OpenGL.GL import *
 import gjslib_c
 import math
+img_png_n=0
 
 #a Support functions
 #f init_opengl
@@ -184,8 +185,8 @@ class c_image_match(object):
         self.copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
         self.equalize = c_windowed_equalization_filter()
         self.harris = c_harris_filter()
-        self.find_corners = c_find_filter(extra_parameters={"min_distance":10.0, "max_elements":100})
-        self.find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.1, "max_elements":100})
+        self.find_corners = c_find_filter(extra_parameters={"min_distance":10.0, "max_elements":150})
+        self.find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.1, "max_elements":40})
         self.circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":self.radius,
                                                              "CIRCLE_COMPONENT":"r",
                                                              })
@@ -334,7 +335,7 @@ class c_quaternion_cluster(object):
         while len(remaining_qs)>0:
             q = remaining_qs[0]
             v = v_of_q(q)
-            fc = self.find_centers(remaining_qs, v, 0.5, 0.005, len(qs)/10, 0.9, 40)
+            fc = self.find_centers(remaining_qs, v, 3.0, 0.005, len(qs)/10, 0.9, 40)
             fcs.append(fc)
             for q in fc[0]:
                 handled_results.append(q)
@@ -347,7 +348,7 @@ class c_quaternion_cluster(object):
             if x[2]/len(x[0])<y[2]/len(y[0]): return -1
             return 1
         fcs.sort(cmp=fc_cmp)
-        if False:
+        if True:
             for fc in fcs:
                 print fc[2], fc[1], fc[3], fc[4]
                 n = 0
@@ -370,6 +371,269 @@ class c_quaternion_cluster(object):
             pass
         return agreed_orientations
     pass
+
+#c c_camera_image
+class c_camera_image(object):
+    def __init__(self, image_filename, frame_width=22.3, focal_length=35.0, lens_type="rectilinear", orientation=None):
+        self.texture = gjslib_c.texture(filename=image_filename)
+        self.lp      = gjslib_c.lens_projection(width=1.0,
+                                                height=1.0/self.texture.height*self.texture.width,
+                                                frame_width=frame_width,
+                                                focal_length=focal_length,
+                                                lens_type=lens_type)
+        if orientation is None:
+            orientation = gjslib_c.quaternion(r=1)
+            pass
+        self.lp.orient(orientation)
+        pass
+    def orientation(self):
+        return self.lp.orientation
+    def orientation_of_xy(self,xy):
+        return self.lp.orientation_of_xy(xy)
+    def orientation_of_xy_list(self, xy_list):
+        q_list = []
+        for xy in xy_list:
+            q_list.append(self.lp.orientation_of_xy(xy))
+            pass
+        return q_list
+    def xy_of_orientation_list(self, q_list):
+        xy_list = []
+        for q in q_list:
+            xy_list.append(self.lp.xy_of_orientation(q))
+            pass
+        return xy_list
+
+#c c_image_pair_quaternion_match
+class c_image_pair_quaternion_match(object):
+    def __init__(self, filenames=[]):
+        self.camera_images = {}
+        for f in filenames:
+            self.add_image(f)
+            pass
+        self.im = c_image_match()
+        self.im.max_corners=40
+        self.im.max_matches_per_corner=6
+        self.to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
+                                extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
+                                               "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
+                                               })
+        pass
+    def orient(self, image, orientation):
+        self.camera_images[image].lp.orient(orientation)
+        pass
+    def xy_of_orientation(self, image, q):
+        return self.camera_images[image].lp.xy_of_orientation(q)
+    def add_image(self, image_filename="", **kwargs):
+        if image_filename not in self.camera_images:
+            self.camera_images[image_filename] = c_camera_image(image_filename=image_filename, **kwargs)
+            pass
+        pass
+    def find_overflows(self, images, cxy0, size):
+        ci0 = self.camera_images[images[0]]
+        ci1 = self.camera_images[images[1]]
+        width = ci0.texture.width
+        height = ci0.texture.height
+        ci0_xy_list = []
+        for i in range(4):
+            for j in range(20):
+                xy = j/10.0-1.0
+                xy = [ (xy,-1.0), (1.0,xy), (-xy,1.0), (1.0,-xy) ][i]
+                xy = ((cxy0[0] + xy[0]*size/2)*width, (cxy0[1] + xy[1]*size/2)*height)
+                ci0_xy_list.append(xy)
+                pass
+            pass
+        q_list      = ci0.orientation_of_xy_list(ci0_xy_list)
+        ci1_xy_list = ci1.xy_of_orientation_list(q_list)
+        off_edge = [0]*4
+        in_bounds = True
+        for i in range(4):
+            for j in range(20):
+                err = None
+                for xy in (ci0_xy_list[i*20+j], ci1_xy_list[i*20+j]):
+                    xy = (xy[0]/(width/2), xy[1]/(height/2))
+                    for k in range(2):
+                        if (xy[k]<-1.0):err = -1 - xy[k]
+                        if (xy[k]>1.0): err = xy[k] - 1
+                        pass
+                    if err is None: continue
+                    err = abs(err)
+                    if err > off_edge[i]:
+                        off_edge[i] = err
+                        in_bounds = False
+                        pass
+                    pass
+                pass
+            pass
+        if in_bounds: return None
+        return off_edge
+    def find_overlap(self, images, cxy0, size, scale=0.9, max_iter=40):
+        ci0 = self.camera_images[images[0]]
+        ci1 = self.camera_images[images[1]]
+        for i in range(max_iter):
+            overflow = self.find_overflows(images, cxy0, size)
+            #print i, cxy0, size, overflow
+            if overflow is None: return (cxy0, size)
+            if overflow[0]>0 and overflow[2]>0:   size *= scale
+            elif overflow[1]>0 and overflow[3]>0: size *= scale
+            else:
+                if overflow[0]>0: cxy0=(cxy0[0] + size*(1-scale), cxy0[1])
+                if overflow[2]>0: cxy0=(cxy0[0] - size*(1-scale), cxy0[1])
+                if overflow[1]>0: cxy0=(cxy0[0], cxy0[1] + size*(1-scale))
+                if overflow[3]>0: cxy0=(cxy0[0], cxy0[1] - size*(1-scale))
+                pass
+            pass
+        return None
+    def find_matches(self, images, cxy0, size):
+        global img_png_n
+        # 'size' maps to frame_width;
+        # fov = 2atan2(frame_width/2focal_length) = 2atan2(size/2)
+        # hence size = frame_width/focal_length
+        # hence focal_length = frame_width/size
+        focal_length = 36.0 / size
+        if img_png_n>0:focal_length=300.0
+        ci0 = self.camera_images[images[0]]
+        ci1 = self.camera_images[images[1]]
+
+        src_img_lp_to = gjslib_c.lens_projection(width=1.0, height=1.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
+        dst_img_lp_to = gjslib_c.lens_projection(width=1.0, height=1.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
+
+        # Currently we can change ci0 orientation and src_to_orientation works great with world_cxy0_q
+        # (but presumably not with ci0.orientation() * world_cxy0_q...)
+        # The dest projection camera needs to point at world_cxy0_q relative to the destination image
+        # as the destination image is accessed 'destination image local'
+        # Not sure I buy this logic actually...
+        print "Centering on image 0",cxy0, (cxy0[0]+0.5)*5184, (cxy0[1]+0.5)*3456
+        world_cxy0_q = ci0.orientation_of_xy(cxy0)
+
+        rq = world_cxy0_q
+        print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
+        src_to_orientation = world_cxy0_q
+        dst_to_orientation = world_cxy0_q
+
+        dst_img_lp_to.orient(dst_to_orientation)
+        src_img_lp_to.orient(src_to_orientation)
+
+        #b Find matches
+        self.to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0, "xc":-1.0} )
+        self.to_yuv.set_projections(projections=(ci0.lp,src_img_lp_to), num_x_divisions=20, num_y_divisions=20)
+        self.to_yuv.execute((ci0.texture,tb[0]))
+        self.to_yuv.set_projections(projections=(ci1.lp,dst_img_lp_to), num_x_divisions=20, num_y_divisions=20)
+        self.to_yuv.execute((ci1.texture,tb[1]))
+        matches = self.im.get_matches(tb)
+
+        save_as_png(tb[0],"a%d.png"%img_png_n)
+        save_as_png(tb[1],"b%d.png"%img_png_n)
+        img_png_n+=1
+
+        #b Matches of stuff
+        class c_mappings(object):
+            def __init__(self, src_xy, src_q):
+                self.src_xy = src_xy
+                self.src_q = src_q
+                self.matches = {}
+                self.tgt_qs = []
+                self.tgt_q_mappings = {}
+                pass
+            def add_match(self, tgt_xy, tgt_q, fft_rot, fft_power):
+                self.tgt_qs.append(tgt_q)
+                self.tgt_q_mappings[tgt_q] = []
+                self.matches[tgt_q] = (tgt_xy, tgt_q, fft_rot, fft_power)
+                pass
+            def add_tgt_mapping(self, tgt_q, src_q1, tgt_q1, qm):
+                if tgt_q not in self.tgt_qs:
+                    raise Exception, "Unexpected add_tgt_mapping for tgt quaternion that is not part of the source"
+                self.tgt_q_mappings[tgt_q].append( (src_q1, tgt_q1, qm.src_from_tgt_orient) )
+                pass
+            pass
+
+        mappings_by_src_q = {}
+        for m in matches:
+            mxy = (float(m[0])/tb[0].width-0.5, float(m[1])/tb[0].height-0.5)
+            src_q = src_img_lp_to.orientation_of_xy(mxy)
+            mappings_by_src_q[src_q] = c_mappings(mxy, src_q)
+            for mm in matches[m]:
+                tgt_xy = ( float(mm[0])/tb[1].width-0.5, float(mm[1])/tb[1].height-0.5 )
+                fft_rot = 180/math.pi*math.atan2(mm[3],mm[4])
+                tgt_q = dst_img_lp_to.orientation_of_xy(tgt_xy)
+                mappings_by_src_q[src_q].add_match(tgt_xy, tgt_q, fft_rot, mm[2])
+                pass
+            pass
+
+        #b Build results as dictionary of quaternion matches
+        for src_q0 in mappings_by_src_q:
+            for src_q1 in mappings_by_src_q:
+                if src_q0 == src_q1: continue
+                for tgt_q0 in mappings_by_src_q[src_q0].tgt_qs:
+                    for tgt_q1 in mappings_by_src_q[src_q1].tgt_qs:
+                        qm = c_quaternion_match.test_add(src_qs=(src_q0,src_q1),
+                                                         tgt_qs=(tgt_q0,tgt_q1),
+                                                         max_angle_diff=0.3)
+                        if qm is not None:
+                            #rq = qm.src_from_tgt_orient
+                            #print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
+                            mappings_by_src_q[src_q0].add_tgt_mapping(tgt_q0, src_q1, tgt_q1, qm)
+                            pass
+                        pass
+                    pass
+                pass
+            pass
+
+        self.mappings_by_src_q = mappings_by_src_q
+        return (mappings_by_src_q, world_cxy0_q, dst_to_orientation)
+    #b Find 'best other target matches' for each source match
+    class c_best_match(object):
+        def __init__(self, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q):
+            self.min_distance = None
+            self.max_distance = None
+            self.src_from_tgt_q = src_from_tgt_q
+            self.mappings = {src_q0:(0.0,tgt_q0), src_q1:(0.0,tgt_q1)}
+            pass
+        def add_match(self, src_q, tgt_q, distance):
+            self.mappings[src_q] = (distance, tgt_q)
+            if (self.max_distance is None) or (self.max_distance<distance):
+                self.max_distance = distance
+                pass
+            pass
+        pass
+    #b Find 'best other target matches' for each source match
+    def find_best_matches_within_distance(self, mappings_by_src_q, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q, min_distance, min_used):
+        matches_used = self.c_best_match(src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q)
+        max_d = None
+        for src_qx in mappings_by_src_q:
+            if src_qx in matches_used.mappings: continue
+            min_d = (None, None)
+            for tgt_qx in mappings_by_src_q[src_qx].tgt_qs:
+                d = c_vector.vector_diff(v_of_q(src_qx), v_of_q(src_from_tgt_q*tgt_qx))
+                d = c_vector.vector_length(d)
+                if (min_d[0] is None) or (min_d[0]>d):
+                    min_d = (d, tgt_qx)
+                    pass
+                pass
+            if min_d[0] is None: continue
+            if min_d[0]>min_distance: continue
+            matches_used.add_match(src_qx, min_d[1], min_d[0])
+            pass
+        if len(matches_used.mappings)<min_used: return None
+        if matches_used.max_distance is None: return None
+        return matches_used
+    #f find_best_target_matches
+    def find_best_target_matches(self, mappings_by_src_q, min_used_factor=0.5):
+        best_other_target_matches = []
+        global_min_d = 1000
+        min_used = len(mappings_by_src_q)*min_used_factor
+        for src_q0 in mappings_by_src_q:
+            for tgt_q0 in mappings_by_src_q[src_q0].tgt_qs:
+                for (src_q1, tgt_q1, src_from_tgt_q) in mappings_by_src_q[src_q0].tgt_q_mappings[tgt_q0]:
+                    bm = self.find_best_matches_within_distance(mappings_by_src_q, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q, min_distance=global_min_d*1.2, min_used=min_used)
+                    if bm is None: continue
+                    if (bm.max_distance < global_min_d):
+                        global_min_d = bm.max_distance
+                        pass
+                    best_other_target_matches.append(bm)
+                    pass
+                pass
+            pass
+        return (best_other_target_matches, global_min_d)
 
 #a Testy functions
 #f test_to_yuv
@@ -640,8 +904,10 @@ def test_diff_image_quaternion():
     dst_orientation = quaternion(r= 0.943114593009 ,i= 0.036678893399 ,j= -0.266698808114 ,k= -0.195092975228 )
     dst_orientation = src_orientation.copy()
 
-    src_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
-    dst_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
+    focal_length = 35.0
+    focal_length = 20.0
+    src_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=focal_length, lens_type="rectilinear")
+    dst_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=focal_length, lens_type="rectilinear")
 
     src_lp_35.orient(src_orientation)
     dst_lp_35.orient(dst_orientation)
@@ -658,6 +924,8 @@ def test_diff_image_quaternion():
 
         imgs = ( gjslib_c.texture(filename='images/IMG_1901.JPG'),
                  gjslib_c.texture(filename='images/IMG_1902.JPG') )
+        imgs = ( gjslib_c.texture(filename='images/IMG_2180.JPG'),
+                 gjslib_c.texture(filename='images/IMG_2181.JPG') )
 
         ar = float(imgs[0].width)/imgs[0].height
         to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0*ar} )
@@ -739,6 +1007,8 @@ def test_diff_image_quaternion():
 
     #b Bucket up quaternions to find numerous near-matches
     valid_results = validate_buckets(results)
+    print valid_results
+
     #b Do clusters
     qc = c_quaternion_cluster(valid_results)
     print qc.find_clusters()
@@ -757,11 +1027,27 @@ def test_diff_image_quaternion_2():
     src_orientation = quaternion(r=1)
     dst_orientation = quaternion(r=1)
 
-    src_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
-    dst_lp_35 = gjslib_c.lens_projection(width=1024.0, frame_width=22.3*3456/5184, focal_length=35.0, lens_type="rectilinear")
+    src_img_lp_35 = gjslib_c.lens_projection(width=1024.0, height=1024.0/3456.0*5184, frame_width=22.3, focal_length=35.0, lens_type="rectilinear")
+    dst_img_lp_35 = gjslib_c.lens_projection(width=1024.0, height=1024.0/3456.0*5184, frame_width=22.3, focal_length=35.0, lens_type="rectilinear")
 
-    src_lp_35.orient(src_orientation)
-    dst_lp_35.orient(dst_orientation)
+    src_img_lp_35.orient(src_orientation)
+    dst_orientation = src_orientation * quaternion(r=0.993334,i=-0.006355,j=-0.007261,k=-0.114871) * quaternion(r=0.999925,i=0.006125,j=0.010561,k=-0.000094) * quaternion(r=0.999996,i=-0.002278,j=0.001577,k=0.000149)
+    dst_img_lp_35.orient(dst_orientation)
+
+    src_img_lp_to = gjslib_c.lens_projection(width=1024.0, frame_width=36.0, focal_length=250.0, lens_type="rectilinear")
+    dst_img_lp_to = gjslib_c.lens_projection(width=1024.0, frame_width=36.0, focal_length=250.0, lens_type="rectilinear")
+    src_to_orientation = src_img_lp_35.orientation_of_xy((-0.08,0.25))
+    #src_to_orientation = src_img_lp_35.orientation_of_xy((-0.01,0.01))
+    dst_to_orientation = dst_img_lp_35.orientation_of_xy((-0.16,0.1))
+    dst_to_orientation = dst_orientation * src_to_orientation
+
+    #src_to_orientation = src_img_lp_35.orientation_of_xy((0,0))
+    #dst_to_orientation = dst_img_lp_35.orientation_of_xy((0,0))
+
+    src_img_lp_to.orient(src_to_orientation)
+    #dst_to_orientation = quaternion(r=0.701862,i=-0.118005,j=-0.043319,k=-0.701133) * src_to_orientation
+    #dst_to_orientation = src_to_orientation * quaternion(r=0.993139,i=-0.001478,j=0.003958,k=-0.116867) * dst_to_orientation
+    dst_img_lp_to.orient(dst_to_orientation)
 
     #b Find matches
     if True:
@@ -772,45 +1058,32 @@ def test_diff_image_quaternion_2():
         im = c_image_match()
         im.max_corners=15
         im.max_matches_per_corner=8
+        im.max_corners=40
+        im.max_matches_per_corner=6
 
-        ar = float(imgs[0].width)/imgs[0].height
-        to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0*ar, "xc":-1.0*ar} )
+        to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0, "xc":-1.0} )
+        to_yuv.set_projections(projections=(src_img_lp_35,src_img_lp_to), num_x_divisions=20, num_y_divisions=20)
         to_yuv.execute((imgs[0],tb[0]))
+        to_yuv.set_projections(projections=(dst_img_lp_35,dst_img_lp_to), num_x_divisions=20, num_y_divisions=20)
         to_yuv.execute((imgs[1],tb[1]))
         matches = im.get_matches(tb)
         print matches
         save_as_png(tb[0],"a.png")
+        save_as_png(tb[1],"b.png")
         pass
 
     #b Matches of stuff
-    # Presumably for any two points on source image there is a great circle rotation to go from one to the other
-    # The same rotation must match that for the corresponding target positions
-    # So, what is the great circle rotation to go from one position to another?
-    # We know for each point on an image a quaternion 'q' that maps (0,0,1) to the location in 'image sphere space'
-    # Hence we have two points in 'image sphere space' p0 and p1, where pn = qn.(0,0,1).qn'
-    # What quaternion maps p0 to p1?
-    # The axis of rotation is in direction; p0 x p1; and cos(rot) = p0.p1 (and sin(rot)=|p0 x p1|)
-    # Note that p0.p1 = p0 p1 = q0.(0,0,1).q0'.q1'.(0,0,1).q1
-    # If q0 = w0,x0,y0,z0, and q1 is w1,x1,y1,z1 then p0.p1 = 4(z0x0-w0y0)(z1x1-w1y1) + 4(w0x0+y0z0)(w1x1+y1z1) + (w0w0-x0x0-y0y0+z0z0)(w1w1-x1x1-y1y1+z1z1)
-    # Now if the great circle rotation is represented as a quaternion then its w is the cos of the angle of rotation, i.e. p0.p1
-    # Now note also that p0 = q0(0,0,1)
-    # Hence q0'(p0) = (0,0,1)
-    # Hence q1(q0'(p0)) = p1
-    # Hence q1.q0' is the mapping from p0 to p1
-    # Now q1.q0' = (w1w0, -w1x0, -w1y0, -w1z0) + i(x1w0, -x1x0, -x1y0, -x1z0) + j(y1w0, -y1x0, -y1y0, -y1z0) + k(z1w0, -z1x0, -z1y0, -z1z0)
-    #            = (w1w0, -w1x0, -w1y0, -w1z0) +  (x1x0,  x1w0,  x1z0, -x1y0) +  (y1y0, -y1z0,  y1w0,  y1x0) +  (z1z0,  z1y0, -z1x0,  z1w0)
-    #            = (w1w0+x0x1+y0y1+z0z1, x1w0-w1x0+z1y0-y1z0, y1w0-w1y0+x1z0-z1x0, w0z1-w1z0+z0x1-z1x0)
     data = {}
     match_qs = {}
     for m in matches:
         mxy = (m[0]-tb[0].width/2,m[1]-tb[0].height/2)
-        print "Match ", m, matches[m],mxy
-        src_q = src_lp_35.orientation_of_xy(mxy)
+        print "Match ", m, matches[m], mxy
+        src_q = src_img_lp_to.orientation_of_xy(mxy)
         data[src_q] = (mxy,[])
         match_qs[src_q] = []
         for mm in matches[m]:
             mmxy = (mm[0]-tb[1].width/2,mm[1]-tb[1].height/2)
-            tgt_q = dst_lp_35.orientation_of_xy(mmxy)
+            tgt_q = dst_img_lp_to.orientation_of_xy(mmxy)
             fft_rot = 180/math.pi*math.atan2(mm[3],mm[4])
             data[src_q][1].append( (tgt_q, fft_rot, mm[2], mmxy) )
             match_qs[src_q].append(tgt_q)
@@ -831,7 +1104,7 @@ def test_diff_image_quaternion_2():
                                                      tgt_qs=(tgt_q0,tgt_q1),
                                                      max_angle_diff=0.3)
                     if qm is not None:
-                        results[(src_q0, src_q1, tgt_q0, tgt_q1)] = qm.src_from_tgt_orient# * dst_orientation
+                        results[(src_q0, src_q1, tgt_q0, tgt_q1)] = qm.src_from_tgt_orient
                         results[(src_q0, tgt_q0)].append( (src_q1, tgt_q1) )
                         pass
                     pass
@@ -840,7 +1113,7 @@ def test_diff_image_quaternion_2():
         pass
 
     #b Find 'best other target matches' for each source match
-    def blah(match_qs, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q, min_distance=0.001):
+    def blah(match_qs, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q, min_distance=0.1):
         matches_used = {src_q0:(0.0,tgt_q0), src_q1:(0.0,tgt_q1)}
         max_d = None
         for src_qx in match_qs:
@@ -872,6 +1145,7 @@ def test_diff_image_quaternion_2():
             for (src_q1, tgt_q1) in results[match]:
                 src_from_tgt_q = results[(src_q0, src_q1, tgt_q0, tgt_q1)]
                 (min_d, max_d, matches_used) = blah(match_qs, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q)
+                if max_d is None: continue
                 if (max_d < global_min_d) and (len(matches_used)>=min_used):
                     global_min_d = max_d
                     pass
@@ -888,8 +1162,8 @@ def test_diff_image_quaternion_2():
         #if src_q0 is not data.keys()[0]:continue
         match = best_other_target_matches[mapping]
         if match["max"] > 1.1*global_min_d: continue
-        if len(match)<=min_used: continue
-        rq = results[mapping] * dst_orientation
+        if len(match)<min_used-1: continue
+        rq = results[mapping]
         print match["max"], "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(match)
         for sq in match:
             if sq == "max": continue
@@ -907,6 +1181,124 @@ def test_diff_image_quaternion_2():
         print
         pass
     pass
+
+#f test_diff_image_quaternion_3
+def test_diff_image_quaternion_3():
+    #b Init
+    images = ('images/IMG_1900.JPG', 'images/IMG_1901.JPG')
+    focal_length = 35.0
+    #images = ('images/IMG_2180.JPG', 'images/IMG_2181.JPG')
+    #focal_length = 20.0
+    ipqm = c_image_pair_quaternion_match()
+    ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length )
+    ipqm.add_image(image_filename=images[1], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length )
+
+    print "Diff images with quaternions (three)"
+    (cxy, size) = ((0,0),0.5)
+    region = ipqm.find_overlap(images, cxy, size)
+    print region
+
+    (mappings_by_src_q, src_to_orientation, dst_to_orientation) = ipqm.find_matches( (images[0], images[1]), cxy, size )
+    (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.5)
+
+    #b Do clusters
+    def cmp_matches(x,y):
+        if x.max_distance/len(x.mappings)<y.max_distance/len(y.mappings): return -1
+        return 1
+    best_other_target_matches.sort(cmp=cmp_matches)
+    for mapping in best_other_target_matches:
+        if mapping.max_distance > 1.1*global_min_d: continue
+        rq = mapping.src_from_tgt_q
+        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        pass
+
+    chosen_mapping = best_other_target_matches[0]
+    ipqm.orient(images[1], chosen_mapping.src_from_tgt_q)
+    centers = []
+    for src_q in chosen_mapping.mappings:
+        xy = ipqm.xy_of_orientation(images[0],src_q)
+        print mappings_by_src_q[src_q].src_xy, xy, (xy[0]+0.5)*5184,(xy[1]+0.5)*3456
+        rq = src_q
+        print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
+        #print ipqm.camera_images[images[0]].lp.frame_width,ipqm.camera_images[images[0]].lp.focal_length
+        #print ipqm.camera_images[images[0]].lp.xy_of_orientation(src_q)
+        #xy = (xy[0]/5184.0, xy[1]/3456.0)
+        print "src_xy",(mappings_by_src_q[src_q].src_xy[0]+0.5)*1024, (mappings_by_src_q[src_q].src_xy[1]+0.5)*1024
+        centers.append(xy)
+        pass
+
+    delta_matches = {}
+    for cxy in centers:#[:3]:
+        print "Trying",cxy
+        region = ipqm.find_overlap((images[0], images[1]), cxy, 0.1)
+        print "Region",region
+        if region is None:
+            continue
+        (cxy, size) = region
+        (mappings_by_src_q, src_to_orientation, dst_to_orientation) = ipqm.find_matches( (images[0], images[1]), cxy, size )
+        (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.8)
+        if len(best_other_target_matches)==0:
+            print "No best matches"
+            continue
+
+        #b Do clusters
+        best_other_target_matches.sort(cmp=cmp_matches)
+        mapping = best_other_target_matches[0]
+        delta_matches[cxy] = mapping
+        # mapping.src_from_tgt_q is a mapping that goes from project_tq to projected_sq
+        # The final mapping we need is base_tq to base_sq
+        # Center of both images in space is base_sq * src_ry_of_xy(cxy)
+        # the image projection does subimage(xy) = subimage(q) = image(q) = world(q)*~image_orientation
+        # project_tq = base_tq * (base_sq * src_ry_of_xy(cxy))
+        # project_sq = base_sq * src_ry_of_xy(cxy)
+        rq = mapping.src_from_tgt_q
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = mapping.src_from_tgt_q * ~dst_to_orientation
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = mapping.src_from_tgt_q * dst_to_orientation
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = ~dst_to_orientation *mapping.src_from_tgt_q
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = dst_to_orientation *mapping.src_from_tgt_q
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "q.~d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = ~src_to_orientation * mapping.src_from_tgt_q * dst_to_orientation
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "ns.q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = src_to_orientation * mapping.src_from_tgt_q * ~dst_to_orientation
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "s.q.nd (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = ~dst_to_orientation * mapping.src_from_tgt_q * src_to_orientation
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "nd.q.s (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        rq = dst_to_orientation * mapping.src_from_tgt_q * ~src_to_orientation
+        rq = rq * chosen_mapping.src_from_tgt_q
+        print mapping.max_distance, "d.q.ns (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        mapping.src_from_tgt_q = mapping.src_from_tgt_q * chosen_mapping.src_from_tgt_q
+        pass
+
+    ordered_matches = []
+    for cxy in delta_matches:
+        ordered_matches.append(delta_matches[cxy])
+        pass
+    ordered_matches.sort(cmp=cmp_matches)
+    for mapping in ordered_matches:
+        rq = mapping.src_from_tgt_q
+        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        pass
+    ordered_matches = ordered_matches[0:len(ordered_matches)/2+1]
+    orientations = []
+    for mapping in ordered_matches:
+        orientations.append(mapping.src_from_tgt_q)
+        pass
+    dq = quaternion_average(orientations)
+    print "quaternion(r=%f,i=%f,j=%f,k=%f)"%(dq.r,dq.i,dq.j,dq.k),len(orientations),len(delta_matches)
+    pass
+
 
 #f test_diff_image
 def test_diff_image():
@@ -1113,8 +1505,11 @@ if False:
 if False:
     test_diff_image_quaternion()
 
-if True:
+if False:
     test_diff_image_quaternion_2()
+
+if True:
+    test_diff_image_quaternion_3()
 
         
 

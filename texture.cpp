@@ -324,6 +324,16 @@ texture_draw_through_projections(c_lens_projection *projections[2], int num_x_di
             vn++;
         }
     }
+    if (0) {
+        for (int i=0; i<40; i++) {
+            fprintf(stderr,"%3d: %lf %lf %lf %lf %lf\n",i,
+                    vertices[5*i+0],
+                    vertices[5*i+1],
+                    vertices[5*i+2],
+                    vertices[5*i+3],
+                    vertices[5*i+4]);
+        }
+    }
     short *indices = (short *)malloc(sizeof(short)*2*(num_x_divisions+1)*num_y_divisions);
     int in=0;
     for (int y=0; y<num_y_divisions; y++) {
@@ -332,7 +342,6 @@ texture_draw_through_projections(c_lens_projection *projections[2], int num_x_di
             indices[in++] = x + (y+1)*(num_x_divisions+1);
         }
     }
-    fprintf(stderr, "%d %d %d %d\n",num_x_divisions, num_y_divisions, vn, in);
 
     GLuint VertexArrayID;
     GLuint vertex_buffer;

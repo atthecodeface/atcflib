@@ -190,19 +190,45 @@ def test_object():
     src_ar = 1
     src_h = 3456/5148.0
 
+    obj2 = opengl_obj.c_opengl_obj()
+    obj3 = opengl_obj.c_opengl_obj()
+    obj4 = opengl_obj.c_opengl_obj()
+
+    obj2.texture_filename = "../images/IMG_1900.JPG"
+    obj3.texture_filename = "../images/IMG_1901.JPG"
+    obj4.texture_filename = "../images/IMG_1902.JPG"
+    focal_length = 35.0
+
     src_orientation = quaternion().from_euler(yaw=0,degrees=True) * quaternion().from_euler(pitch=-30,degrees=True)
-    src2_orientation = quaternion(r=0.957717, i=0.023461, j=-0.264079, k=-0.111759)
-    src2_orientation = src_orientation  * quaternion(r=0.993334,i=-0.006355,j=-0.007261,k=-0.114871)
+    src_orientation = ~quaternion(r=0.360925,i=0.049321,j=0.126091,k=0.922714) # focus on muzzy...
+    src2_orientation = src_orientation  * quaternion(r=0.993052,i=-0.006335,j=-0.007559,k=-0.117261)# (r=0.992948,i=-0.006785,j=-0.007814,k=-0.118102) #* quaternion(r=0.993423,i=-0.006407,j=-0.007213,k=-0.114097)
     src3_orientation = src2_orientation * quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
 
-    src_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
+    if False:
+
+        obj2.texture_filename = "../images/IMG_2180.JPG"
+        obj3.texture_filename = "../images/IMG_2181.JPG"
+        obj4.texture_filename = "../images/IMG_2180.JPG"
+        focal_length = 20.0
+
+        src_orientation = quaternion(r=1)
+        src2_orientation = src_orientation  * quaternion(r=0.996109,i=-0.003261,j=-0.005923,k=-0.087866)
+        src3_orientation = src_orientation #* quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
+        pass
+
+
+    src_camera      = lens_projection(focal_length=focal_length, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
     src_camera.orient(src_orientation)
 
-    src2_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
+    src2_camera      = lens_projection(focal_length=focal_length, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
     src2_camera.orient(src2_orientation)
 
-    src3_camera      = lens_projection(focal_length=35.0, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
+    src3_camera      = lens_projection(focal_length=focal_length, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
     src3_camera.orient(src3_orientation)
+
+    build_add_projected_image_mesh(obj2, src_camera, src_w, src_h, 64)
+    build_add_projected_image_mesh(obj3, src2_camera, src_w, src_h, 64)
+    build_add_projected_image_mesh(obj4, src3_camera, src_w, src_h, 64)
 
     dst_orientation = quaternion().from_euler(yaw=-10,degrees=True) * quaternion().from_euler(pitch=-74,degrees=True)
     dst_camera      = lens_projection(focal_length=80.0, lens_type="stereographic", frame_width=22.3, width=dst_w*3456/5148)
@@ -215,13 +241,6 @@ def test_object():
     dst_triangles = [ ((-512.0,-512.0), (512.0,-512.0), (-512.0,512.0)),
                           ((512.0,512.0), (512.0,-512.0), (-512.0,512.0)),
                           ]
-
-    obj2 = opengl_obj.c_opengl_obj()
-    build_add_projected_image_mesh(obj2, src_camera, src_w, src_h, 64)
-    obj3 = opengl_obj.c_opengl_obj()
-    build_add_projected_image_mesh(obj3, src2_camera, src_w, src_h, 64)
-    obj4 = opengl_obj.c_opengl_obj()
-    build_add_projected_image_mesh(obj4, src3_camera, src_w, src_h, 64)
 
     triangles = []
     n = 32
@@ -258,18 +277,10 @@ def test_object():
                           uv_list = dst_uvs )
         pass
         
-    objects = [ {"obj":obj1,"texture_filename":"../../gjslib_data/camera/IMG_2159_25.PNG"},
-                {"obj":obj2,"texture_filename":"../../gjslib_data/camera/IMG_2159_25.PNG"},
-                {"obj":obj3,"texture_filename":"../../gjslib_data/camera/IMG_2159_25.PNG"},
-                  ]
-    objects = [ {"obj":obj1,"texture_filename":"../images/IMG_1900.PNG"},
-                {"obj":obj2,"texture_filename":"../images/IMG_1900.PNG"},
-                {"obj":obj3,"texture_filename":"../images/IMG_1901.PNG"},
-                  ]
     objects = [ #{"obj":obj1,"texture_filename":"../images/IMG_1900.JPG"},
-                {"obj":obj2,"texture_filename":"../images/IMG_1900.JPG"},
-                {"obj":obj3,"texture_filename":"../images/IMG_1901.JPG"},
-                {"obj":obj4,"texture_filename":"../images/IMG_1902.JPG"},
+                {"obj":obj2,"texture_filename":obj2.texture_filename},
+                {"obj":obj3,"texture_filename":obj3.texture_filename},
+                {"obj":obj4,"texture_filename":obj4.texture_filename},
                   ]
 
     og = c_view_obj(obj=objects,

@@ -185,8 +185,8 @@ class c_image_match(object):
         self.copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
         self.equalize = c_windowed_equalization_filter()
         self.harris = c_harris_filter()
-        self.find_corners = c_find_filter(extra_parameters={"min_distance":10.0, "max_elements":150})
-        self.find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.1, "max_elements":40})
+        self.find_corners = c_find_filter(extra_parameters={"min_distance":5.0, "minimum":0.04, "max_elements":150})
+        self.find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.04,  "max_elements":150})
         self.circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":self.radius,
                                                              "CIRCLE_COMPONENT":"r",
                                                              })
@@ -412,7 +412,7 @@ class c_image_pair_quaternion_match(object):
             pass
         self.im = c_image_match()
         self.im.max_corners=40
-        self.im.max_matches_per_corner=6
+        self.im.max_matches_per_corner=10
         self.to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
                                 extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
                                                "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
@@ -505,8 +505,6 @@ class c_image_pair_quaternion_match(object):
         print "Centering on image 0",cxy0, (cxy0[0]+0.5)*5184, (cxy0[1]+0.5)*3456
         world_cxy0_q = ci0.orientation_of_xy(cxy0)
 
-        rq = world_cxy0_q
-        print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
         src_to_orientation = world_cxy0_q
         dst_to_orientation = world_cxy0_q
 
@@ -1187,8 +1185,10 @@ def test_diff_image_quaternion_3():
     #b Init
     images = ('images/IMG_1900.JPG', 'images/IMG_1901.JPG')
     focal_length = 35.0
-    #images = ('images/IMG_2180.JPG', 'images/IMG_2181.JPG')
-    #focal_length = 20.0
+    if True:
+        images = ('images/IMG_2174.JPG', 'images/IMG_2173.JPG')
+        focal_length = 20.0
+        pass
     ipqm = c_image_pair_quaternion_match()
     ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length )
     ipqm.add_image(image_filename=images[1], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length )
@@ -1199,20 +1199,21 @@ def test_diff_image_quaternion_3():
     print region
 
     (mappings_by_src_q, src_to_orientation, dst_to_orientation) = ipqm.find_matches( (images[0], images[1]), cxy, size )
-    (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.5)
+    (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.3) #GJST was 0.5
 
     #b Do clusters
     def cmp_matches(x,y):
         if x.max_distance/len(x.mappings)<y.max_distance/len(y.mappings): return -1
         return 1
     best_other_target_matches.sort(cmp=cmp_matches)
+    print "Best matches for whole image"
     for mapping in best_other_target_matches:
         if mapping.max_distance > 1.1*global_min_d: continue
         rq = mapping.src_from_tgt_q
         print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
         pass
 
-    chosen_mapping = best_other_target_matches[0]
+    chosen_mapping = best_other_target_matches[1]
     ipqm.orient(images[1], chosen_mapping.src_from_tgt_q)
     centers = []
     for src_q in chosen_mapping.mappings:
@@ -1228,7 +1229,7 @@ def test_diff_image_quaternion_3():
         pass
 
     delta_matches = {}
-    for cxy in centers:#[:3]:
+    for cxy in centers:#[]:
         print "Trying",cxy
         region = ipqm.find_overlap((images[0], images[1]), cxy, 0.1)
         print "Region",region
@@ -1251,34 +1252,38 @@ def test_diff_image_quaternion_3():
         # the image projection does subimage(xy) = subimage(q) = image(q) = world(q)*~image_orientation
         # project_tq = base_tq * (base_sq * src_ry_of_xy(cxy))
         # project_sq = base_sq * src_ry_of_xy(cxy)
-        rq = mapping.src_from_tgt_q
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = mapping.src_from_tgt_q * ~dst_to_orientation
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = mapping.src_from_tgt_q * dst_to_orientation
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = ~dst_to_orientation *mapping.src_from_tgt_q
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = dst_to_orientation *mapping.src_from_tgt_q
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "q.~d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = ~src_to_orientation * mapping.src_from_tgt_q * dst_to_orientation
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "ns.q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = src_to_orientation * mapping.src_from_tgt_q * ~dst_to_orientation
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "s.q.nd (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = ~dst_to_orientation * mapping.src_from_tgt_q * src_to_orientation
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "nd.q.s (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
-        rq = dst_to_orientation * mapping.src_from_tgt_q * ~src_to_orientation
-        rq = rq * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "d.q.ns (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        if False:
+            rq = mapping.src_from_tgt_q
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = mapping.src_from_tgt_q * ~dst_to_orientation
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = mapping.src_from_tgt_q * dst_to_orientation
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = ~dst_to_orientation *mapping.src_from_tgt_q
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = dst_to_orientation *mapping.src_from_tgt_q
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "q.~d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = ~src_to_orientation * mapping.src_from_tgt_q * dst_to_orientation
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "ns.q.d (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = src_to_orientation * mapping.src_from_tgt_q * ~dst_to_orientation
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "s.q.nd (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = ~dst_to_orientation * mapping.src_from_tgt_q * src_to_orientation
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "nd.q.s (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            rq = dst_to_orientation * mapping.src_from_tgt_q * ~src_to_orientation
+            rq = rq * chosen_mapping.src_from_tgt_q
+            print mapping.max_distance, "d.q.ns (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+            pass
         mapping.src_from_tgt_q = mapping.src_from_tgt_q * chosen_mapping.src_from_tgt_q
+        rq = mapping.src_from_tgt_q
+        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
         pass
 
     ordered_matches = []

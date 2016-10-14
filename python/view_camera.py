@@ -201,8 +201,8 @@ def test_object():
 
     src_orientation = quaternion().from_euler(yaw=0,degrees=True) * quaternion().from_euler(pitch=-30,degrees=True)
     src_orientation = ~quaternion(r=0.360925,i=0.049321,j=0.126091,k=0.922714) # focus on muzzy...
-    src2_orientation = src_orientation  * quaternion(r=0.993052,i=-0.006335,j=-0.007559,k=-0.117261)# (r=0.992948,i=-0.006785,j=-0.007814,k=-0.118102) #* quaternion(r=0.993423,i=-0.006407,j=-0.007213,k=-0.114097)
-    src3_orientation = src2_orientation * quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
+    src2_orientation = src_orientation  * quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)#(r=0.993450,i=-0.006199,j=-0.007088,k=-0.113879)#(r=0.993624,i=-0.005610,j=-0.006695,k=-0.112407)
+    src3_orientation = src2_orientation * quaternion(r=0.995856,i=-0.009064,j=-0.006932,k=-0.090231)#(r=0.995798,i=-0.009073,j=-0.006975,k=-0.090860)#(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
     lens_type = "rectilinear"
 
     if True:
@@ -212,7 +212,9 @@ def test_object():
         obj4.texture_filename = "../images/IMG_2173.JPG"
 
         src_orientation = quaternion(r=1)
-        src2_orientation = src_orientation  * quaternion().of_rotation((1,0.1,0),angle=0,degrees=True) * ~quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
+        src2_orientation = src_orientation  * quaternion(r=0.998548,i=-0.004666,j=-0.053508,k=0.004202)
+#(r=0.997590,i=-0.021140,j=-0.061052,k=0.025295)
+#~quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)#(r=0.997499,i=0.006470,j=0.067833,k=-0.018762)
 #(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
 # given (r=0.997484,i=0.011707,j=0.069910,k=0.000644)...        
 # best was (r=0.997583,i=0.006527,j=0.067192,k=-0.016425)

@@ -600,23 +600,29 @@ class c_image_pair_quaternion_match(object):
     #b Find 'best other target matches' for each source match
     def find_best_matches_within_distance(self, mappings_by_src_q, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q, min_distance, min_used):
         matches_used = self.c_best_match(src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q)
+        slack = len(mappings_by_src_q)-min_used
         max_d = None
         for src_qx in mappings_by_src_q:
+            if slack<0: return None
             if src_qx in matches_used.mappings: continue
+            slack = slack-1
             min_d = (None, None)
             for tgt_qx in mappings_by_src_q[src_qx].tgt_qs:
                 d = c_vector.vector_diff(v_of_q(src_qx), v_of_q(src_from_tgt_q*tgt_qx))
                 d = c_vector.vector_length(d)
+                d = d*d
                 if (min_d[0] is None) or (min_d[0]>d):
                     min_d = (d, tgt_qx)
                     pass
                 pass
             if min_d[0] is None: continue
             if min_d[0]>min_distance: continue
+            slack += 1
             matches_used.add_match(src_qx, min_d[1], min_d[0])
             pass
         if len(matches_used.mappings)<min_used: return None
         if matches_used.max_distance is None: return None
+        #matches_used.max_distance = matches_used.max_distance/len(matches_used.mappings)
         return matches_used
     #f find_best_target_matches
     def find_best_target_matches(self, mappings_by_src_q, min_used_factor=0.5, given_src_from_tgt_q=None):
@@ -1202,15 +1208,16 @@ def test_diff_image_quaternion_2():
 def test_diff_image_quaternion_3():
     #b Init
     images = ('images/IMG_1900.JPG', 'images/IMG_1901.JPG')
+    images = ('images/IMG_1901.JPG', 'images/IMG_1902.JPG')
     focal_length = 35.0
     lens_type="rectilinear"
     initial_dest_orientation = gjslib_c.quaternion(r=1)
     if True:
-        images = ('images/IMG_2174.JPG', 'images/IMG_2173.JPG')
-        focal_length = 20.4
+        images = ('images/IMG_2173.JPG', 'images/IMG_2174.JPG')
+        focal_length = 20.6
         lens_type = "rectilinear"
         #initial_dest_orientation = gjslib_c.quaternion(r=0.997871,i=0.002148,j=0.065027,k=-0.004444)
-        initial_dest_orientation = gjslib_c.quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
+        #initial_dest_orientation = gjslib_c.quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
         pass
     ipqm = c_image_pair_quaternion_match()
     ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
@@ -1286,7 +1293,7 @@ def test_diff_image_quaternion_3():
         mappings_by_src_q = ipqm.find_matches( mappings_by_src_q, (images[0], images[1]), cxy, size )
         pass
     print "Finding best matches from",len(mappings_by_src_q)
-    (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.5, given_src_from_tgt_q=chosen_mapping.src_from_tgt_q )
+    (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.75, given_src_from_tgt_q=chosen_mapping.src_from_tgt_q )
     if len(best_other_target_matches)==0:
         print "No best matches"
         pass

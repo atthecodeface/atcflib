@@ -147,7 +147,7 @@ def conjugation(q,p):
     return r.get()[1:]
 
 #f build_add_projected_image_mesh
-def build_add_projected_image_mesh(obj,camera,src_w,src_h,n=32):
+def build_add_projected_image_mesh(obj,camera,src_w,src_h,n=32,z=8):
     triangles = []
     for x in range(n):
         for y in range(n):
@@ -167,7 +167,7 @@ def build_add_projected_image_mesh(obj,camera,src_w,src_h,n=32):
             # points for 'src' mesh - also uses 'src' as the image texture, hence needs uv in 'src' terms
             src_xy = (xy[0]*src_w, xy[1]*src_w)
             src_q = camera.orientation_of_xy(src_xy)
-            xyz = src_q.rotate_vector((0,0,8))
+            xyz = src_q.rotate_vector((0,0,z))
             src_xyzs.append(xyz)
             src_uvs.append(((xy[0]+1.0/2)/1,(1.0/2+xy[1]/src_h)/1))
             pass
@@ -212,18 +212,15 @@ def test_object():
         obj4.texture_filename = "../images/IMG_2173.JPG"
 
         src_orientation = quaternion(r=1)
-        src2_orientation = src_orientation  * ~quaternion(r=0.997426,i=0.006911,j=0.068935,k=-0.018489)
-#(r=0.979061,i=0.000218,j=0.063287,k=-0.193480)
-#(r=0.994938, i=0.014869, j=0.070528, k=0.070024)#(r=0.996989,i=-0.011306,j=0.057253,k=0.051063)
-# from center, with best of 3 by 3 grid centers: (r=0.997093,i=0.002413,j=0.075649,k=-0.008815)
-# from lh(r=0.997391,i=0.007200,j=0.069475,k=-0.018252)
-# from rh(r=0.996984,i=0.006643,j=0.073935,k=-0.022628)
-#from center (r=0.997168,i=0.005920,j=0.071125,k=-0.023709)
-#(r=0.997308,i=0.005484,j=0.069184,k=-0.023680)#(r=0.997169,i=0.006451,j=0.072660,k=-0.018252)#(r=0.000173,i=-0.101220,j=-0.185006,k=-0.977511)
+        src2_orientation = src_orientation  * quaternion().of_rotation((1,0.1,0),angle=0,degrees=True) * ~quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
+#(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
+# given (r=0.997484,i=0.011707,j=0.069910,k=0.000644)...        
+# best was (r=0.997583,i=0.006527,j=0.067192,k=-0.016425)
+#derived from 24 hits on center match (r=0.997333,i=-0.006595,j=0.060502,k=-0.040275)
         src3_orientation = src_orientation #* quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
         focal_length = 20.0
-        focal_length = 21.5
-        lens_type = "stereographic"
+        focal_length = 20.4
+        lens_type = "rectilinear"
         pass
 
 
@@ -236,9 +233,9 @@ def test_object():
     src3_camera      = lens_projection(focal_length=focal_length, lens_type=lens_type, frame_width=22.3*src_ar, width=src_w)
     src3_camera.orient(src3_orientation)
 
-    build_add_projected_image_mesh(obj2, src_camera, src_w, src_h, 64)
-    build_add_projected_image_mesh(obj3, src2_camera, src_w, src_h, 64)
-    build_add_projected_image_mesh(obj4, src3_camera, src_w, src_h, 64)
+    build_add_projected_image_mesh(obj2, src_camera, src_w, src_h, 64, z=8)
+    build_add_projected_image_mesh(obj3, src2_camera, src_w, src_h, 64, z=10)
+    build_add_projected_image_mesh(obj4, src3_camera, src_w, src_h, 64, z=12)
 
     dst_orientation = quaternion().from_euler(yaw=-10,degrees=True) * quaternion().from_euler(pitch=-74,degrees=True)
     dst_camera      = lens_projection(focal_length=80.0, lens_type="stereographic", frame_width=22.3, width=dst_w*3456/5148)

@@ -320,7 +320,7 @@ python_lens_projection_init(PyObject *self, PyObject *args, PyObject *kwds)
 {
     t_PyObject_lens_projection *py_obj = (t_PyObject_lens_projection *)self;
 
-    double width = 1.0;
+    double width = 2.0;
     double height = 0.0;
     double focal_length = 35.0;
     double frame_width = 36.0;

@@ -313,14 +313,15 @@ texture_draw_through_projections(c_lens_projection *projections[2], int num_x_di
         for (int x=0; x<=num_x_divisions; x++) {
             float vx = ((float)x)/num_x_divisions;
             double vxy[2], uv[2];
-            vxy[0] = vx-0.5; vxy[1]=vy-0.5;
-            c_quaternion q = projections[1]->orientation_of_xy(vxy);
-            projections[0]->xy_of_orientation(&q, uv);
+            vxy[0] = 2*vx-1.0; vxy[1]=2*vy-1.0; // vxy needs to be -1 to 1
+            c_quaternion q = projections[1]->orientation_of_xy(vxy); // projections must be width=1.0
+            projections[0]->xy_of_orientation(&q, uv); // uv now is -1 to 1
+            uv[0] = (uv[0]+1)/2; uv[1]=(uv[1]+1)/2; // uv needs to be 0 to 1
             vertices[5*vn+0] = vx; // x
             vertices[5*vn+1] = vy; // y
             vertices[5*vn+2] = 0.0; // z
-            vertices[5*vn+3] = uv[0]+0.5; // u
-            vertices[5*vn+4] = uv[1]+0.5; // v
+            vertices[5*vn+3] = uv[0]; // u
+            vertices[5*vn+4] = uv[1]; // v
             vn++;
         }
     }

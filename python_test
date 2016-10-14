@@ -493,7 +493,7 @@ class c_image_pair_quaternion_match(object):
         # hence size = frame_width/focal_length
         # hence focal_length = frame_width/size
         focal_length = 36.0 / size
-        if img_png_n>0:focal_length=200.0 # GJS T
+        #if img_png_n>0:focal_length=200.0 # GJS T
         ci0 = self.camera_images[images[0]]
         ci1 = self.camera_images[images[1]]
 
@@ -618,13 +618,21 @@ class c_image_pair_quaternion_match(object):
         if matches_used.max_distance is None: return None
         return matches_used
     #f find_best_target_matches
-    def find_best_target_matches(self, mappings_by_src_q, min_used_factor=0.5):
+    def find_best_target_matches(self, mappings_by_src_q, min_used_factor=0.5, given_src_from_tgt_q=None):
         best_other_target_matches = []
         global_min_d = 1000
         min_used = len(mappings_by_src_q)*min_used_factor
         for src_q0 in mappings_by_src_q:
             for tgt_q0 in mappings_by_src_q[src_q0].tgt_qs:
                 for (src_q1, tgt_q1, src_from_tgt_q) in mappings_by_src_q[src_q0].tgt_q_mappings[tgt_q0]:
+                    if given_src_from_tgt_q is not None:
+                        d = src_from_tgt_q.rotate_vector((0,0,1))
+                        d = d[2]
+                        if d<0.9: continue
+                        d = src_from_tgt_q.rotate_vector((1,0,0))
+                        d = d[0]
+                        if d<0.9: continue
+                        pass
                     bm = self.find_best_matches_within_distance(mappings_by_src_q, src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_q, min_distance=global_min_d*1.2, min_used=min_used)
                     if bm is None: continue
                     if (bm.max_distance < global_min_d):
@@ -1192,15 +1200,16 @@ def test_diff_image_quaternion_3():
     if True:
         images = ('images/IMG_2174.JPG', 'images/IMG_2173.JPG')
         focal_length = 20.0
-        focal_length=21.5
-        lens_type="stereographic"
+        lens_type = "rectilinear"
         pass
+    initial_dest_orientation = gjslib_c.quaternion(r=1)
+    #initial_dest_orientation = gjslib_c.quaternion(r=0.997308,i=0.005484,j=0.069184,k=-0.023680)
     ipqm = c_image_pair_quaternion_match()
     ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
-    ipqm.add_image(image_filename=images[1], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
+    ipqm.add_image(image_filename=images[1], orientation=initial_dest_orientation, focal_length=focal_length, lens_type=lens_type )
 
     print "Diff images with quaternions (three)"
-    (cxy, size) = ((0,0),0.5)
+    (cxy, size) = ((-1/1.5/2,0),1/1.5)
     region = ipqm.find_overlap(images, cxy, size)
     print region
 
@@ -1214,6 +1223,7 @@ def test_diff_image_quaternion_3():
     best_other_target_matches.sort(cmp=cmp_matches)
     print "Best matches for whole image"
     for mapping in best_other_target_matches:
+        mapping.src_from_tgt_q = mapping.src_from_tgt_q * initial_dest_orientation
         if mapping.max_distance > 1.1*global_min_d: continue
         rq = mapping.src_from_tgt_q
         print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
@@ -1222,29 +1232,43 @@ def test_diff_image_quaternion_3():
     chosen_mapping = best_other_target_matches[0]
     #Fake out the best mapping to check it improves:chosen_mapping.src_from_tgt_q = gjslib_c.quaternion(r=0.995660,i=-0.000496,j=0.072651,k=-0.058163)
     ipqm.orient(images[1], chosen_mapping.src_from_tgt_q)
-    centers = []
-    for src_q in chosen_mapping.mappings:
-        xy = ipqm.xy_of_orientation(images[0],src_q)
-        print mappings_by_src_q[src_q].src_xy, xy, (xy[0]+0.5)*5184,(xy[1]+0.5)*3456
-        rq = src_q
-        print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
-        #print ipqm.camera_images[images[0]].lp.frame_width,ipqm.camera_images[images[0]].lp.focal_length
-        #print ipqm.camera_images[images[0]].lp.xy_of_orientation(src_q)
-        #xy = (xy[0]/5184.0, xy[1]/3456.0)
-        print "src_xy",(mappings_by_src_q[src_q].src_xy[0]+0.5)*1024, (mappings_by_src_q[src_q].src_xy[1]+0.5)*1024
-        centers.append(xy)
+
+    if False: # Build centers from 'hotspots'
+        centers = []
+        for src_q in chosen_mapping.mappings:
+            xy = ipqm.xy_of_orientation(images[0],src_q)
+            print mappings_by_src_q[src_q].src_xy, xy, (xy[0]/2+1.0)*5184,(xy[1]/2+1.0)*3456
+            rq = src_q
+            print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
+            #print ipqm.camera_images[images[0]].lp.frame_width,ipqm.camera_images[images[0]].lp.focal_length
+            #print ipqm.camera_images[images[0]].lp.xy_of_orientation(src_q)
+            #xy = (xy[0]/5184.0, xy[1]/3456.0)
+            print "src_xy",(mappings_by_src_q[src_q].src_xy[0]/2+1.0)*1024, (mappings_by_src_q[src_q].src_xy[1]/2+1)*1024
+            centers.append(xy)
+            pass
+        center_size=1/1.5/1.5
         pass
+    else:
+        ngrid = 5
+        centers = []
+        for x in range(ngrid):
+            for y in range(ngrid):
+                centers.append( ( (float(x+1)/(ngrid+2))*2-1.0,
+                                  (float(y+1)/(ngrid+2))*2-1.0) )
+                pass
+            pass
+        center_size=2.0/(ngrid+2)
 
     delta_matches = {}
     for cxy in centers:#[]:
         print "Trying",cxy
-        region = ipqm.find_overlap((images[0], images[1]), cxy, 0.1)
+        region = ipqm.find_overlap((images[0], images[1]), cxy, center_size)
         print "Region",region
         if region is None:
             continue
         (cxy, size) = region
         (mappings_by_src_q, src_to_orientation, dst_to_orientation) = ipqm.find_matches( (images[0], images[1]), cxy, size )
-        (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.8)
+        (best_other_target_matches, global_min_d) = ipqm.find_best_target_matches(mappings_by_src_q, min_used_factor=0.5,given_src_from_tgt_q=chosen_mapping.src_from_tgt_q )
         if len(best_other_target_matches)==0:
             print "No best matches"
             continue
@@ -1289,6 +1313,8 @@ def test_diff_image_quaternion_3():
             print mapping.max_distance, "d.q.ns (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
             pass
         mapping.src_from_tgt_q = mapping.src_from_tgt_q * chosen_mapping.src_from_tgt_q
+        rq = src_to_orientation
+        print "     src (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
         rq = mapping.src_from_tgt_q
         print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
         pass
@@ -1310,7 +1336,6 @@ def test_diff_image_quaternion_3():
     dq = quaternion_average(orientations)
     print "quaternion(r=%f,i=%f,j=%f,k=%f)"%(dq.r,dq.i,dq.j,dq.k),len(orientations),len(delta_matches)
     pass
-
 
 #f test_diff_image
 def test_diff_image():

@@ -203,27 +203,30 @@ def test_object():
     src_orientation = ~quaternion(r=0.360925,i=0.049321,j=0.126091,k=0.922714) # focus on muzzy...
     src2_orientation = src_orientation  * quaternion(r=0.993052,i=-0.006335,j=-0.007559,k=-0.117261)# (r=0.992948,i=-0.006785,j=-0.007814,k=-0.118102) #* quaternion(r=0.993423,i=-0.006407,j=-0.007213,k=-0.114097)
     src3_orientation = src2_orientation * quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
+    lens_type = "rectilinear"
 
     if True:
 
         obj2.texture_filename = "../images/IMG_2173.JPG"
         obj3.texture_filename = "../images/IMG_2174.JPG"
         obj4.texture_filename = "../images/IMG_2173.JPG"
-        focal_length = 20.0
 
         src_orientation = quaternion(r=1)
-        src2_orientation = src_orientation  * ~quaternion(r=0.995660,i=-0.000496,j=0.072651,k=-0.058163)#(r=0.996439,i=0.003303,j=0.080766,k=0.023967) # * quaternion(r=0.996109,i=-0.003261,j=-0.005923,k=-0.087866)
+        src2_orientation = src_orientation  * ~quaternion(r=0.995762,i=0.009119,j=0.084645,k=0.034779)#(r=0.995660,i=-0.000496,j=0.072651,k=-0.058163)#(r=0.996439,i=0.003303,j=0.080766,k=0.023967) # * quaternion(r=0.996109,i=-0.003261,j=-0.005923,k=-0.087866)
         src3_orientation = src_orientation #* quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
+        focal_length = 20.0
+        focal_length = 21.5
+        lens_type = "stereographic"
         pass
 
 
-    src_camera      = lens_projection(focal_length=focal_length, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
+    src_camera      = lens_projection(focal_length=focal_length, lens_type=lens_type, frame_width=22.3*src_ar, width=src_w)
     src_camera.orient(src_orientation)
 
-    src2_camera      = lens_projection(focal_length=focal_length, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
+    src2_camera      = lens_projection(focal_length=focal_length, lens_type=lens_type, frame_width=22.3*src_ar, width=src_w)
     src2_camera.orient(src2_orientation)
 
-    src3_camera      = lens_projection(focal_length=focal_length, lens_type="rectilinear", frame_width=22.3*src_ar, width=src_w)
+    src3_camera      = lens_projection(focal_length=focal_length, lens_type=lens_type, frame_width=22.3*src_ar, width=src_w)
     src3_camera.orient(src3_orientation)
 
     build_add_projected_image_mesh(obj2, src_camera, src_w, src_h, 64)

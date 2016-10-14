@@ -490,7 +490,7 @@ class c_image_pair_quaternion_match(object):
         # hence size = frame_width/focal_length
         # hence focal_length = frame_width/size
         focal_length = 36.0 / size
-        if img_png_n>0:focal_length=300.0
+        if img_png_n>0:focal_length=200.0 # GJS T
         ci0 = self.camera_images[images[0]]
         ci1 = self.camera_images[images[1]]
 
@@ -1185,13 +1185,16 @@ def test_diff_image_quaternion_3():
     #b Init
     images = ('images/IMG_1900.JPG', 'images/IMG_1901.JPG')
     focal_length = 35.0
+    lens_type="rectilinear"
     if True:
         images = ('images/IMG_2174.JPG', 'images/IMG_2173.JPG')
         focal_length = 20.0
+        focal_length=21.5
+        lens_type="stereographic"
         pass
     ipqm = c_image_pair_quaternion_match()
-    ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length )
-    ipqm.add_image(image_filename=images[1], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length )
+    ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
+    ipqm.add_image(image_filename=images[1], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
 
     print "Diff images with quaternions (three)"
     (cxy, size) = ((0,0),0.5)
@@ -1213,7 +1216,8 @@ def test_diff_image_quaternion_3():
         print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
         pass
 
-    chosen_mapping = best_other_target_matches[1]
+    chosen_mapping = best_other_target_matches[0]
+    #Fake out the best mapping to check it improves:chosen_mapping.src_from_tgt_q = gjslib_c.quaternion(r=0.995660,i=-0.000496,j=0.072651,k=-0.058163)
     ipqm.orient(images[1], chosen_mapping.src_from_tgt_q)
     centers = []
     for src_q in chosen_mapping.mappings:

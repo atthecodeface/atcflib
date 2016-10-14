@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+#PYTHONPATH=`pwd`/../python:`pwd`/..:`pwd`/gjslib/../python::`pwd`/../../gjslib/python:$PYTHONPATH ./lens_projection.py
 import math
+import OpenGL.GL
+import gjslib_c
+quaternion = gjslib_c.quaternion
 
 def test():
     lp_20 = gjslib_c.lens_projection(width=5184, frame_width=22.3, focal_length=20.0, lens_type="rectilinear")
@@ -14,5 +18,11 @@ def test():
     #print 180.0/math.pi*math.acos(lp_20.orientation_of_xy((900,0)).r)*2
     ##At 20mm img_2335, (x,y) of (0.107,0) = ( 555/5184,0) is ( 80  0/16 - 73 10/16) =  6.375" =  6.32 degrees
     #print 180.0/math.pi*math.acos(lp_20.orientation_of_xy((555,0)).r)*2
-
+    lp_20 = gjslib_c.lens_projection(width=5184, frame_width=22.3, focal_length=21.5, lens_type="stereographic")
+    lp_20.orient(quaternion().lookat((0,0,1),(1,0,0)))
+    print lp_20.xy_of_orientation(quaternion.of_euler(yaw=6.32,degrees=True))
+    print lp_20.xy_of_orientation(quaternion.of_euler(yaw=10.23,degrees=True))
+    print lp_20.xy_of_orientation(quaternion.of_euler(yaw=21.21,degrees=True))
+    print lp_20.xy_of_orientation(quaternion.of_euler(yaw=24.64,degrees=True))
+    print lp_20.xy_of_orientation(quaternion.of_euler(yaw=28.79,degrees=True))
 test()

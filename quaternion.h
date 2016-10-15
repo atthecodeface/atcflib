@@ -45,6 +45,7 @@ public:
     static inline c_quaternion yaw(  double angle, int degrees) { c_quaternion q; q.from_euler(0,0,angle,degrees); return q; }
     static inline c_quaternion of_euler(double r, double p, double y, int degrees) { c_quaternion q; q.from_euler(r,p,y,degrees); return q; }
     static inline c_quaternion of_rotation(double angle, double axis[3], int degrees) { c_quaternion q; q.from_rotation(angle, axis, degrees); return q; }
+    static inline c_quaternion of_rotation(double cos_angle, double sin_angle, const double *axis) { c_quaternion q; q.from_rotation(cos_angle, sin_angle, axis); return q; }
 
     c_quaternion &operator=(double real);
     c_quaternion &operator+=(double real);
@@ -69,6 +70,7 @@ public:
 
     c_quaternion(const c_quaternion *quat);
     c_quaternion(void);
+    c_quaternion(const class c_vector &vector);
     c_quaternion(double r, double i, double j, double k);
     c_quaternion *copy(void) const;
 
@@ -88,9 +90,17 @@ public:
     c_quaternion *from_euler(double roll, double pitch, double yaw, int degrees=0);
     c_quaternion *lookat(double xyz[3], double up[3]);
     c_quaternion *from_rotation(double angle, double axis[3], int degrees=0);
+    c_quaternion *from_rotation(double cos_angle, double sin_angle, const double *axis);
     double as_rotation(double axis[3]) const;
     void as_euler(double rpy[3]) const;
     void get_rijk(double rijk[4]) const;
+    // axis_angle gives the quaternion for a great-circle (minimum rotation angle)
+    // required to transform a vector ('this' applied to vector) to another vector
+    // ('other' applied to that vector).
+    // The axis will be perpendicular to the axes of rotation represented by 'this'
+    // and 'other'
+    c_quaternion &rotate_vector(const class c_vector &vector) const;
+    c_quaternion &axis_angle(const c_quaternion &other, class c_vector &vector) const;
     void __str__(char *buffer, int buf_size) const;
     
 };

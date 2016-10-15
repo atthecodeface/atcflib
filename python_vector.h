@@ -12,33 +12,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @file          python_quaternion.h
- * @brief         Python wrapper for quaternions
+ * @file          python_vector.h
+ * @brief         Python wrapper for vectors
  *
  */
 
 /*a Wrapper
  */
-#ifdef __INC_PYTHON_QUATERNION
+#ifdef __INC_PYTHON_VECTOR
 #else
-#define __INC_PYTHON_QUATERNION
+#define __INC_PYTHON_VECTOR
 
 /*a Includes
  */
 #include <Python.h>
-#include "quaternion.h"
+#include "vector.h"
 
 /*a External data
  */
-extern PyTypeObject PyTypeObject_quaternion_frame;
+extern PyTypeObject PyTypeObject_vector_frame;
 
 /*a External functions
  */
-extern int python_quaternion_init_premodule(void);
-extern void python_quaternion_init_postmodule(PyObject *module);
-extern PyObject *python_quaternion(PyObject* self, PyObject* args, PyObject *kwds);
-extern PyObject *python_quaternion_from_c(c_quaternion *quaternion);
-extern int python_quaternion_data(PyObject* self, int id, void *data_ptr);
+extern int python_vector_init_premodule(void);
+extern void python_vector_init_postmodule(PyObject *module);
+extern PyObject *python_vector(PyObject* self, PyObject* args, PyObject *kwds);
+extern PyObject *python_vector_from_c(c_vector *vector);
+extern int python_vector_data(PyObject* self, int id, void *data_ptr);
 
 /*a Wrapper
  */

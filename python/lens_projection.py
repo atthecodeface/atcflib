@@ -45,6 +45,79 @@ def test():
         xy = lp_20.xy_of_orientation(quaternion.of_euler(yaw=angle,degrees=True))
         print px, r(px,f), angle, xy
         pass
+
+    focal_length=35
+    lp_35 = gjslib_c.lens_projection(width=5184, frame_width=22.3, focal_length=focal_length, lens_type="rectilinear")
+    lp_35.orient(quaternion().lookat((0,0,1),(1,0,0)))
+    q0 = lp_35.orientation_of_xy((5184/2,3456/2))
+    q1 = lp_35.orientation_of_xy((-5184/2,-3456/2))
+    rq = q0*~q1
+    print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
     pass
 
 test()
+
+vector = gjslib_c.vector
+v1 = vector((1,2,3))
+print v1
+#v1 = v1+v1
+v1 += v1
+print v1.dot_product(v1)
+print abs(v1)
+v1.normalize()
+print abs(v1.scale(2))
+v2 = vector((0,0,1))
+v3 = v2.cross_product(v1)
+v4 = v3.cross_product(v2)
+v5 = v4 - v3
+print str(vector(length=3)), str(v1), str(v2), str(v3), str(v4), str(v5)
+
+print v5.coords
+
+def axis_angle_from_v0_to_v1(v0,v1):
+    axis = v0.cross_product(v1)
+    angle = math.atan2(abs(axis),v0.dot_product(v1))
+    axis.normalize()
+    return (axis,angle)
+
+#f axis_angle_of_quaternion_diff
+def axis_angle_of_quaternion_diff(q0,q1,pt=(0,0,1)):
+    a=vector(q0.rotate_vector(pt))
+    b=a.axis_angle_to_v(vector(q1.rotate_vector(pt)))
+    return b
+
+#41.9012082851 (-0.832050, -0.554700, 0.000000)
+#138.098791715 (0.832050, 0.554700, 0.000000)
+#180.0 (0.000000, -0.000000, 0.000000)
+
+focal_length=35
+lp_35 = gjslib_c.lens_projection(width=5184, frame_width=22.3, focal_length=focal_length, lens_type="rectilinear")
+lp_35.orient(quaternion().lookat((0,0,1),(1,0,0)))
+q0 = lp_35.orientation_of_xy((5184/2,3456/2))
+q1 = lp_35.orientation_of_xy((-5184/2,-3456/2))
+aa = axis_angle_of_quaternion_diff(q0,q1,(0,1,0))
+print aa[1]*180.0/math.pi,aa[0]
+aa = axis_angle_of_quaternion_diff(q0,q1,(1,0,0))
+print aa[1]*180.0/math.pi,aa[0]
+
+aa = axis_angle_of_quaternion_diff(q0,q1,(0,0,1))
+print aa[1]*180.0/math.pi,aa[0]
+
+print "\nin gjslib_c"
+a = q1.rotate_vector((0,0,1))
+b = q0.rotate_vector((0,0,1))
+print a,b,vector(a).cross_product(vector(b))
+aa = q0.axis_angle(q1,vector((0,0,1))).to_rotation()
+print aa[0]*180.0/math.pi,aa[1]
+die
+for angle in [20.0*(i-10) for i in range(21)]:
+    sin_angle = math.sin(angle/180.0*math.pi)
+    cos_angle = math.cos(angle/180.0*math.pi)
+
+    cos_angle_d2 = math.sqrt(1+cos_angle)/math.sqrt(2)
+    sin_angle_d2 = math.sqrt(1-cos_angle_d2*cos_angle_d2)
+    if (sin_angle<0): sin_angle_d2=-sin_angle_d2
+
+    print angle, 180.0/math.pi * math.acos(cos_angle_d2), 180.0/math.pi * math.asin(sin_angle_d2),  180.0/math.pi * math.atan2(sin_angle_d2, cos_angle_d2)
+    pass
+

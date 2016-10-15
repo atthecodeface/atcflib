@@ -15,10 +15,10 @@ LINKFLAGS = -g -iframework /Library/Frameworks -framework SDL2 -framework SDL2_i
 CPPFLAGS  = -std=c++11 -DGLM_FORCE_RADIANS -DGL_GLEXT_PROTOTYPES -g -Wall -I$(GLM) -iframework /Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I/Library/Frameworks/SDL2_ttf.framework/Headers -I/usr/local/include
 endif
 
-PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o image_correlator.o
-BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o
+PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o vector.o image_correlator.o
+BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o vector.o
 # image_correlator.o
-PY_OBJS := gjslib_c.o python_texture.o python_filter.o python_lens_projection.o python_quaternion.o python_image_correlator.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o quaternion.o image_correlator.o
+PY_OBJS := gjslib_c.o python_texture.o python_filter.o python_lens_projection.o python_quaternion.o python_vector.o python_image_correlator.o filter.o shader.o key_value.o texture.o image_io.o lens_projection.o quaternion.o vector.o image_correlator.o
 
 PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks

@@ -50,6 +50,7 @@ pass
  */
 #include <math.h>
 #include <stdio.h>
+#include "vector.h"
 #include "quaternion.h"
 
 /*a Defines
@@ -151,6 +152,16 @@ c_quaternion::c_quaternion(double r, double i, double j, double k)
     quat.i = i;
     quat.j = j;
     quat.k = k;
+}
+
+/*f c_quaternion::c_quaternion(vector)
+ */
+c_quaternion::c_quaternion(const c_vector &vector)
+{
+    quat.r = 0;
+    quat.i = vector.coords()[0];
+    quat.j = vector.coords()[1];
+    quat.k = vector.coords()[2];
 }
 
 /*f c_quaternion::copy
@@ -374,6 +385,28 @@ c_quaternion *c_quaternion::from_rotation(double angle, double axis[3], int degr
     return this;
 }
 
+/*f c_quaternion::from_rotation
+ */
+c_quaternion *c_quaternion::from_rotation(double cos_angle, double sin_angle, const double *axis)
+{
+    double c, s;
+    // cos(2x) = 2(cos(x)^2)-1 = cos(x)^2 - sin(x)^2
+    // sin(2x) = 2sin(x)cos(x)
+    // cos(x) = +-sqrt(1+cos(2x))/sqrt(2)
+    // sin(x) = +-sin(2x)/sqrt(1+cos(2x))/sqrt(2)
+    // chose +ve for cos(x) (-90<x<90), and sin(x) same segment as sin(2x)
+    c = sqrt(1+cos_angle)/sqrt(2);
+    s = sqrt(1-c*c);
+    if (sin_angle<0) {
+        s = -s;
+    }
+    quat.r = c;
+    quat.i = s*axis[0];
+    quat.j = s*axis[1];
+    quat.k = s*axis[2];
+    return this;
+}
+
 /*f c_quaternion::as_rotation
  */
 double c_quaternion::as_rotation(double axis[3]) const
@@ -488,6 +521,33 @@ c_quaternion *c_quaternion::multiply(const c_quaternion *other, int premultiply)
     this->quat.j = r1*j2 + j1*r2 + k1*i2 - i1*k2;
     this->quat.k = r1*k2 + k1*r2 + i1*j2 - j1*i2;
     return this;
+}
+
+/*f c_quaternion::rotate_vector
+ */
+c_quaternion &c_quaternion::rotate_vector(const c_vector &vector) const
+{
+    c_quaternion *r = new c_quaternion();
+    *r = (*this) * c_quaternion(vector) * this->copy()->conjugate();
+    return *r;
+}
+
+/*f c_quaternion::axis_angle
+ */
+c_quaternion &c_quaternion::axis_angle(const c_quaternion &other, c_vector &vector) const
+{
+    c_quaternion a, b;
+    c_quaternion *r = new c_quaternion();
+    double cos_angle, sin_angle;
+    //fprintf(stderr,"vector:%lf,%lf,%lf\n",vector.coords()[0],vector.coords()[1],vector.coords()[2]);
+    a = this->rotate_vector(vector);
+    //fprintf(stderr,"a:%lf,%lf,%lf,%lf\n",a.r(),a.i(),a.j(),a.k());
+    b = other.rotate_vector(vector);
+    //fprintf(stderr,"b:%lf,%lf,%lf,%lf\n",b.r(),b.i(),b.j(),b.k());
+    c_vector axis = c_vector(&a).axis_angle_to_v(c_vector(&b), &cos_angle, &sin_angle);
+    //fprintf(stderr,"axis:%lf,%lf,%lf\n",axis.coords()[0],axis.coords()[1],axis.coords()[2]);
+    *r = c_quaternion::of_rotation(cos_angle, sin_angle, axis.coords());
+    return *r;
 }
 
 /*a Others

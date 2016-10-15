@@ -225,7 +225,7 @@ def test_object():
 #derived from 24 hits on center match (r=0.997333,i=-0.006595,j=0.060502,k=-0.040275)
         src3_orientation = src_orientation #* quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
         focal_length = 20.0
-        focal_length = 20.4
+        focal_length = 20.6
         lens_type = "rectilinear"
         pass
 

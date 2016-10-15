@@ -167,8 +167,8 @@ def build_add_projected_image_mesh(obj,camera,src_w,src_h,n=32,z=8):
             # points for 'src' mesh - also uses 'src' as the image texture, hence needs uv in 'src' terms
             src_xy = (xy[0]*src_w, xy[1]*src_w)
             src_q = camera.orientation_of_xy(src_xy)
-            xyz = src_q.rotate_vector((0,0,z))
-            src_xyzs.append(xyz)
+            xyz = src_q.rotate_vector(gjslib_c.vector((0,0,z)))
+            src_xyzs.append(xyz.coords)
             src_uvs.append(((xy[0]+1.0/2)/1,(1.0/2+xy[1]/src_h)/1))
             pass
         obj.add_triangle( xyz_list = src_xyzs,
@@ -214,7 +214,9 @@ def test_object():
         obj4.texture_filename = "../images/IMG_2173.JPG"
 
         src_orientation = quaternion(r=1)
-        src2_orientation = src_orientation  * quaternion(r=0.997539,i=-0.007213,j=-0.067968,k=0.015646)
+        src2_orientation = src_orientation  * quaternion(r=0.974571,i=0.047879,j=0.006187,k=0.218817)
+# Good at 20.7: quaternion(r=0.997465,i=-0.007825,j=-0.069781,k=0.011491)
+# Better at 20.6: quaternion(r=0.997539,i=-0.007213,j=-0.067968,k=0.015646)
 # Approximately: (r=0.997425,i=-0.007999,j=-0.070465,k=0.010689)
 #(r=0.998548,i=-0.004666,j=-0.053508,k=0.004202)
 #(r=0.997590,i=-0.021140,j=-0.061052,k=0.025295)
@@ -225,7 +227,7 @@ def test_object():
 #derived from 24 hits on center match (r=0.997333,i=-0.006595,j=0.060502,k=-0.040275)
         src3_orientation = src_orientation #* quaternion(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
         focal_length = 20.0
-        focal_length = 20.6
+        focal_length = 20.5
         lens_type = "rectilinear"
         pass
 
@@ -281,7 +283,7 @@ def test_object():
             dst_xy = (dst_w*xy[0],dst_w*xy[1])
             dst_q  = dst_camera.orientation_of_xy(dst_xy)
             src_xy = src_camera.xy_of_orientation(dst_q)
-            xyz = dst_q.rotate_vector((0,0,2))
+            xyz = dst_q.rotate_vector(gjslib_c.vector((0,0,2)))
             dst_uvs.append(((src_xy[0]+1.0)/2,(1.0-src_xy[1])/2))
             dst_xyzs.append(xyz)
 

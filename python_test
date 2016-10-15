@@ -6,6 +6,8 @@ from OpenGL.GL import *
 import gjslib_c
 import math
 img_png_n=0
+vector_z = gjslib_c.vector(vector=(0,0,1))
+vector_x = gjslib_c.vector(vector=(1,0,0))
 
 #a Support functions
 #f init_opengl
@@ -38,7 +40,7 @@ def alu_test(ops):
 #f v_of_q
 def v_of_q(q):
     q = q.copy().normalize()
-    return q.rotate_vector((0,0,1))
+    return q.rotate_vector(vector_z)
 
 #f quaternion_average
 def quaternion_average(qs, verbose=False):
@@ -46,8 +48,8 @@ def quaternion_average(qs, verbose=False):
     vf = [0,0,0]
     vu = [0,0,0]
     for q in qs:
-        nvf = q.rotate_vector((0,0,1))
-        nvu = q.rotate_vector((1,0,0))
+        nvf = q.rotate_vector(vector_z)
+        nvu = q.rotate_vector(vector_x)
         for i in range(3):
             vf[i] += nvf[i]
             vu[i] += nvu[i]
@@ -227,20 +229,24 @@ class c_image_match(object):
 
 #c c_quaternion_match
 class c_quaternion_match(object):
+    """
+    A match is a mapping from a pair of source points to a pair of target points
+
+    The match has a status
+    """
     #f test_add
     @classmethod
     def test_add(cls, src_qs, tgt_qs, max_angle_diff):
-        (src_axis, src_angle) = c_vector.axis_angle_of_quaternion_diff(src_qs[0], src_qs[1])
-        (tgt_axis, tgt_angle) = c_vector.axis_angle_of_quaternion_diff(tgt_qs[0], tgt_qs[1])
-        if abs(src_angle-tgt_angle)>=max_angle_diff/180.0*math.pi:
-            return None
+        (src_angle, src_axis) = src_qs[0].axis_angle(src_qs[1], vector_z).to_rotation()
+        (tgt_angle, tgt_axis) = tgt_qs[0].axis_angle(tgt_qs[1], vector_z).to_rotation()
+        if abs((src_angle-tgt_angle)/src_angle)>=max_angle_diff: return None
         if False:
             print "  Src/tgt axis/angle",src_axis,src_angle*180/math.pi,tgt_axis,tgt_angle*180/math.pi
             pass
-        dq = c_vector.vector_diff((src_qs[0]/tgt_qs[0]).rotate_vector((0,0,1)),(src_qs[1]/tgt_qs[1]).rotate_vector((0,0,1)))
-        #print "Abs:",c_vector.vector_length(dq),"   ",180.0/math.pi*abs(src_angle-tgt_angle),"  ",dq
-        dq = c_vector.vector_length(dq)
-        if abs(dq)>0.2: return None
+        #dq = (src_qs[0]/tgt_qs[0]).rotate_vector(vector_z) - (src_qs[1]/tgt_qs[1]).rotate_vector(vector_z)
+        #print "Abs:",dq.modulus()," ",180.0/math.pi*abs(src_angle-tgt_angle),"  ",abs(src_angle-tgt_angle)/src_angle,"  ",dq
+        #dq = dq.modulus()
+        #if abs(dq)>0.2: return None
         return cls(src_qs, tgt_qs, src_axis_angle=(src_axis, src_angle), tgt_axis_angle=(tgt_axis,tgt_angle))
     #f __init__
     def __init__(self, src_qs, tgt_qs, src_axis_angle=None, tgt_axis_angle=None ):
@@ -249,46 +255,66 @@ class c_quaternion_match(object):
         self.src_axis_angle = src_axis_angle
         self.tgt_axis_angle = tgt_axis_angle
         self.src_from_tgt_orient = gjslib_c.quaternion()
+        self.diff_q = gjslib_c.quaternion()
         self.calculate()
         pass
     #f calculate
     def calculate(self):
+        """
+        There is a rotation (angle, axis) that has src_q0.vector_z/src_q1.vector_z on a great circle,
+        and similarly for tgt_q0.vector_z/tgt_q1.vector_z
+        (The spherical coordinates of a point corresponding to src_q/tgt_q is q.vector_z in our definition)
+
+        Given this we have two great circles; these are either the same, or they meet at two points.
+        If they are the same we have src_axis==tgt_axis
+        We can find the transformation that rotates src axis to tgt axis - this we call diff_q
+        Hence diff_q . src_axis = tgt axis
+
+        Now, diff_q is a rotation about an axis which goes through the great circles for src and tgt
+        each in two places. diff_q has no effect on these positions (da0 and -da0).
+
+        So, we can consider a first transformation that moves src_q0.vector_z to da0; this is moving
+        the point around the great circle with the axis src_axis. Next apply the diff_q transformation;
+        this has no effect on the point. Finally apply a last transformation that moves da0 to tgt_q0.vector_z, 
+        moving it along its great circle hence as a rotation around tgt_axis.
+        This combination is a transformation for src_q0.vector_z to tgt_q0.vector_z
+
+        Consider the effect on a point src_q1.vector_z - also on the
+        great circle, perhaps 10 degrees further clockwise round. 
+        Our first rotation will place the point at da0 + 10 degrees clockwise on the src great circle
+        The diff_q transformation moves this to da0 + 10 degrees clockwise on the tgt great circle
+        The last rotation moves it to tgt_q1.vector_z - i.e. tgt_q0.vector_z + 10 degrees clockwise
+        (assuming the src/tgt points correspond).
+
+        The first rotation is a rotation around src_axis to make src_q0.vector_z move to diff_axis.
+        This is simply the transformation to move diff_axis to src_q0.vector_z on a great circle
+        The last is is also just the transformation to move diff_axis to tgt_q0.vector_z on a great circle
+
+        Now if src_axis == +-tgt_axis then all that is needed is a rotation around src_axis
+        """
         if self.src_axis_angle is None:
-            self.src_axis_angle = c_vector.axis_angle_of_quaternion_diff(self.src_qs[0], self.src_qs[1])
+            self.src_axis_angle = self.src_qs[0].axis_angle(self.src_qs[1], vector_z).to_rotation()
             pass
         if self.tgt_axis_angle is None:
-            self.tgt_axis_angle = c_vector.axis_angle_of_quaternion_diff(self.tgt_qs[0], self.tgt_qs[1])
+            self.tgt_axis_angle = self.tgt_qs[0].axis_angle(self.tgt_qs[1], vector_z).to_rotation()
             pass
         (src_axis, src_angle) = self.src_axis_angle
         (tgt_axis, tgt_angle) = self.tgt_axis_angle
 
-        (diff_axis, diff_angle) = c_vector.axis_angle_from_v0_to_v1(src_axis, tgt_axis)
-        sp0 = self.src_qs[0].rotate_vector((0,0,1))
-        tp0 = self.tgt_qs[0].rotate_vector((0,0,1))
+        sp0 = self.src_qs[0].rotate_vector(vector_z)
+        tp0 = self.tgt_qs[1].rotate_vector(vector_z)
+        self.diff_q = src_axis.axis_angle_to_v(tgt_axis)
 
-        src_angle_sp0 = math.atan2(c_vector.vector_length(c_vector.vector_product(sp0,diff_axis)),c_vector.dot_product(sp0,diff_axis))
-        dst_angle_tp0 = math.atan2(c_vector.vector_length(c_vector.vector_product(tp0,diff_axis)),c_vector.dot_product(tp0,diff_axis))
-        src_sp0_orient_to_diff_axis = gjslib_c.quaternion.of_rotation(src_axis, -src_angle_sp0)
-        dst_tp0_orient_to_diff_axis = gjslib_c.quaternion.of_rotation(tgt_axis, -dst_angle_tp0)
+        if self.diff_q.r>0.99999999:
+            self.src_from_tgt_orient = tp0.axis_angle_to_v(sp0)
+            return
 
-        # diff_axis === src_sp0_orient_to_diff_axis.rotate_vector(sp0)
-        # diff_axis === dst_tp0_orient_to_diff_axis.rotate_vector(tp0)
+        (diff_angle, diff_axis) = self.diff_q.to_rotation()
 
-        # tgt_q = quaternion.of_rotation(tgt_axis, tgt_angle)
-        # src_q = quaternion.of_rotation(src_axis, src_angle)
-        # tp1 === tgt_q.rotate_vector(tp0)
-        # tp1 == {dst_lp_35.orient(tgt_q*dst_orientation), (dst_lp_35.orientation_of_xy((t0[3]-512,t0[4]-512))).rotate_vector((0,0,1))
-        # sp1 == {src_lp_35.orient(src_q*src_orientation), (src_lp_35.orientation_of_xy(data[src_q0][0])).rotate_vector((0,0,1))
-        # dst_orient_gc_aligned = quaternion.of_rotation(axis=diff_axis, angle=-diff_angle, degrees=0) * dst_orientation
-        # dst_lp_35.orient(dst_orient_gc_aligned)
-        # t0p = dst_lp_35.orientation_of_xy((t0[3]-512,t0[4]-512))
-        # t1p = dst_lp_35.orientation_of_xy((t1[3]-512,t1[4]-512))
-        # tp0 = t0p.rotate_vector((0,0,1))
-        # tp1 = t1p.rotate_vector((0,0,1))
-        # tgt_axis = vector_product(tp0,tp1)
-        # tgt_axis = vector_normalize(tgt_axis)
+        src_sp0_orient_to_diff_axis = diff_axis.axis_angle_to_v(sp0)
+        dst_tp0_orient_to_diff_axis = tp0.axis_angle_to_v(diff_axis)
 
-        self.src_from_tgt_orient = ~src_sp0_orient_to_diff_axis * gjslib_c.quaternion.of_rotation(axis=diff_axis, angle=-diff_angle, degrees=0) * dst_tp0_orient_to_diff_axis
+        self.src_from_tgt_orient = src_sp0_orient_to_diff_axis * ~self.diff_q * dst_tp0_orient_to_diff_axis
         pass
     pass
 
@@ -403,6 +429,67 @@ class c_camera_image(object):
             pass
         return xy_list
 
+#c c_mapping
+class c_mappings(object):
+    #f save_mappings
+    @staticmethod
+    def save_mappings(mappings_by_src_q):
+        print "Save mappings"
+        c_mappings.show_mappings(mappings_by_src_q)
+        pass
+    #f show_mappings
+    @staticmethod
+    def show_mappings(mappings_by_src_q):
+        for src_q in mappings_by_src_q:
+            mappings_by_src_q[src_q].show_mapping()
+            pass
+        pass
+    #f show_mapping
+    def show_mapping(self):
+        vector_z = gjslib_c.vector(vector=(0,0,1))
+        print "%s:%s:%d"%(str(self.src_q),
+                          str(self.src_q.rotate_vector(vector_z)),
+                          len(self.tgt_qs))
+        pass
+    #f __init__
+    def __init__(self, src_xy, src_q):
+        self.src_xy = src_xy
+        self.src_q = src_q
+        self.matches = {}
+        self.tgt_qs = []
+        self.tgt_q_mappings = {}
+        pass
+    #f add_match
+    def add_match(self, tgt_xy, tgt_q, fft_rot, fft_power):
+        self.tgt_qs.append(tgt_q)
+        self.tgt_q_mappings[tgt_q] = []
+        self.matches[tgt_q] = (tgt_xy, tgt_q, fft_rot, fft_power)
+        pass
+    #f power_of_match
+    def power_of_match(self, tgt_q):
+        if tgt_q not in self.tgt_qs:
+            return 0
+        return self.matches[tgt_q][3]
+    #f add_tgt_mapping
+    def add_tgt_mapping(self, mappings_by_src_q, tgt_q, src_q1, tgt_q1, qm, max_rot_diff=60.0):
+        if tgt_q not in self.tgt_qs:
+            raise Exception, "Unexpected add_tgt_mapping for tgt quaternion that is not part of the source"
+        if True:
+            (src0_xy, tgt0_xy, fft0_rot, fft0_power) = self.matches[tgt_q]
+            (src1_xy, tgt1_xy, fft1_rot, fft1_power) = mappings_by_src_q[src_q1].matches[tgt_q1]
+            rot_diff = abs(fft1_rot-fft0_rot)
+            if rot_diff>180: rot_diff=360-rot_diff
+            if rot_diff>max_rot_diff: return
+            if False:
+                print src0_xy, tgt0_xy, src1_xy,tgt1_xy, rot_diff
+                rq = qm.src_from_tgt_orient
+                print fft0_power, fft0_rot, fft1_power, fft1_rot, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
+                pass
+            pass
+        self.tgt_q_mappings[tgt_q].append( (src_q1, tgt_q1, qm.src_from_tgt_orient) )
+        pass
+    pass
+
 #c c_image_pair_quaternion_match
 class c_image_pair_quaternion_match(object):
     #f __init__
@@ -414,8 +501,8 @@ class c_image_pair_quaternion_match(object):
         self.im = c_image_match()
         self.im.max_corners=40
         self.im.max_matches_per_corner=10
-        self.im.max_corners=10
-        self.im.max_matches_per_corner=5
+        self.im.max_corners=20
+        self.im.max_matches_per_corner=10 # Not too many matches, as a good match is a good match
         self.to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
                                 extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
                                                "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
@@ -497,47 +584,6 @@ class c_image_pair_quaternion_match(object):
         return None
     #f find_matches
     def find_matches(self, mappings_by_src_q, images, cxy0, size):
-        #c c_mapping
-        class c_mappings(object):
-            #f __init__
-            def __init__(self, src_xy, src_q):
-                self.src_xy = src_xy
-                self.src_q = src_q
-                self.matches = {}
-                self.tgt_qs = []
-                self.tgt_q_mappings = {}
-                pass
-            #f add_match
-            def add_match(self, tgt_xy, tgt_q, fft_rot, fft_power):
-                self.tgt_qs.append(tgt_q)
-                self.tgt_q_mappings[tgt_q] = []
-                self.matches[tgt_q] = (tgt_xy, tgt_q, fft_rot, fft_power)
-                pass
-            #f power_of_match
-            def power_of_match(self, tgt_q):
-                if tgt_q not in self.tgt_qs:
-                    return 0
-                return self.matches[tgt_q][3]
-            #f add_tgt_mapping
-            def add_tgt_mapping(self, mappings_by_src_q, tgt_q, src_q1, tgt_q1, qm, max_rot_diff=60.0):
-                if tgt_q not in self.tgt_qs:
-                    raise Exception, "Unexpected add_tgt_mapping for tgt quaternion that is not part of the source"
-                if True:
-                    (src0_xy, tgt0_xy, fft0_rot, fft0_power) = self.matches[tgt_q]
-                    (src1_xy, tgt1_xy, fft1_rot, fft1_power) = mappings_by_src_q[src_q1].matches[tgt_q1]
-                    rot_diff = abs(fft1_rot-fft0_rot)
-                    if rot_diff>180: rot_diff=360-rot_diff
-                    if rot_diff>max_rot_diff: return
-                    if False:
-                        print src0_xy, tgt0_xy, src1_xy,tgt1_xy, rot_diff
-                        rq = qm.src_from_tgt_orient
-                        print fft0_power, fft0_rot, fft1_power, fft1_rot, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
-                        pass
-                    pass
-                self.tgt_q_mappings[tgt_q].append( (src_q1, tgt_q1, qm.src_from_tgt_orient) )
-                pass
-            pass
-
         #f globals
         global img_png_n
         #b Set to/from projections
@@ -615,7 +661,7 @@ class c_image_pair_quaternion_match(object):
                     for tgt_q1 in mappings_by_src_q[src_q1].tgt_qs:
                         qm = c_quaternion_match.test_add(src_qs=(src_q0,src_q1),
                                                          tgt_qs=(tgt_q0,tgt_q1),
-                                                         max_angle_diff=0.3)
+                                                         max_angle_diff=0.02) # good matches for 1900/1901 are all <0.02
                         if qm is not None:
                             #rq = qm.src_from_tgt_orient
                             #print "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k)
@@ -644,11 +690,10 @@ class c_image_pair_quaternion_match(object):
         pass
     #f find_min_error
     def find_min_error(self, mappings_by_src_q, src_from_tgt_q, src_qx, min_power=0.1):
-        vector_z = gjslib_c.vector(vector=(0,0,1))
         min_d = None
         for tgt_qx in mappings_by_src_q[src_qx].tgt_qs:
             rq0 = src_qx.axis_angle(src_from_tgt_q*tgt_qx,vector_z)
-            d = (1-rq0.r)
+            d = (1-rq0.r) # Not much effect if we change this to rq0.r^2
             if (min_d is None) or (min_d[0]>d):
                 min_d = (d, tgt_qx)
                 pass
@@ -717,10 +762,10 @@ class c_image_pair_quaternion_match(object):
             for tgt_q0 in mappings_by_src_q[src_q0].tgt_qs:
                 for (src_q1, tgt_q1, src_from_tgt_q) in mappings_by_src_q[src_q0].tgt_q_mappings[tgt_q0]:
                     if given_src_from_tgt_q is not None:
-                        d = src_from_tgt_q.rotate_vector((0,0,1))
+                        d = src_from_tgt_q.rotate_vector(vector_z)
                         d = d[2]
                         if d<0.9: continue
-                        d = src_from_tgt_q.rotate_vector((1,0,0))
+                        d = src_from_tgt_q.rotate_vector(vector_x)
                         d = d[0]
                         if d<0.9: continue
                         pass
@@ -741,7 +786,8 @@ class c_image_pair_quaternion_match(object):
             pass
         return (best_other_target_matches, global_min_d)
     #f find_best_target_matches
-    def find_best_target_matches(self, mappings_by_src_q, min_used_factor=0.5, given_src_from_tgt_q=None, min_cos_sep=0.99):
+    def find_best_target_matches(self, mappings_by_src_q, min_used_factor=0.5, given_src_from_tgt_q=None, min_cos_sep=0.999995):
+        #min_used_factor = 0.7
         print "Building list of src_from_tgt_q"
         mappings_to_try = []
         if given_src_from_tgt_q:
@@ -980,13 +1026,13 @@ class c_vector(object):
     #f axis_angle_from_v0_to_v1
     @staticmethod
     def axis_angle_from_v0_to_v1(v0,v1):
-        axis = c_vector.vector_product(v0, v1)
-        angle = math.atan2(c_vector.vector_length(axis),c_vector.dot_product(v0,v1))
-        axis  = c_vector.vector_normalize(axis)
+        axis = v0.cross_product(v1)
+        angle = math.atan2(abs(axis),v0.dot_product(v1))
+        axis.normalize()
         return (axis,angle)
     #f axis_angle_of_quaternion_diff
     @staticmethod
-    def axis_angle_of_quaternion_diff(q0,q1,pt=(0,0,1)):
+    def axis_angle_of_quaternion_diff(q0,q1,pt=vector_z):
         return c_vector.axis_angle_from_v0_to_v1(q0.rotate_vector(pt), q1.rotate_vector(pt))
 
 #f validate_buckets
@@ -1349,7 +1395,7 @@ def test_diff_image_quaternion_3():
     #initial_dest_orientation = gjslib_c.quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
     if True:
         images = ('images/IMG_2173.JPG', 'images/IMG_2174.JPG')
-        focal_length = 20.6
+        focal_length = 20.5
         lens_type = "rectilinear"
         #initial_dest_orientation = gjslib_c.quaternion(r=0.997871,i=0.002148,j=0.065027,k=-0.004444)
         #initial_dest_orientation = gjslib_c.quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
@@ -1364,7 +1410,7 @@ def test_diff_image_quaternion_3():
     print region
 
     given_src_from_tgt_q = None
-    min_used_factor = 0.3
+    min_used_factor = 0.5 # Most points should have a good match, so asking for half is not bad
     if initial_dest_orientation.r<0.99999:
         given_src_from_tgt_q = initial_dest_orientation
         min_used_factor = 0.7
@@ -1389,11 +1435,14 @@ def test_diff_image_quaternion_3():
         print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
         pass
 
-    #die
+    c_mappings.show_mappings(mappings_by_src_q)
+    die
+
     chosen_mapping = best_other_target_matches[0]
     #Fake out the best mapping to check it improves:chosen_mapping.src_from_tgt_q = gjslib_c.quaternion(r=0.995660,i=-0.000496,j=0.072651,k=-0.058163)
     ipqm.orient(images[1], chosen_mapping.src_from_tgt_q)
 
+    find(" overlap should be done in quaternsions and should find the to mappings")
     if False: # Build centers from 'hotspots'
         centers = []
         for src_q in chosen_mapping.mappings:
@@ -1535,8 +1584,8 @@ def test_diff_image():
         for i in range(4):
             s += q1.rijk[i]*q2.rijk[i]
             pass
-        a1 = q1.rotate_vector((0,0,1))
-        a2 = q2.rotate_vector((0,0,1))
+        a1 = q1.rotate_vector(vector_z)
+        a2 = q2.rotate_vector(vector_z)
         s = 0
         for i in range(3):
             s += a1[i]*a2[i]
@@ -1593,8 +1642,8 @@ def test_lens_projection():
     lp_30.orient(quaternion().lookat((0,0,1),(1,0,0)))
 
     a = quaternion.roll(60, degrees=1)
-    print a.rotate_vector((1,0,3))
-    print a.rotate_vector((0,1,3))
+    print a.rotate_vector(vector(1,0,3))
+    print a.rotate_vector(vector(0,1,3))
 
     lp_20 = lens_projection(width=2.0, frame_width=36.0, focal_length=20.0, lens_type="rectilinear")
     print quaternion.roll(60,degrees=1)
@@ -1641,7 +1690,7 @@ def test_quaternion_rotation_z():
             for y in range(4):
                for z in range(4):
                    q = quaternion(r=w,i=x,j=y,k=z)
-                   r = q.rotate_vector((0,0,1))
+                   r = q.rotate_vector(vector(0,0,1))
                    r2 = (2*(z*x-w*y), 2*(w*x+y*z), w*w-x*x-y*y+z*z)
                    for i in range(3):
                        if abs(r[i]-r2[i])>0.000001:

@@ -44,7 +44,7 @@ public:
     static inline c_quaternion pitch(double angle, int degrees) { c_quaternion q; q.from_euler(0,angle,0,degrees); return q; }
     static inline c_quaternion yaw(  double angle, int degrees) { c_quaternion q; q.from_euler(0,0,angle,degrees); return q; }
     static inline c_quaternion of_euler(double r, double p, double y, int degrees) { c_quaternion q; q.from_euler(r,p,y,degrees); return q; }
-    static inline c_quaternion of_rotation(double angle, double axis[3], int degrees) { c_quaternion q; q.from_rotation(angle, axis, degrees); return q; }
+    static inline c_quaternion of_rotation(double angle, const double axis[3], int degrees) { c_quaternion q; q.from_rotation(angle, axis, degrees); return q; }
     static inline c_quaternion of_rotation(double cos_angle, double sin_angle, const double *axis) { c_quaternion q; q.from_rotation(cos_angle, sin_angle, axis); return q; }
 
     c_quaternion &operator=(double real);
@@ -89,7 +89,7 @@ public:
 
     c_quaternion *from_euler(double roll, double pitch, double yaw, int degrees=0);
     c_quaternion *lookat(double xyz[3], double up[3]);
-    c_quaternion *from_rotation(double angle, double axis[3], int degrees=0);
+    c_quaternion *from_rotation(double angle, const double axis[3], int degrees=0);
     c_quaternion *from_rotation(double cos_angle, double sin_angle, const double *axis);
     double as_rotation(double axis[3]) const;
     void as_euler(double rpy[3]) const;

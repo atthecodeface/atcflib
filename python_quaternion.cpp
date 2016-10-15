@@ -260,7 +260,8 @@ python_quaternion_class_method_of_rotation(PyObject* cls, PyObject* args, PyObje
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)obj;
     py_obj->quaternion = new c_quaternion();
     if (!python_quaternion_method_from_rotation(obj, args, kwds)) {
-        Py_DECREF(py_obj);
+        Py_DECREF(py_obj); // THIS SHOULD PROBABLY ALWAYS BE DONE??
+        // Does an OF_ROTATION have one too many refcount?
         return NULL;
     }
     return obj;
@@ -644,24 +645,19 @@ static PyObject *
 python_quaternion_method_rotate_vector(PyObject* self, PyObject* args, PyObject *kwds)
 {
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
-    PyObject *vector;
+    PyObject *vec_obj;
     static const char *kwlist[] = {"vector", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", (char **)kwlist, &vector))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", (char **)kwlist,
+                                     &PyTypeObject_vector_frame, &vec_obj))
         return NULL;
 
     if (py_obj->quaternion) {
-        PyObject *tuple = PySequence_Fast(vector, "Vector must be a 3-tuple");
-        double xyz[3];
-        int len = PySequence_Size(tuple);
-        for (int i=0; (i<len) && (i<3); i++) {
-            PyObject *value = PySequence_Fast_GET_ITEM(tuple, i);
-            xyz[i] = PyFloat_AsDouble(value);
+        c_vector *vector;
+        if (python_vector_data(vec_obj, 0, &vector)) {
+            c_vector *v;
+            v = new c_vector(*(py_obj->quaternion) * c_quaternion(*vector) * *(py_obj->quaternion->copy()->conjugate()));
+            return python_vector_from_c(v);
         }
-        Py_DECREF(tuple);
-        if (PyErr_Occurred()) return NULL;
-        c_quaternion v;
-        v = *(py_obj->quaternion) * c_quaternion(0,xyz[0],xyz[1],xyz[2]) * *(py_obj->quaternion->copy()->conjugate());
-        return Py_BuildValue("ddd",v.i(),v.j(),v.k());
     }
     Py_RETURN_NONE;
 }
@@ -784,23 +780,26 @@ python_quaternion_method_from_rotation(PyObject* self, PyObject* args, PyObject 
 {
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
 
-    PyObject *axis;
-    double angle=0;
+    PyObject *vec_obj;
+    double angle=0, cos_angle=0, sin_angle=0;
     int degrees=0;
-    double xyz_d[3];
+    static const char *kwlist[] = {"axis", "angle", "cos_angle", "sin_angle", "degrees", NULL};
 
-    static const char *kwlist[] = {"axis", "angle", "degrees", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Od|i", (char **)kwlist, 
-                                     &axis, &angle, &degrees))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|dddi", (char **)kwlist, 
+                                     &PyTypeObject_vector_frame, &vec_obj, &angle, &cos_angle, &sin_angle, &degrees))
         return NULL;
 
-    if (!PyArg_ParseTuple(axis, "ddd", &xyz_d[0], &xyz_d[1], &xyz_d[2])) return NULL;
-
     if (py_obj->quaternion) {
-        py_obj->quaternion->from_rotation(angle, xyz_d, degrees);
-        Py_INCREF(py_obj);
-        return self;
+        c_vector *vector;
+        if (python_vector_data(vec_obj, 0, &vector)) {
+            if ((cos_angle==sin_angle) && (cos_angle==0)) {
+                py_obj->quaternion->from_rotation(angle, vector->coords(), degrees);
+            } else {
+                py_obj->quaternion->from_rotation(cos_angle, sin_angle, vector->coords());
+            }
+            Py_INCREF(py_obj);
+            return self;
+        }
     }
     Py_RETURN_NONE;
 }
@@ -839,7 +838,7 @@ python_quaternion_method_to_rotation(PyObject* self, PyObject* args, PyObject *k
         double axis[3];
         double angle = py_obj->quaternion->as_rotation(axis);
         if (degrees) angle*=180.0/M_PI;
-        return Py_BuildValue("dO",angle,Py_BuildValue("ddd",axis[0],axis[1],axis[2]));
+        return Py_BuildValue("dO",angle,python_vector_from_c(new c_vector(3,axis)));
     }
     Py_RETURN_NONE;
 }

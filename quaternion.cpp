@@ -371,7 +371,7 @@ void c_quaternion::as_euler(double rpy[3]) const
 
 /*f c_quaternion::from_rotation
  */
-c_quaternion *c_quaternion::from_rotation(double angle, double axis[3], int degrees)
+c_quaternion *c_quaternion::from_rotation(double angle, const double axis[3], int degrees)
 {
     if (degrees) {
         angle *= PI/180;

@@ -15,6 +15,8 @@
 #include <Python.h>
 #include "python_vector.h"
 #include "vector.h"
+#include "python_quaternion.h"
+#include "quaternion.h"
 
 /*a Defines
  */
@@ -419,12 +421,12 @@ python_vector_method_axis_angle_to_v(PyObject* self, PyObject* args, PyObject *k
     if (!PyObject_TypeCheck((PyObject *)vec_b, &PyTypeObject_vector_frame))
         return NULL;
     if (py_obj->vector && vec_b->vector) {
-        c_vector *v;
         double c, s;
-        double angle;
-        v = new c_vector(py_obj->vector->axis_angle_to_v(*(vec_b->vector), &c, &s));
-        angle = atan2(s,c);
-        return Py_BuildValue("Od", python_vector_from_c(v), angle);
+        c_quaternion *q;
+        c_vector v=py_obj->vector->axis_angle_to_v(*(vec_b->vector), &c, &s);
+        q = new c_quaternion();
+        q->from_rotation(c,s,v.coords());
+        return python_quaternion_from_c(q);
     }
     Py_RETURN_NONE;
 }

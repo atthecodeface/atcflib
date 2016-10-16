@@ -245,7 +245,7 @@ def build_add_projected_image_mesh(obj,camera,src_w,src_h,n=32,z=8):
 
 #f line_between_qs
 def line_between_qs(src_q, tgt_q, angle_steps = 20):
-    diff_q = src_q.axis_angle(tgt_q, vector_z)
+    diff_q = src_q.angle_axis(tgt_q, vector_z)
     (diff_angle, diff_axis) = diff_q.to_rotation()
 
     points = []
@@ -283,16 +283,18 @@ def test_object():
     src_h = 3456/5148.0
 
     image_orientations = [ ("../images/IMG_1900.JPG", None, ~quaternion(r=0.360925,i=0.049321,j=0.126091,k=0.922714)), # focus on muzzy...
-                           ("../images/IMG_1901.JPG", 0, quaternion(r=0.993401,i=-0.006273,j=-0.007141,k=-0.114297)),
+                           ("../images/IMG_1901.JPG", 0, quaternion(r=0.994394,i=-0.008970,j=-0.008219,k=-0.105034)
+                            ),
+                           #(r=0.993401,i=-0.006273,j=-0.007141,k=-0.114297)),
                            # Perfect: (r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
                            #(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)#(r=0.993450,i=-0.006199,j=-0.007088,k=-0.113879)#(r=0.993624,i=-0.005610,j=-0.006695,k=-0.112407)
-                           ("../images/IMG_1902.JPG", 1, quaternion(r=0.995856,i=-0.009064,j=-0.006932,k=-0.090231)),
+#                           ("../images/IMG_1902.JPG", 1, quaternion(r=0.995856,i=-0.009064,j=-0.006932,k=-0.090231)),
                            #(r=0.995798,i=-0.009073,j=-0.006975,k=-0.090860)#(r=0.995947,i=-0.008978,j=-0.006900,k=-0.089229)
                            ]
     focal_length = 35.0
     lens_type = "rectilinear"
 
-    if True:
+    if False:
 
         image_orientations = [ ("../images/IMG_2173.JPG", None, quaternion(r=1)),
                                ("../images/IMG_2174.JPG", 0, quaternion(r=0.997352,i=-0.005048,j=-0.070954,k=0.015113)

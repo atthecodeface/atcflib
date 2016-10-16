@@ -538,9 +538,9 @@ c_quaternion &c_quaternion::rotate_vector(const c_vector &vector) const
     return *r;
 }
 
-/*f c_quaternion::axis_angle
+/*f c_quaternion::angle_axis
  */
-c_quaternion &c_quaternion::axis_angle(const c_quaternion &other, c_vector &vector) const
+c_quaternion &c_quaternion::angle_axis(const c_quaternion &other, c_vector &vector) const
 {
     c_quaternion a, b;
     c_quaternion *r = new c_quaternion();
@@ -550,10 +550,19 @@ c_quaternion &c_quaternion::axis_angle(const c_quaternion &other, c_vector &vect
     //fprintf(stderr,"a:%lf,%lf,%lf,%lf\n",a.r(),a.i(),a.j(),a.k());
     b = other.rotate_vector(vector);
     //fprintf(stderr,"b:%lf,%lf,%lf,%lf\n",b.r(),b.i(),b.j(),b.k());
-    c_vector axis = c_vector(&a).axis_angle_to_v(c_vector(&b), &cos_angle, &sin_angle);
+    c_vector axis = c_vector(&a).angle_axis_to_v(c_vector(&b), &cos_angle, &sin_angle);
     //fprintf(stderr,"axis:%lf,%lf,%lf\n",axis.coords()[0],axis.coords()[1],axis.coords()[2]);
     *r = c_quaternion::of_rotation(cos_angle, sin_angle, axis.coords());
     return *r;
+}
+
+/*f c_quaternion::distance_to
+ */
+double c_quaternion::distance_to(const c_quaternion &other) const
+{
+    c_quaternion q;
+    q = (*this / other);
+    return 1-((q*q).r());
 }
 
 /*a Others

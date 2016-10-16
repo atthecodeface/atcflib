@@ -66,7 +66,7 @@ public:
     // It changes 'this' to be the axis of rotation required to
     // get from 'this' to 'other' (i.e. this <= unit(this x other))
     // and sets the angle; it returns 'this'
-    c_vector &axis_angle_to_v(const c_vector &other, double *cos_angle, double *sin_angle);
+    c_vector &angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle);
     void __str__(char *buffer, int buf_size) const;
 };
 

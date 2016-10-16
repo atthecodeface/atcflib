@@ -42,7 +42,7 @@ static PyObject *python_vector_method_scale(PyObject* self, PyObject* args, PyOb
 static PyObject *python_vector_method_add(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_vector_method_dot_product(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_vector_method_cross_product(PyObject* self, PyObject* args, PyObject *kwds);
-static PyObject *python_vector_method_axis_angle_to_v(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_vector_method_angle_axis_to_v(PyObject* self, PyObject* args, PyObject *kwds);
 
 static PyObject *python_vector_method_binary_add(PyObject* self, PyObject* b);
 static PyObject *python_vector_method_binary_subtract(PyObject* self, PyObject* b);
@@ -70,7 +70,7 @@ static PyMethodDef python_vector_methods[] = {
     {"add",           (PyCFunction)python_vector_method_add,            METH_VARARGS|METH_KEYWORDS},
     {"dot_product",   (PyCFunction)python_vector_method_dot_product,    METH_VARARGS|METH_KEYWORDS},
     {"cross_product", (PyCFunction)python_vector_method_cross_product,  METH_VARARGS|METH_KEYWORDS},//
-    {"axis_angle_to_v", (PyCFunction)python_vector_method_axis_angle_to_v,  METH_VARARGS|METH_KEYWORDS},//
+    {"angle_axis_to_v", (PyCFunction)python_vector_method_angle_axis_to_v,  METH_VARARGS|METH_KEYWORDS},//
     {NULL, NULL},
 };
 
@@ -407,10 +407,10 @@ python_vector_method_cross_product(PyObject* self, PyObject* args, PyObject *kwd
     Py_RETURN_NONE;
 }
 
-/*f python_vector_method_axis_angle_to_v
+/*f python_vector_method_angle_axis_to_v
  */
 static PyObject *
-python_vector_method_axis_angle_to_v(PyObject* self, PyObject* args, PyObject *kwds)
+python_vector_method_angle_axis_to_v(PyObject* self, PyObject* args, PyObject *kwds)
 {
     t_PyObject_vector *py_obj = (t_PyObject_vector *)self;
     t_PyObject_vector *vec_b;
@@ -423,7 +423,7 @@ python_vector_method_axis_angle_to_v(PyObject* self, PyObject* args, PyObject *k
     if (py_obj->vector && vec_b->vector) {
         double c, s;
         c_quaternion *q;
-        c_vector v=py_obj->vector->axis_angle_to_v(*(vec_b->vector), &c, &s);
+        c_vector v=py_obj->vector->angle_axis_to_v(*(vec_b->vector), &c, &s);
         q = new c_quaternion();
         q->from_rotation(c,s,v.coords());
         return python_quaternion_from_c(q);

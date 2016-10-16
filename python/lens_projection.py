@@ -74,16 +74,16 @@ print str(vector(length=3)), str(v1), str(v2), str(v3), str(v4), str(v5)
 
 print v5.coords
 
-def axis_angle_from_v0_to_v1(v0,v1):
+def angle_axis_from_v0_to_v1(v0,v1):
     axis = v0.cross_product(v1)
     angle = math.atan2(abs(axis),v0.dot_product(v1))
     axis.normalize()
     return (axis,angle)
 
-#f axis_angle_of_quaternion_diff
-def axis_angle_of_quaternion_diff(q0,q1,pt=(0,0,1)):
+#f angle_axis_of_quaternion_diff
+def angle_axis_of_quaternion_diff(q0,q1,pt=(0,0,1)):
     a=q0.rotate_vector(vector(pt))
-    b=a.axis_angle_to_v(q1.rotate_vector(vector(pt)))
+    b=a.angle_axis_to_v(q1.rotate_vector(vector(pt)))
     return b
 
 #41.9012082851 (-0.832050, -0.554700, 0.000000)
@@ -95,26 +95,26 @@ lp_35 = gjslib_c.lens_projection(width=5184, frame_width=22.3, focal_length=foca
 lp_35.orient(quaternion().lookat((0,0,1),(1,0,0)))
 q0 = lp_35.orientation_of_xy((5184/2,3456/2))
 q1 = lp_35.orientation_of_xy((-5184/2,-3456/2))
-aa = axis_angle_of_quaternion_diff(q0,q1,(0,1,0)).to_rotation()
+aa = angle_axis_of_quaternion_diff(q0,q1,(0,1,0)).to_rotation()
 
 print aa[0]*180.0/math.pi,aa[1]
-aa = axis_angle_of_quaternion_diff(q0,q1,(1,0,0)).to_rotation()
+aa = angle_axis_of_quaternion_diff(q0,q1,(1,0,0)).to_rotation()
 print aa[0]*180.0/math.pi,aa[1]
 
-aa = axis_angle_of_quaternion_diff(q0,q1,(0,0,1)).to_rotation()
+aa = angle_axis_of_quaternion_diff(q0,q1,(0,0,1)).to_rotation()
 print aa[0]*180.0/math.pi,aa[1]
 
 print "\nin gjslib_c"
 a = q1.rotate_vector(vector((0,0,1)))
 b = q0.rotate_vector(vector((0,0,1)))
 print a,b,a.cross_product(b)
-aa = q0.axis_angle(q1,vector((0,0,1))).to_rotation()
+aa = q0.angle_axis(q1,vector((0,0,1))).to_rotation()
 print aa[0]*180.0/math.pi,aa[1]
 
 src_axis = vector((1,0,0))
 tgt_axis = vector((1.0000000000,0,0))
 
-print src_axis.axis_angle_to_v(tgt_axis)
+print src_axis.angle_axis_to_v(tgt_axis)
 
 die
 for angle in [20.0*(i-10) for i in range(21)]:

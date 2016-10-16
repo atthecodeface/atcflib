@@ -53,7 +53,8 @@ static PyObject *python_quaternion_method_lookat(PyObject* self, PyObject* args,
 static PyObject *python_quaternion_method_add(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_multiply(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_rotate_vector(PyObject* self, PyObject* args, PyObject *kwds);
-static PyObject *python_quaternion_method_axis_angle(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_angle_axis(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_distance_to(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_from_euler(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_to_euler(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_from_rotation(PyObject* self, PyObject* args, PyObject *kwds);
@@ -110,7 +111,8 @@ static PyMethodDef python_quaternion_methods[] = {
     {"add",           (PyCFunction)python_quaternion_method_add,            METH_VARARGS|METH_KEYWORDS},
     {"multiply",      (PyCFunction)python_quaternion_method_multiply,       METH_VARARGS|METH_KEYWORDS},
     {"rotate_vector", (PyCFunction)python_quaternion_method_rotate_vector,  METH_VARARGS|METH_KEYWORDS},
-    {"axis_angle",    (PyCFunction)python_quaternion_method_axis_angle,     METH_VARARGS|METH_KEYWORDS},
+    {"angle_axis",    (PyCFunction)python_quaternion_method_angle_axis,     METH_VARARGS|METH_KEYWORDS},
+    {"distance_to",   (PyCFunction)python_quaternion_method_distance_to,     METH_VARARGS|METH_KEYWORDS},
     {"interpolate",   (PyCFunction)python_quaternion_method_scale,      METH_VARARGS|METH_KEYWORDS},//
     {NULL, NULL},
 };
@@ -664,10 +666,10 @@ python_quaternion_method_rotate_vector(PyObject* self, PyObject* args, PyObject 
     Py_RETURN_NONE;
 }
 
-/*f python_quaternion_method_axis_angle
+/*f python_quaternion_method_angle_axis
  */
 static PyObject *
-python_quaternion_method_axis_angle(PyObject* self, PyObject* args, PyObject *kwds)
+python_quaternion_method_angle_axis(PyObject* self, PyObject* args, PyObject *kwds)
 {
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
     t_PyObject_quaternion *other;
@@ -682,9 +684,27 @@ python_quaternion_method_axis_angle(PyObject* self, PyObject* args, PyObject *kw
         c_vector *vector;
         if (python_vector_data(vec_obj, 0, &vector)) {
             c_quaternion *v;
-            v = new c_quaternion(py_obj->quaternion->axis_angle(*other->quaternion, *vector));
+            v = new c_quaternion(py_obj->quaternion->angle_axis(*other->quaternion, *vector));
             return python_quaternion_from_c(v);
         }
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_distance_to
+ */
+static PyObject *
+python_quaternion_method_distance_to(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    t_PyObject_quaternion *other;
+    static const char *kwlist[] = {"other", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", (char **)kwlist,
+                                     &PyTypeObject_quaternion_frame, &other))
+        return NULL;
+
+    if (py_obj->quaternion && other->quaternion) {
+        return PyFloat_FromDouble(py_obj->quaternion->distance_to(*other->quaternion));
     }
     Py_RETURN_NONE;
 }

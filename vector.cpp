@@ -197,9 +197,9 @@ c_vector &c_vector::cross_product(const c_vector &other) const
     return *r;
 }
 
-/*f c_vector::axis_angle_to_v
+/*f c_vector::angle_axis_to_v
  */
-c_vector &c_vector::axis_angle_to_v(const c_vector &other, double *cos_angle, double *sin_angle)
+c_vector &c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle)
 {
     double tl, ol;
     tl = this->modulus();

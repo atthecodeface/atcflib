@@ -100,7 +100,8 @@ public:
     // The axis will be perpendicular to the axes of rotation represented by 'this'
     // and 'other'
     c_quaternion &rotate_vector(const class c_vector &vector) const;
-    c_quaternion &axis_angle(const c_quaternion &other, class c_vector &vector) const;
+    c_quaternion &angle_axis(const c_quaternion &other, class c_vector &vector) const;
+    double distance_to(const c_quaternion &other) const;
     void __str__(char *buffer, int buf_size) const;
     
 };

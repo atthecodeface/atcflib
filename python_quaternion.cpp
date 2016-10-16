@@ -58,6 +58,7 @@ static PyObject *python_quaternion_method_from_euler(PyObject* self, PyObject* a
 static PyObject *python_quaternion_method_to_euler(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_from_rotation(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_to_rotation(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_method_to_rotation_str(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_method_from_sequence(PyObject* self, PyObject* args, PyObject *kwds);
 
 static PyObject *python_quaternion_method_binary_add(PyObject* self, PyObject* b);
@@ -105,6 +106,7 @@ static PyMethodDef python_quaternion_methods[] = {
     {"from_rotation", (PyCFunction)python_quaternion_method_from_rotation,  METH_VARARGS|METH_KEYWORDS},
     {"to_euler",      (PyCFunction)python_quaternion_method_to_euler,       METH_VARARGS|METH_KEYWORDS},
     {"to_rotation",   (PyCFunction)python_quaternion_method_to_rotation,    METH_VARARGS|METH_KEYWORDS},
+    {"to_rotation_str",    (PyCFunction)python_quaternion_method_to_rotation_str,    METH_VARARGS|METH_KEYWORDS},
     {"add",           (PyCFunction)python_quaternion_method_add,            METH_VARARGS|METH_KEYWORDS},
     {"multiply",      (PyCFunction)python_quaternion_method_multiply,       METH_VARARGS|METH_KEYWORDS},
     {"rotate_vector", (PyCFunction)python_quaternion_method_rotate_vector,  METH_VARARGS|METH_KEYWORDS},
@@ -839,6 +841,27 @@ python_quaternion_method_to_rotation(PyObject* self, PyObject* args, PyObject *k
         double angle = py_obj->quaternion->as_rotation(axis);
         if (degrees) angle*=180.0/M_PI;
         return Py_BuildValue("dO",angle,python_vector_from_c(new c_vector(3,axis)));
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_method_to_rotation
+ */
+static PyObject *
+python_quaternion_method_to_rotation_str(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
+    int degrees=0;
+    static const char *kwlist[] = {"degrees", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|i", (char **)kwlist, &degrees))
+        return NULL;
+    if (py_obj->quaternion) {
+        double axis[3];
+        double angle = py_obj->quaternion->as_rotation(axis);
+        char buffer[1024];
+        if (degrees) angle*=180.0/M_PI;
+        sprintf(buffer, "%6.2f:(%lf,%lf,%lf)", angle, axis[0], axis[1], axis[2]);
+        return PyString_FromString(buffer);
     }
     Py_RETURN_NONE;
 }

@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+#
+# Useful cosines:
+# 0.99    => 8.1   degrees
+# 0.995   => 5.76  degrees
+# 0.999   => 2.56  degrees
+# 0.9995  => 1.8   degrees
+# 0.9999  => 0.81  degrees
+# 0.99995 => 0.576 degrees
+# 0.99999 => 0.256 degrees
 
 #a Imports
 from OpenGL.GLUT import *
@@ -182,13 +191,16 @@ class c_image_match(object):
     windowed_equalization = False
     max_corners=3
     max_matches_per_corner=3
+    min_corner_distance = 5.0
+    min_corner_distance = 120.0
+    min_match_distance = 2.5
     def __init__(self, radius=4):
         # radius must be 4 at the moment as circle_dft_diff_combine_filter is fixed    
         self.copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
         self.equalize = c_windowed_equalization_filter()
         self.harris = c_harris_filter()
-        self.find_corners = c_find_filter(extra_parameters={"min_distance":5.0, "minimum":0.04, "max_elements":150})
-        self.find_matches = c_find_filter(extra_parameters={"min_distance":2.5, "minimum":0.04,  "max_elements":150})
+        self.find_corners = c_find_filter(extra_parameters={"min_distance":self.min_corner_distance, "minimum":0.01, "max_elements":25000})
+        self.find_matches = c_find_filter(extra_parameters={"min_distance":self.min_match_distance, "minimum":0.04,  "max_elements":250})
         self.circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":self.radius,
                                                              "CIRCLE_COMPONENT":"r",
                                                              })
@@ -433,9 +445,28 @@ class c_camera_image(object):
 class c_mappings(object):
     #f save_mappings
     @staticmethod
-    def save_mappings(mappings_by_src_q):
-        print "Save mappings"
-        c_mappings.show_mappings(mappings_by_src_q)
+    def save_mappings(mappings_by_src_q, f):
+        print >>f, "import gjslib_c"
+        print >>f, "quaternion = gjslib_c.quaternion"
+        print >>f, "mappings={}"
+        for src_q in mappings_by_src_q:
+            print >>f, "mappings[quaternion(r=%f,i=%f,j=%f,k=%f)] = {"%(src_q.r, src_q.i, src_q.j, src_q.k)
+            print >>f, "    'tgts':{"
+            mapping = mappings_by_src_q[src_q]
+            for tgt_q in mapping.tgt_qs:
+                print >>f, "            quaternion(r=%f,i=%f,j=%f,k=%f):{"%(tgt_q.r, tgt_q.i, tgt_q.j, tgt_q.k)
+                print >>f, "                'mappings':("
+                for (src_q1, tgt_q1, src_from_tgt_orient) in mapping.tgt_q_mappings[tgt_q]:
+                    print >>f, "                    (quaternion(r=%f,i=%f,j=%f,k=%f),"  %(src_q1.r, src_q1.i, src_q1.j, src_q1.k)
+                    print >>f, "                     quaternion(r=%f,i=%f,j=%f,k=%f),"  %(tgt_q1.r, tgt_q1.i, tgt_q1.j, tgt_q1.k)
+                    print >>f, "                     quaternion(r=%f,i=%f,j=%f,k=%f) ),"%(src_from_tgt_orient.r, src_from_tgt_orient.i, src_from_tgt_orient.j, src_from_tgt_orient.k)
+                    pass
+                print >>f, "                ),"
+                print >>f, "            },"
+                pass
+            print >>f, "        },"
+            print >>f, "    }"
+            pass
         pass
     #f show_mappings
     @staticmethod
@@ -445,11 +476,78 @@ class c_mappings(object):
             pass
         pass
     #f show_mapping
-    def show_mapping(self):
+    def show_mapping(self, skip_unmapped_tgt_qs=True):
+        model_src_from_tgt_q = gjslib_c.quaternion(r=0.997425,i=-0.007999,j=-0.070465,k=0.010689)
         vector_z = gjslib_c.vector(vector=(0,0,1))
         print "%s:%s:%d"%(str(self.src_q),
                           str(self.src_q.rotate_vector(vector_z)),
                           len(self.tgt_qs))
+        min_error = self.find_min_error(model_src_from_tgt_q, self.src_q)
+        if min_error is None: print "    No min error for ",model_src_from_tgt_q.to_rotation_str(1)
+        if min_error is not None:print "    min_e for %s:"%model_src_from_tgt_q.to_rotation_str(1),min_error[0],min_error[1]
+        for tgt_qx in self.tgt_qs:
+            if skip_unmapped_tgt_qs and (len(self.tgt_q_mappings[tgt_qx])==0): continue
+            print "    map v,l:%s:%s:%d"%(str(tgt_qx),
+                                          str(tgt_qx.rotate_vector(vector_z)),
+                                          len(self.tgt_q_mappings[tgt_qx]))
+            for (src_q1, tgt_q1, src_from_tgt_orient) in self.tgt_q_mappings[tgt_qx]:
+                print "        ", src_from_tgt_orient, src_from_tgt_orient.to_rotation_str(1), src_q1.rotate_vector(vector_z), tgt_q1.rotate_vector(vector_z)
+            if tgt_qx in self.selected_mappings:
+                print "        sm:",len(self.selected_mappings[tgt_qx])
+                for (src_from_tgt_qx, n, e) in self.selected_mappings[tgt_qx]:
+                    print "            sel,n,e:",src_from_tgt_qx.to_rotation_str(1),n,e
+                    pass
+                pass
+            if tgt_qx in self.too_far_from:
+                print "        tff:",len(self.too_far_from[tgt_qx])
+                for (src_from_tgt_qx, max_maa) in self.too_far_from[tgt_qx]:
+                    closeness_to_model = src_from_tgt_qx.axis_angle(model_src_from_tgt_q,vector_z).r
+                    if closeness_to_model>0.9999:
+                        print "            sft:",src_from_tgt_qx.to_rotation_str(1), max_maa, closeness_to_model
+                        pass
+                    pass
+                pass
+        pass
+    #f find_min_error
+    def find_min_error(self, src_from_tgt_q, src_qx):
+        model_src_from_tgt_q = gjslib_c.quaternion(r=0.997425,i=-0.007999,j=-0.070465,k=0.010689)
+        if src_from_tgt_q.axis_angle(model_src_from_tgt_q,vector_z).r>0.9999:
+            print src_from_tgt_q.to_rotation_str(1)
+        min_d = None
+        for tgt_qx in self.tgt_qs:
+            # Does it matter if the source point does not match up with any other target points?
+            if len(self.tgt_q_mappings[tgt_qx])==0: continue
+            # The more mappings that match the better - indeed, all of 'min_used' should map
+            if len(self.tgt_q_mappings[tgt_qx])<4: continue
+            # Does it matter if the source point has no approximately similar target mappings?
+            can_map = False
+            max_maa = 0
+            for m in self.tgt_q_mappings[tgt_qx]:
+                (src_q1, tgt_q1, src_from_tgt_orient) = m
+                maa = src_from_tgt_q.axis_angle(src_from_tgt_orient,vector_z)
+                max_maa = max(max_maa,maa.r)
+                pass
+            if max_maa>0.999: can_map = True
+            if not can_map:
+                self.too_far_from[tgt_qx].append((src_from_tgt_q, max_maa))
+                continue
+            # Use the cos(great circle rotation between tgt mapped back to src and src)
+            # Not good to use ~src_qx * src_from_tgt_q*tgt_qx directly
+            # Can use (~src_qx * src_from_tgt_q*tgt_qx) applied to vector_z and use 1-z
+            # Although that is basically identical (really really close)
+            rv0 = (~src_qx*src_from_tgt_q*tgt_qx).rotate_vector(vector_z)
+            d = 1-rv0.coords[2]*rv0.coords[2]
+            if False:
+                rq0 = src_qx.axis_angle(src_from_tgt_q*tgt_qx,vector_z)
+                d = (1-rq0.r) # Not much effect if we change this to rq0.r^2
+                pass
+            if (min_d is None) or (min_d[0]>d):
+                min_d = (d, tgt_qx)
+                pass
+            pass
+        return min_d
+    def select_for_mapping(self, src_from_tgt_q, tgt_qx, i, e):
+        self.selected_mappings[tgt_qx].append( (src_from_tgt_q, i, e) )
         pass
     #f __init__
     def __init__(self, src_xy, src_q):
@@ -458,6 +556,8 @@ class c_mappings(object):
         self.matches = {}
         self.tgt_qs = []
         self.tgt_q_mappings = {}
+        self.selected_mappings={}
+        self.too_far_from = {}
         pass
     #f add_match
     def add_match(self, tgt_xy, tgt_q, fft_rot, fft_power):
@@ -487,6 +587,8 @@ class c_mappings(object):
                 pass
             pass
         self.tgt_q_mappings[tgt_q].append( (src_q1, tgt_q1, qm.src_from_tgt_orient) )
+        self.selected_mappings[tgt_q] = []
+        self.too_far_from[tgt_q] = []
         pass
     pass
 
@@ -689,34 +791,31 @@ class c_image_pair_quaternion_match(object):
             pass
         pass
     #f find_min_error
-    def find_min_error(self, mappings_by_src_q, src_from_tgt_q, src_qx, min_power=0.1):
-        min_d = None
-        for tgt_qx in mappings_by_src_q[src_qx].tgt_qs:
-            rq0 = src_qx.axis_angle(src_from_tgt_q*tgt_qx,vector_z)
-            d = (1-rq0.r) # Not much effect if we change this to rq0.r^2
-            if (min_d is None) or (min_d[0]>d):
-                min_d = (d, tgt_qx)
-                pass
-            pass
-        return min_d
+    def find_min_error(self, mappings_by_src_q, src_from_tgt_q, src_qx):
+        return mappings_by_src_q[src_qx].find_min_error(src_from_tgt_q, src_qx)
     #f find_error_of_mapping
-    def find_error_of_mapping(self, mappings_by_src_q, src_from_tgt_q, min_used=10):
+    def find_error_of_mapping(self, mappings_by_src_q, src_from_tgt_q, min_used=10, early_termination=True):
         slack = len(mappings_by_src_q)-min_used
         errors = []
         for src_qx in mappings_by_src_q:
-            if slack<0: return None
+            if early_termination and slack<0: return None
             slack = slack-1
             error = self.find_min_error(mappings_by_src_q, src_from_tgt_q, src_qx)
             if error is None: continue
             slack += 1
             errors.append( (error[0],src_qx,error[1]) )
             pass
-        if len(errors)<min_used: return None
-        total_error = 0
         def cmp_error(x,y):
             if x[0]<y[0]:return -1
             return 1
         errors.sort(cmp=cmp_error)
+        for i in range(len(errors)):
+            e = errors[i]
+            (error, src_qx, tgt_qx) = e
+            mappings_by_src_q[src_qx].select_for_mapping(src_from_tgt_q, tgt_qx, i, error)
+            pass
+        if len(errors)<min_used: return None
+        total_error = 0
         for e in errors[:min_used]: total_error+=e[0]
         #rq = src_from_tgt_q
         #print total_error,"(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),[e[0] for e in errors[:min_used]]
@@ -789,6 +888,7 @@ class c_image_pair_quaternion_match(object):
     def find_best_target_matches(self, mappings_by_src_q, min_used_factor=0.5, given_src_from_tgt_q=None, min_cos_sep=0.999995):
         #min_used_factor = 0.7
         print "Building list of src_from_tgt_q"
+        if given_src_from_tgt_q: print "Using ",given_src_from_tgt_q.to_rotation_str(1)
         mappings_to_try = []
         if given_src_from_tgt_q:
             mappings_to_try.append(given_src_from_tgt_q*~given_src_from_tgt_q)
@@ -1411,6 +1511,7 @@ def test_diff_image_quaternion_3():
 
     given_src_from_tgt_q = None
     min_used_factor = 0.5 # Most points should have a good match, so asking for half is not bad
+    min_used_factor = 0.2 # Actually, if there is only half overlap, and the non-overlap section has highlights, it may be as few as 15%...
     if initial_dest_orientation.r<0.99999:
         given_src_from_tgt_q = initial_dest_orientation
         min_used_factor = 0.7
@@ -1432,17 +1533,18 @@ def test_diff_image_quaternion_3():
         mapping.src_from_tgt_q = mapping.src_from_tgt_q * initial_dest_orientation
         if mapping.max_distance > 1.1*global_min_d: continue
         rq = mapping.src_from_tgt_q
-        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings),rq.to_rotation_str(1)
         pass
 
-    c_mappings.show_mappings(mappings_by_src_q)
-    die
+    #c_mappings.show_mappings(mappings_by_src_q)
+    
+    c_mappings.save_mappings(mappings_by_src_q, open("image_mappings.py","w"))
 
     chosen_mapping = best_other_target_matches[0]
     #Fake out the best mapping to check it improves:chosen_mapping.src_from_tgt_q = gjslib_c.quaternion(r=0.995660,i=-0.000496,j=0.072651,k=-0.058163)
     ipqm.orient(images[1], chosen_mapping.src_from_tgt_q)
 
-    find(" overlap should be done in quaternsions and should find the to mappings")
+    #find(" overlap should be done in quaternsions and should find the to mappings")
     if False: # Build centers from 'hotspots'
         centers = []
         for src_q in chosen_mapping.mappings:
@@ -1495,7 +1597,7 @@ def test_diff_image_quaternion_3():
     best_other_target_matches.sort(cmp=cmp_matches)
     for mapping in best_other_target_matches:
         rq = mapping.src_from_tgt_q * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings)
+        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings),rq.to_rotation_str(1)
         pass
 
     num_used = len(best_other_target_matches[0].mappings)
@@ -1519,9 +1621,13 @@ def test_diff_image_quaternion_3():
     max_n = len(best_other_target_matches)
     if max_n>20:max_n=20
     for mapping in best_other_target_matches[:max_n]:
-        rq = mapping.src_from_tgt_q #* chosen_mapping.src_from_tgt_q
-        print mapping.total_score, mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings), mapping.scores
+        rq0 = mapping.src_from_tgt_q
+        rq1 = mapping.src_from_tgt_q * chosen_mapping.src_from_tgt_q
+        print mapping.total_score, mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k), "(r=%f,i=%f,j=%f,k=%f)"%(rq1.r,rq1.i,rq1.j,rq1.k),len(mapping.mappings), rq1.to_rotation_str(1)#, mapping.scores
         pass
+
+    #c_mappings.show_mappings(mappings_by_src_q)
+    c_mappings.save_mappings(mappings_by_src_q, open("image_mappings2.py","w"))
     pass
 
 #f test_diff_image

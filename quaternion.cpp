@@ -415,9 +415,15 @@ double c_quaternion::as_rotation(double axis[3]) const
     double angle = 2*acos(quat.r/m);
 
     double sm = m*sin(angle/2);
-    axis[0] = quat.i/sm;
-    axis[1] = quat.j/sm;
-    axis[2] = quat.k/sm;
+    if (fabs(sm)>EPSILON) {
+        axis[0] = quat.i/sm;
+        axis[1] = quat.j/sm;
+        axis[2] = quat.k/sm;
+    } else {
+        axis[0] = 0;
+        axis[1] = 0;
+        axis[2] = 0;
+    }
     return angle;
 }
 

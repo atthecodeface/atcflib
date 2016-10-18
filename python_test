@@ -1072,6 +1072,17 @@ class c_image_pair_quaternion_match(object):
                     #print "(%d,%d):%d"%(src_q.id, best_tgt[1].id, best_tgt[0])
                     pass
                 pass
+            self.best_qs = []
+            for src_tgts in self.qs:
+                (src_q0, tgt_q0, src_q1, tgt_q1) = src_tgts
+                (src_from_tgt_orient, d) = self.qs[src_tgts]
+                if ((src_q0==src_q and tgt_q0==tgt_q) or
+                    (src_q1==src_q and tgt_q1==tgt_q) ):
+                    self.best_qs.append(src_from_tgt_orient)
+                    pass
+                pass
+            if len(self.best_qs)==0: self.best_qs.append(gjslib_c.quaternion(1))
+            self.optimized_src_from_tgt_q = quaternion_average(self.best_qs)
             pass
         def add_map(self, src_q, tgt_q):
             if src_q not in self.src_tgts: self.src_tgts[src_q]={}
@@ -1824,8 +1835,24 @@ def test_diff_image_quaternion_3():
         images = ('images/IMG_2173.JPG', 'images/IMG_2174.JPG')
         focal_length = 20.5
         lens_type = "rectilinear"
-        #initial_dest_orientation = gjslib_c.quaternion(r=0.997871,i=0.002148,j=0.065027,k=-0.004444)
-        #initial_dest_orientation = gjslib_c.quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
+        initial_dest_orientation = gjslib_c.quaternion(r=1)
+        # After the initial run, picking up the best match's average from:
+        # 71 (r=0.997599,i=-0.005866,j=-0.068908,k=0.003766) 11   7.94:(-0.084691,-0.994923,0.054369)
+        #    (r=0.998109,i=-0.008229,j=-0.060531,k=-0.006890)   7.05:(-0.133863,-0.984642,-0.112075)
+        initial_dest_orientation = gjslib_c.quaternion(r=0.998109,i=-0.008229,j=-0.060531,k=-0.006890)
+        # which yields:
+        # 365 (r=0.997460,i=-0.006295,j=-0.068854,k=0.017134) 24   8.17:(-0.088372,-0.966609,0.240536)
+        #     (r=0.997090,i=-0.008727,j=-0.071728,k=0.024302)   8.74:(-0.114472,-0.940890,0.318783)
+        initial_dest_orientation = gjslib_c.quaternion(r=0.997090,i=-0.008727,j=-0.071728,k=0.024302)
+        # which then yield:
+        # 743 (r=0.997437,i=-0.009561,j=-0.070331,k=0.009050) 30   8.21:(-0.133625,-0.982928,0.126480)
+        #      (r=0.997784,i=-0.006043,j=-0.065743,k=0.008294)   7.63:(-0.090821,-0.988036,0.124643)
+        initial_dest_orientation = gjslib_c.quaternion(r=0.997784,i=-0.006043,j=-0.065743,k=0.008294)
+        # 611 (r=0.997239,i=-0.005558,j=-0.070579,k=0.022411) 28   8.52:(-0.074841,-0.950434,0.301786)
+        #     (r=0.997335,i=-0.006231,j=-0.070523,k=0.017625)   8.37:(-0.085409,-0.966617,0.241572)
+        initial_dest_orientation = gjslib_c.quaternion(r=0.997335,i=-0.006231,j=-0.070523,k=0.017625)
+        # 634 (r=0.997335,i=-0.006231,j=-0.070523,k=0.017625) 26   8.37:(-0.085405,-0.966616,0.241575)
+        #     (r=0.997314,i=-0.006328,j=-0.071135,k=0.016289)   8.40:(-0.086388,-0.971125,0.222380)
         pass
     ipqm = c_image_pair_quaternion_match()
     ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
@@ -1837,20 +1864,21 @@ def test_diff_image_quaternion_3():
     ci0 = ipqm.camera_images[images[0]]
     ci1 = ipqm.camera_images[images[1]]
 
-    initial_orientation = gjslib_c.quaternion().from_euler(yaw=-12.0,degrees=1)
-
-    src_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
-    dst_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
-    src_img_lp_to.orient(initial_orientation)
-    dst_img_lp_to.orient(initial_orientation)
-
-    projections = (src_img_lp_to, dst_img_lp_to)
-    if not ipqm.overlap_projections((images[0], images[1]), (src_img_lp_to, dst_img_lp_to)):
-        raise Exception, "Failed to find overlapping projection"
-    print "Using src projection focal length",src_img_lp_to.focal_length,"centered on",(src_img_lp_to.orientation).rotate_vector(vector_z)
-
     ipqm.mappings_by_src_q = None
-    ipqm.find_matches((images[0], images[1]), projections=projections)
+    for initial_orientation in [gjslib_c.quaternion().from_euler(yaw=-12.0,degrees=1),
+                                gjslib_c.quaternion().from_euler(yaw=+12.0,degrees=1),
+                                ]:
+        src_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
+        dst_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
+        src_img_lp_to.orient(initial_orientation)
+        dst_img_lp_to.orient(initial_orientation)
+        projections = (src_img_lp_to, dst_img_lp_to)
+        if not ipqm.overlap_projections((images[0], images[1]), (src_img_lp_to, dst_img_lp_to)):
+            raise Exception, "Failed to find overlapping projection"
+        print "Using src projection focal length",src_img_lp_to.focal_length,"centered on",(src_img_lp_to.orientation).rotate_vector(vector_z)
+        ipqm.find_matches((images[0], images[1]), projections=projections)
+        pass
+
     ipqm.create_mappings()
     best_other_target_matches = ipqm.find_best_target_matches(max_q_dist = 2, # All directions - actually should be FOV, so about 45 degrees
                                                               min_q_dist        = min_q_dists["80pix35"], # min separation between src_from_tgt_q's to try to score
@@ -1871,95 +1899,14 @@ def test_diff_image_quaternion_3():
     if max_n>20:max_n=20
     for mapping in best_other_target_matches[:max_n]:
         mapping.calculate(ipqm.mappings_by_src_q)
-        #mapping.src_from_tgt_q = mapping.src_from_tgt_q * initial_dest_orientation
-        rq = mapping.src_from_tgt_q
+        rq = mapping.src_from_tgt_q * initial_dest_orientation
         print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings),rq.to_rotation_str(1)
+        rq = mapping.optimized_src_from_tgt_q * initial_dest_orientation
+        print "     (r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),rq.to_rotation_str(1)
         pass
 
-    #c_mappings.show_mappings(mappings_by_src_q)
-    
-    c_mappings.save_mappings(ipqm.mappings_by_src_q, open("image_mappings.py","w"), None, best_other_target_matches)
+    c_mappings.save_mappings(ipqm.mappings_by_src_q, open("image_mappings.py","w"), initial_dest_orientation, best_other_target_matches)
 
-    chosen_mapping = best_other_target_matches[0]
-    #Fake out the best mapping to check it improves:chosen_mapping.src_from_tgt_q = gjslib_c.quaternion(r=0.995660,i=-0.000496,j=0.072651,k=-0.058163)
-    ipqm.orient(images[1], chosen_mapping.src_from_tgt_q)
-
-    die
-    ngrid = 3
-    centers = []
-    if False:
-        for x in range(ngrid):
-            for y in range(ngrid):
-                # ngrid=1 want 0
-                # ngrid=3 want -0.5, 0, 0.5
-                # i.e. -1 + 2(x+1)/(ngrid+1)
-                centers.append( ( (float(x+1)/(ngrid+1))*2-1.0,
-                                  (float(y+1)/(ngrid+1))*2-1.0) )
-                pass
-            pass
-        center_size=2.0/(ngrid+1) * (1/1.5*36.0/focal_length*0.5)
-        pass
-
-    ipqm.mappings_by_src_q = None
-    for cxy in centers[2:3]:
-        print "Trying",cxy
-        region = ipqm.find_overlap((images[0], images[1]), cxy, center_size)
-        print "Region",region
-        if region is None:
-            continue
-        (cxy, size) = region
-        ipqm.find_matches((images[0], images[1]), cxy, size )
-        pass
-    ipqm.create_mappings()
-
-    print "Finding best matches from",len(ipqm.mappings_by_src_q)
-    best_other_target_matches = ipqm.find_best_target_matches( min_q_dist = 0.000004, # 0.256 degrees?,
-                                                                max_q_dist = 0.002, # 5 degrees?,
-                                                                min_cos_sep = 0.99995,
-                                                                min_cos_sep_score = 0.99995, # to count as a good match, must be within 0.256 degrees
-                                                                )
-    if len(best_other_target_matches)==0:
-        print "No best matches"
-        pass
-
-    print "Best matches for subparts combined"
-    best_other_target_matches.sort(cmp=cmp_matches)
-    for mapping in best_other_target_matches:
-        rq = mapping.src_from_tgt_q * chosen_mapping.src_from_tgt_q
-        print mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq.r,rq.i,rq.j,rq.k),len(mapping.mappings),rq.to_rotation_str(1)
-        pass
-
-    if False:
-        num_used = len(best_other_target_matches[0].mappings)
-        for mapping in best_other_target_matches:
-            mapping.scores = []
-            pass
-        for i in range(num_used):
-            best_other_target_matches.sort(cmp=lambda x,y:cmp(x.mappings[i][0],y.mappings[i][0]))
-            for j in range(len(best_other_target_matches)):
-                best_other_target_matches[j].scores.append(j)
-                pass
-            pass
-        for mapping in best_other_target_matches:
-            total_score = 0
-            for s in mapping.scores: total_score+=s
-            mapping.total_score = total_score
-            pass
-        best_other_target_matches.sort(cmp=lambda x,y:cmp(x.total_score,y.total_score))
-        pass
-    
-        print "Best matches for subparts combined"
-        max_n = len(best_other_target_matches)
-        if max_n>20:max_n=20
-        for mapping in best_other_target_matches[:max_n]:
-            rq0 = mapping.src_from_tgt_q
-            rq1 = mapping.src_from_tgt_q * chosen_mapping.src_from_tgt_q
-            print mapping.total_score, mapping.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k), "(r=%f,i=%f,j=%f,k=%f)"%(rq1.r,rq1.i,rq1.j,rq1.k),len(mapping.mappings), rq1.to_rotation_str(1)#, mapping.scores
-            pass
-        pass
-
-    #c_mappings.show_mappings(mappings_by_src_q)
-    c_mappings.save_mappings(ipqm.mappings_by_src_q, open("image_mappings2.py","w"), chosen_mapping.src_from_tgt_q, best_other_target_matches)
     pass
 
 #f test_diff_image

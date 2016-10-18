@@ -116,6 +116,15 @@ tgt_axis = vector((1.0000000000,0,0))
 
 print src_axis.angle_axis_to_v(tgt_axis)
 
+print quaternion(1).distance_to(quaternion(1))
+print quaternion(1).distance_to(quaternion(0.99999,0,0,0.00001).normalize())
+print quaternion(1).distance_to(quaternion(0.99999,0,0,0.0001).normalize())
+print quaternion(1).distance_to(quaternion(0.99999,0,0,0.001).normalize())
+print quaternion(1).distance_to(quaternion(0.99999,0,0,0.01).normalize())
+print quaternion(1).distance_to(quaternion(0.99999,0,0,0.014).normalize())
+print quaternion(0.999999,0,0,0.14).normalize()
+print quaternion(0.992888, -0.023600, -0.020715, -0.114839).distance_to(quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499))
+
 die
 for angle in [20.0*(i-10) for i in range(21)]:
     sin_angle = math.sin(angle/180.0*math.pi)

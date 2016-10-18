@@ -27,6 +27,7 @@
 typedef struct t_PyObject_quaternion *t_PyObject_quaternion_ptr;
 typedef struct t_PyObject_quaternion {
     PyObject_HEAD
+    int unique_id;
     c_quaternion *quaternion;
 } t_PyObject_quaternion;
 
@@ -78,6 +79,9 @@ static void      python_quaternion_dealloc(PyObject *self);
 
 /*a Static variables
  */
+/*v Unique id
+ */
+static int unique_object_id=0;
 
 /*v python_quaternion_methods
  */
@@ -125,6 +129,7 @@ python_quaternion_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     t_PyObject_quaternion *py_obj;
     py_obj = (t_PyObject_quaternion *)type->tp_alloc(type, 0);
     if (py_obj) {
+        py_obj->unique_id = unique_object_id++;
         py_obj->quaternion = NULL;
     }
     return (PyObject *)py_obj;
@@ -137,13 +142,13 @@ python_quaternion_init(PyObject *self, PyObject *args, PyObject *kwds)
 {
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
 
-    static const char *kwlist[] = {"quat", "euler", "degrees", "r", "i", "j", "k", NULL};
+    static const char *kwlist[] = {"r", "i", "j", "k", "quat", "euler", "degrees", NULL};
     PyObject *quat=NULL, *euler=NULL;
     int degrees;
     double r=0.0, i=0.0, j=0.0, k=0.0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O!Oidddd", (char **)kwlist, 
-                                     &PyDict_Type, &quat, &euler, &degrees,
-                                     &r, &i, &j, &k))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ddddO!Oi", (char **)kwlist, 
+                                     &r, &i, &j, &k,
+                                     &PyDict_Type, &quat, &euler, &degrees))
         return -1;
     if (quat) {
         PyObject *obj;
@@ -716,22 +721,23 @@ python_quaternion_method_lookat(PyObject* self, PyObject* args, PyObject *kwds)
 {
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
 
-    PyObject *xyz, *up;
-    double xyz_d[3], up_d[3];
+    PyObject *xyz_obj, *up_obj;
 
     static const char *kwlist[] = {"xyz", "up", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", (char **)kwlist, 
-                                     &xyz, &up))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!O!", (char **)kwlist, 
+                                     &PyTypeObject_vector_frame, &xyz_obj, 
+                                     &PyTypeObject_vector_frame, &up_obj ))
         return NULL;
 
-    if (!PyArg_ParseTuple(xyz, "ddd", &xyz_d[0], &xyz_d[1], &xyz_d[2])) return NULL;
-    if (!PyArg_ParseTuple(up,  "ddd", &up_d[0],  &up_d[1],  &up_d[2] )) return NULL;
-
     if (py_obj->quaternion) {
-        py_obj->quaternion->lookat(xyz_d, up_d);
-        Py_INCREF(py_obj);
-        return self;
+        c_vector *xyz, *up;
+        if ( python_vector_data(xyz_obj, 0, &xyz) &&
+             python_vector_data(up_obj, 0, &up)) {
+            py_obj->quaternion->lookat(xyz->coords(), up->coords());
+            Py_INCREF(py_obj);
+            return self;
+        }
     }
     Py_RETURN_NONE;
 }
@@ -922,6 +928,9 @@ python_quaternion_getattr(PyObject *self, char *attr)
     t_PyObject_quaternion *py_obj = (t_PyObject_quaternion *)self;
     
     if (py_obj->quaternion) {
+        if (!strcmp(attr, "id")) {
+            return PyInt_FromLong(py_obj->unique_id);
+        }
         if (!strcmp(attr, "r")) {
             return PyFloat_FromDouble(py_obj->quaternion->r());
         }

@@ -236,7 +236,7 @@ c_quaternion *c_quaternion::from_euler(double roll, double pitch, double yaw, in
 
 /*f c_quaternion::lookat
  */
-c_quaternion *c_quaternion::lookat(double xyz[3], double up[3])
+c_quaternion *c_quaternion::lookat(const double xyz[3], const double up[3])
 {
     double len_xyz = sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
     double pitch =  asin(xyz[0] / len_xyz);
@@ -395,7 +395,21 @@ c_quaternion *c_quaternion::from_rotation(double cos_angle, double sin_angle, co
     // cos(x) = +-sqrt(1+cos(2x))/sqrt(2)
     // sin(x) = +-sin(2x)/sqrt(1+cos(2x))/sqrt(2)
     // chose +ve for cos(x) (-90<x<90), and sin(x) same segment as sin(2x)
-    c = sqrt(1+cos_angle)/sqrt(2);
+    if (cos_angle>=1){
+        quat.r = 1;
+        quat.i = 0;
+        quat.j = 0;
+        quat.k = 0;
+        return this;
+    }
+    if (cos_angle<=-1){
+        quat.r = 0; // rotate by 180 degrees around _any_ axis
+        quat.i = 1;
+        quat.j = 0;
+        quat.k = 0;
+        return this;
+    }
+    c = sqrt((1+cos_angle)/2);
     s = sqrt(1-c*c);
     if (sin_angle<0) {
         s = -s;
@@ -551,7 +565,7 @@ c_quaternion &c_quaternion::angle_axis(const c_quaternion &other, c_vector &vect
     b = other.rotate_vector(vector);
     //fprintf(stderr,"b:%lf,%lf,%lf,%lf\n",b.r(),b.i(),b.j(),b.k());
     c_vector axis = c_vector(&a).angle_axis_to_v(c_vector(&b), &cos_angle, &sin_angle);
-    //fprintf(stderr,"axis:%lf,%lf,%lf\n",axis.coords()[0],axis.coords()[1],axis.coords()[2]);
+    //fprintf(stderr,"axis:%lf,%lf,%lf - %lf,%lf\n",axis.coords()[0],axis.coords()[1],axis.coords()[2],cos_angle,sin_angle);
     *r = c_quaternion::of_rotation(cos_angle, sin_angle, axis.coords());
     return *r;
 }

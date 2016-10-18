@@ -212,6 +212,7 @@ c_vector &c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, do
     *sin_angle = axis->modulus();
     //fprintf(stderr,"angles:%lf,%lf\n",*cos_angle,*sin_angle);
     axis->normalize();
+    //fprintf(stderr,"axis:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
     return *axis;
 }
 

@@ -157,6 +157,7 @@ class c_view_obj(opengl_app.c_opengl_camera_app):
             else:
                 self.selection = self.selection+1
                 pass
+            print "Selected",self.selection
             return True
         if key=='2':
             if self.selection is None:
@@ -165,6 +166,7 @@ class c_view_obj(opengl_app.c_opengl_camera_app):
             else:
                 self.selection = self.selection-1
                 pass
+            print "Selected",self.selection
             return True
         return opengl_app.c_opengl_camera_app.keypress(self, key, m, x, y)
     #f All done
@@ -184,7 +186,8 @@ def conjugation(q,p):
 class c_view_camera_obj(opengl_obj.c_opengl_obj):
     color = None
     selectable_id = -1
-    def __init__(self, has_surface=False, texture_filename=None, color=None, selectable=None):
+    last_note_shown = None
+    def __init__(self, has_surface=False, texture_filename=None, color=None, selectable=None, note=None):
         opengl_obj.c_opengl_obj.__init__(self)
         self.color = color
         self.has_surface = has_surface
@@ -194,12 +197,17 @@ class c_view_camera_obj(opengl_obj.c_opengl_obj):
             self.is_textured = True
             pass
         self.selectable = False
+        self.selectable_id = None
         if selectable is not None:
             self.selectable = True
             if selectable:
                 c_view_camera_obj.selectable_id += 1
                 pass
             self.selectable_id = c_view_camera_obj.selectable_id
+            pass
+        self.note = note
+        if note is not None:
+            print self.selectable_id,note
         pass
     pass
     def should_display(self, selection, n, tick):
@@ -209,7 +217,13 @@ class c_view_camera_obj(opengl_obj.c_opengl_obj):
             return True
         if selection is None:
             return True
+        if c_view_camera_obj.selectable_id==0: return True
         if (selection%c_view_camera_obj.selectable_id)==self.selectable_id:
+            if ((c_view_camera_obj.last_note_shown!=self.selectable_id) and
+                self.note is not None):
+                print self.selectable_id,self.note
+                c_view_camera_obj.last_note_shown = self.selectable_id
+                pass
             return True
         return False
 
@@ -256,13 +270,40 @@ def line_between_qs(src_q, tgt_q, angle_steps = 20):
         pass
     return points
 
+#f add_blob
+def add_blob(obj, src_q, scale=0.001, style="star"):
+    angle_rs = {"diamond":      [(i,1) for i in range(0,450,90)],
+                "star":         [(i,[1,0.5][((i/36)&1)]) for i in range(0,396,36)],
+                "triangle":     [(i,1) for i in range(0,450,120)],
+                "inv_triangle": [(i,1) for i in range(60,450,120)],
+                }
+    cxyz= src_q.rotate_vector(gjslib_c.vector((0,0,0.8))).coords
+    lxyz = None
+    for (angle,r) in angle_rs[style]:
+        vector_z_sc = gjslib_c.vector((0,scale*r,0.8))
+        xyz = (src_q*gjslib_c.quaternion().from_euler(roll=angle,degrees=1)).rotate_vector(vector_z_sc).coords
+        if lxyz is not None:
+            obj.add_triangle([cxyz,lxyz,xyz],[(0,0)]*3)
+            pass
+        lxyz = xyz
+        pass
+    pass
+
 #f rgb_of_hue
 def rgb_of_hue(hue):
+    """
+    0   -> red
+    60  -> yellow
+    120 -> green
+    180 -> cyan
+    240 -> blue
+    300 -> magenta
+    """
     i = int(hue/60.0) % 6
     o = (hue-i*60.0)/60.0
-    rgb = ( (o, 1, 1, 1-o, 0, 0, o, 1, 1, 1-0)[i],
-            (o, 1, 1, 1-o, 0, 0, o, 1, 1, 1-0)[i+2],
-            (o, 1, 1, 1-o, 0, 0, o, 1, 1, 1-0)[i+4])
+    rgb = ( (1, 1-o, 0, 0,   o, 1  )[i],
+            (o, 1,   1, 1-o, 0, 0  )[i],
+            (0, 0,   o, 1,   1, 1-o)[i])
     return rgb
 
 #f test_object
@@ -277,13 +318,17 @@ def test_object():
     src_ar = 3456/5148.0
 
     separate = False
+    #separate = True
 
     #for rect
     src_ar = 1
     src_h = 3456/5148.0
 
-    image_orientations = [ ("../images/IMG_1900.JPG", None, ~quaternion(r=0.360925,i=0.049321,j=0.126091,k=0.922714)), # focus on muzzy...
-                           ("../images/IMG_1901.JPG", 0, quaternion(r=0.994394,i=-0.008970,j=-0.008219,k=-0.105034)
+    image_orientations = [ ("../images/IMG_1900.JPG", None, quaternion(1)),
+#~quaternion(r=0.360925,i=0.049321,j=0.126091,k=0.922714)), # focus on muzzy...
+                           ("../images/IMG_1901.JPG", 0,
+#quaternion(r=0.993562,i=-0.023601,j=-0.021194,k=-0.108759)
+quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
                             ),
                            #(r=0.993401,i=-0.006273,j=-0.007141,k=-0.114297)),
                            # Perfect: (r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
@@ -345,35 +390,81 @@ def test_object():
         image_objects.append(obj)
         pass
     mappings = None
+    from image_mappings import mappings, best_matches, src_quaternions, tgt_quaternions, base_mapping
     try:
-        from image_mappings import mappings
+        #from image_mappings2 import mappings
         pass
     except:
         pass
     if mappings is not None:
         src_q = orientations[0]
+        # Use tgt_q = orientations[1]
+        # if using mappings; because orientations[1] is 'null' to 'where we want to put tgt'
+        # and image_mappings, for example, has src and target with the same 'null' mapping
         tgt_q = orientations[1]
+        # Use tgt_q = orientations[0]
+        # if using mappings2; because orientations[0] is 'null' to 'where we want to put src'
+        # and the points are supposed to be where we want them
+        # This is absolutely true if orientations[1]=orientations[0]*mapping used to generate mappings2
+        # If the latter is not the case, then we should use
+        # tgt_q = orientations[1]*~mapping_used_to_generate_mappins2
+        # and image_mappings, for example, has src and target with the same 'null' mapping
+        if base_mapping is not None:
+            tgt_q = orientations[1] * ~base_mapping
+            pass
 
-        for src_q0 in mappings:
+        hue = 0
+        for src_q_id in src_quaternions:
+            obj = c_view_camera_obj(has_surface=True, color=rgb_of_hue(hue), selectable=(hue==0))
+            hue = (hue+15)%360
+            image_objects.append(obj)
+            add_blob(obj, src_q * src_quaternions[src_q_id] )
+            pass
+        hue = 0
+        for bm in best_matches:
+            (score, min_cos_sep_score, score_q, src_tgt_maps, src_tgts, average_q) = bm
+            obj = c_view_camera_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
+                                    note="score %f, src_tgts %s"%(score,src_tgts),
+                                    )
+            image_objects.append(obj)
+            hue = (hue+44)%360
+            obj.add_line(line_between_qs(src_q,tgt_q*~score_q))
+            for src_qx in src_tgts:
+                for tgt_qx in src_tgts[src_qx]:
+                    src_q0 = src_q * src_quaternions[src_qx]
+                    tgt_q0 = tgt_q * tgt_quaternions[tgt_qx]
+                    obj.add_line(line_between_qs(src_q0,tgt_q0))
+                    add_blob(obj, src_q0, style="triangle" )
+                    add_blob(obj, tgt_q0, style="inv_triangle" )
+                    pass
+                pass
+            pass
+        if False: #for src_q0 in mappings: # 
+            src_q0_id = src_q0
             m = mappings[src_q0]
-            src_q0 = src_q * src_q0
+            src_q0 = src_q * src_quaternions[src_q0]
             hue = 0
             first_of_mapping = True
             for tgt_q0 in m['tgts']:
+                tgt_q0_id = tgt_q0
                 src_tgt_mapping = m['tgts'][tgt_q0]
-                tgt_q0 = tgt_q * tgt_q0
+                tgt_q0 = tgt_q * tgt_quaternions[tgt_q0]
                 obj = None
                 if len(src_tgt_mapping['mappings'])<4: continue
                 for (src_q1, tgt_q1, src_from_tgt_orient) in src_tgt_mapping['mappings']:
                     if obj is None:
-                        obj = c_view_camera_obj(has_surface=True, color=rgb_of_hue(hue), selectable=first_of_mapping)
+                        tgt_xy,fft_rot,fft_power = src_tgt_mapping['data']
+                        hue = fft_power*100
+                        obj = c_view_camera_obj(has_surface=True, color=rgb_of_hue(hue), selectable=first_of_mapping,
+                                                note="%d,%d,%s"%(src_q0_id,tgt_q0_id,str(src_tgt_mapping['data'])),
+                                                )
                         image_objects.append(obj)
                         hue = (hue+44)%360
                         #first_of_mapping = False
                         pass
 
-                    src_q1 = src_q * src_q1
-                    tgt_q1 = tgt_q * tgt_q1
+                    src_q1 = src_q * src_quaternions[src_q1]
+                    tgt_q1 = tgt_q * tgt_quaternions[tgt_q1]
                     obj.add_line(line_between_qs(src_q0, src_q1))
                     obj.add_line(line_between_qs(src_q1, tgt_q1))
                     obj.add_line(line_between_qs(tgt_q0, tgt_q1))
@@ -385,7 +476,7 @@ def test_object():
     og = c_view_obj(obj=image_objects,
                     window_size=(1000,1000))
     og.init_opengl()
-    og.seal_hack = True
+    #og.seal_hack = True
     og.camera["fov"] = 90
 
     og.zFar = 100.0

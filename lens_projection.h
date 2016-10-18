@@ -55,6 +55,7 @@ private:
     double width, height; // in 'sensor' or 'image' units (e.g. pixels)
     double frame_width;   // in lens units, same as focal length
     double focal_length;  // in lens units, same as frame_width
+    t_lens_projection_type lens_type;
     c_quaternion orientation;
     f_offset_to_angle offset_to_angle;
     f_angle_to_offset angle_to_offset;
@@ -68,6 +69,7 @@ public:
 
     inline double get_frame_width(void) { return frame_width; }
     inline double get_focal_length(void) { return focal_length; }
+    inline t_lens_projection_type get_lens_type(void) { return lens_type; }
     inline void   get_sensor(double wh[2]) { wh[0]=width; wh[1]=height; }
     inline double get_sensor_width(void)  { return width; }
     inline double get_sensor_height(void) { return height; }

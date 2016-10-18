@@ -36,6 +36,7 @@ static int       python_lens_projection_init(PyObject *self, PyObject *args, PyO
 static PyObject *python_lens_projection_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 static void      python_lens_projection_dealloc(PyObject *self);
 static PyObject *python_lens_projection_getattr(PyObject *self, char *attr);
+static int       python_lens_projection_setattr(PyObject *o, char *attr_name, PyObject *v);
 static PyObject *python_lens_projection_str(PyObject *self);
 
 static PyObject *python_lens_projection_method_set_lens(PyObject* self, PyObject* args, PyObject *kwds);
@@ -68,7 +69,7 @@ static PyTypeObject PyTypeObject_lens_projection = {
     python_lens_projection_dealloc, //py_engine_dealloc, /*tp_dealloc*/
     0, /*tp_print - basically deprecated */
     python_lens_projection_getattr, /*tp_getattr*/
-    0, /*tp_setattr*/
+    python_lens_projection_setattr, /*tp_setattr*/
     0, /*tp_compare*/
     0, /*tp_repr - ideally a represenation that is python that recreates this object */
     0, /*tp_as_number*/
@@ -279,6 +280,55 @@ python_lens_projection_getattr(PyObject *self, char *attr)
         }
     }
     return Py_FindMethod(python_lens_projection_methods, self, attr);
+}
+
+/*f python_lens_projection_getattr
+ */
+static int       
+python_lens_projection_setattr(PyObject *self, char *attr, PyObject *v)
+{
+    t_PyObject_lens_projection *py_obj = (t_PyObject_lens_projection *)self;
+    
+    if (py_obj->lens_projection) {
+        c_lens_projection *lp = py_obj->lens_projection;
+        if (!strcmp(attr, "frame_width")) {
+            double v_d = PyFloat_AsDouble(v);
+            if (!PyErr_Occurred()) {
+                lp->set_lens(v_d, lp->get_focal_length(), lp->get_lens_type());
+                return 0;
+            }
+        }
+        if (!strcmp(attr, "focal_length")) {
+            double v_d = PyFloat_AsDouble(v);
+            if (!PyErr_Occurred()) {
+                lp->set_lens(lp->get_frame_width(), v_d, lp->get_lens_type());
+                return 0;
+            }
+        }
+        if (!strcmp(attr, "lens_type")) {
+            char *lens_type = PyString_AsString(v);
+            if (!lens_type) return -1;
+            t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
+            lp->set_lens(lp->get_frame_width(), lp->get_focal_length(), lp_type);
+            return 0;
+        }
+
+        if (!strcmp(attr, "width")) {
+            double v_d = PyFloat_AsDouble(v);
+            if (!PyErr_Occurred()) {
+                lp->set_sensor(v_d, lp->get_sensor_height());
+                return 0;
+            }
+        }
+        if (!strcmp(attr, "height")) {
+            double v_d = PyFloat_AsDouble(v);
+            if (!PyErr_Occurred()) {
+                lp->set_sensor(lp->get_sensor_width(), v_d);
+                return 0;
+            }
+        }
+    }
+    return -1;
 }
 
 /*a Python object

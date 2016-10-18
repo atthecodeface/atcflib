@@ -76,6 +76,7 @@ void c_lens_projection::set_lens(double frame_width, double focal_length, t_lens
 {
     this->frame_width = frame_width;
     this->focal_length = focal_length;
+    this->lens_type = lens_type;
     switch (lens_type) {
     case lens_projection_type_rectilinear: {
         offset_to_angle = &c_lens_projection::offset_to_angle_rectilinear;

@@ -327,8 +327,9 @@ def test_object():
     image_orientations = [ ("../images/IMG_1900.JPG", None, quaternion(1)),
 #~quaternion(r=0.360925,i=0.049321,j=0.126091,k=0.922714)), # focus on muzzy...
                            ("../images/IMG_1901.JPG", 0,
-#quaternion(r=0.993562,i=-0.023601,j=-0.021194,k=-0.108759)
-quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
+quaternion(r=0.993473,i=-0.006114,j=-0.007049,k=-0.113690)
+#quaternion(r=0.993913,i=-0.006268,j=-0.006571,k=-0.109790)
+#quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
                             ),
                            #(r=0.993401,i=-0.006273,j=-0.007141,k=-0.114297)),
                            # Perfect: (r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
@@ -339,15 +340,11 @@ quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
     focal_length = 35.0
     lens_type = "rectilinear"
 
-    if False:
-
+    if True:
         image_orientations = [ ("../images/IMG_2173.JPG", None, quaternion(r=1)),
-                               ("../images/IMG_2174.JPG", 0, quaternion(r=0.997352,i=-0.005048,j=-0.070954,k=0.015113)
-#(r=0.996421,i=0.033653,j=-0.074828,k=0.020332)
-                                ),
-#(r=0.993533,i=-0.080915,j=0.073880,k=-0.029767))
-#(r=0.998303,i=-0.017093,j=-0.055670,k=0.000131)),
-                               ]
+                               ("../images/IMG_2174.JPG", 0, 
+quaternion(r=0.997397,i=-0.007835,j=-0.071092,k=0.009107),
+                               )]
 # Good at 20.7: quaternion(r=0.997465,i=-0.007825,j=-0.069781,k=0.011491)
 # Better at 20.6: quaternion(r=0.997539,i=-0.007213,j=-0.067968,k=0.015646)
 # Approximately: (r=0.997425,i=-0.007999,j=-0.070465,k=0.010689)
@@ -424,7 +421,7 @@ quaternion(r=0.993378,i=-0.006266,j=-0.007135,k=-0.114499)
         for bm in best_matches:
             (score, min_cos_sep_score, score_q, src_tgt_maps, src_tgts, average_q) = bm
             obj = c_view_camera_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
-                                    note="score %f, src_tgts %s"%(score,src_tgts),
+                                    note="score %f, src_tgts %s, avg %s"%(score,src_tgts,average_q.to_rotation_str(1)),
                                     )
             image_objects.append(obj)
             hue = (hue+44)%360

@@ -17,6 +17,7 @@
 #include "python_filter.h"
 #include "python_texture.h"
 #include "python_image_correlator.h"
+#include "python_quaternion_image_correlator.h"
 #include "python_lens_projection.h"
 #include "python_quaternion.h"
 #include "python_vector.h"
@@ -58,6 +59,7 @@ extern "C" void initgjslib_c( void )
     if ( python_quaternion_init_premodule() ||
          python_vector_init_premodule() ||
          python_image_correlator_init_premodule() ||
+         python_quaternion_image_correlator_init_premodule() ||
          python_texture_init_premodule() ||
          python_lens_projection_init_premodule() ||
          python_filter_init_premodule() ) {
@@ -72,6 +74,7 @@ extern "C" void initgjslib_c( void )
     python_lens_projection_init_postmodule(module);
     python_texture_init_postmodule(module);
     python_image_correlator_init_postmodule(module);
+    python_quaternion_image_correlator_init_postmodule(module);
     python_filter_init_postmodule(module);
     python_quaternion_init_postmodule(module);
     python_vector_init_postmodule(module);

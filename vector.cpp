@@ -81,9 +81,9 @@ c_vector::c_vector(const c_vector &other)
     }
 }
 
-/*f c_vector::c_vector (length, double *coords)
+/*f c_vector::c_vector (length, const double *coords)
  */
-c_vector::c_vector(int length, double *coords)
+c_vector::c_vector(int length, const double *coords)
 {
     _length = length;
     for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
@@ -177,7 +177,7 @@ c_vector *c_vector::normalize(void)
 
 /*f c_vector::dot_product
  */
-double c_vector::dot_product(const c_vector &other)
+double c_vector::dot_product(const c_vector &other) const
 {
     double l=0;
     for (int i=0; i<_length; i++) {
@@ -199,7 +199,7 @@ c_vector &c_vector::cross_product(const c_vector &other) const
 
 /*f c_vector::angle_axis_to_v
  */
-c_vector &c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle)
+c_vector &c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle) const
 {
     double tl, ol;
     tl = this->modulus();
@@ -216,3 +216,13 @@ c_vector &c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, do
     return *axis;
 }
 
+/*f c_vector::angle_axis_to_v (to quaternion)
+ */
+c_quaternion &c_vector::angle_axis_to_v(const c_vector &other) const
+{
+    c_quaternion *r;
+    double cos_angle, sin_angle;
+    c_vector axis = this->angle_axis_to_v(other, &cos_angle, &sin_angle);
+    r = (new c_quaternion())->from_rotation(cos_angle, sin_angle, axis.coords());
+    return *r;
+}

@@ -48,6 +48,7 @@ public:
 
     c_vector(const c_vector &vector);
     c_vector(int length);
+    c_vector(void);
     c_vector(const class c_quaternion &quat);
     c_vector(int length, const double *coords);
     c_vector *copy(void) const;

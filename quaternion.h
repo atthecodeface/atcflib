@@ -65,6 +65,7 @@ public:
     inline c_quaternion operator+(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs += rhs; return lhs; }
     inline c_quaternion operator-(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs -= rhs; return lhs; }
     inline c_quaternion operator-(void) const { c_quaternion lhs=*this; lhs.quat.r=-lhs.quat.r;lhs.quat.i=-lhs.quat.i;lhs.quat.j=-lhs.quat.j;lhs.quat.k=-lhs.quat.k; return lhs; }
+    inline c_quaternion operator~(void) const { c_quaternion lhs=*this; lhs.quat.i=-lhs.quat.i;lhs.quat.j=-lhs.quat.j;lhs.quat.k=-lhs.quat.k; return lhs; }
     inline c_quaternion operator*(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs *= rhs; return lhs; }
     inline c_quaternion operator/(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs /= rhs; return lhs; }
 
@@ -92,6 +93,7 @@ public:
     c_quaternion *from_rotation(double angle, const double axis[3], int degrees=0);
     c_quaternion *from_rotation(double cos_angle, double sin_angle, const double *axis);
     double as_rotation(double axis[3]) const;
+    double as_rotation(class c_vector &vector) const;
     void as_euler(double rpy[3]) const;
     void get_rijk(double rijk[4]) const;
     // axis_angle gives the quaternion for a great-circle (minimum rotation angle)
@@ -102,7 +104,7 @@ public:
     c_quaternion &rotate_vector(const class c_vector &vector) const;
     c_quaternion &angle_axis(const c_quaternion &other, class c_vector &vector) const;
     double distance_to(const c_quaternion &other) const;
-    void __str__(char *buffer, int buf_size) const;
+    char *__str__(char *buffer, int buf_size) const;
     
 };
 

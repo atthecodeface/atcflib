@@ -61,6 +61,16 @@ c_vector &c_vector::operator-=(const c_vector &other)
 
 /*a Constructors
  */
+/*f c_vector::c_vector (void) - null
+ */
+c_vector::c_vector(void)
+{
+    _length = 0;
+    for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
+        _coords[i] = 0;
+    }
+}
+
 /*f c_vector::c_vector (length) - null
  */
 c_vector::c_vector(int length)

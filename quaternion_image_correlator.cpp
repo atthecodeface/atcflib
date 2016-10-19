@@ -24,7 +24,7 @@
 typedef struct
 {
     double angle;
-    double axis[3];
+    c_vector axis;
 } t_angle_axis;
 
 /*t t_qi_src_tgt_pv
@@ -204,14 +204,19 @@ c_qi_src_tgt_pair_mapping::c_qi_src_tgt_pair_mapping(const c_quaternion *src_q0,
                                                      const t_angle_axis *src_angle_axis,
                                                      const t_angle_axis *tgt_angle_axis)
 {
-    this->src_qs[0] = src_qs[0];
-    this->src_qs[1] = src_qs[1];
-    this->tgt_qs[0] = tgt_qs[0];
-    this->tgt_qs[1] = tgt_qs[1];
+    this->src_qs[0] = src_q0;
+    this->src_qs[1] = src_q1;
+    this->tgt_qs[0] = tgt_q0;
+    this->tgt_qs[1] = tgt_q1;
     calculate(src_from_tgt_orient, src_angle_axis, tgt_angle_axis);
-    // "These two should be equal..."
-    // (src_from_tgt_orient * (*tgt_qs[0])).angle_axis((*src_qs[0]) , vector_z)
-    // (src_from_tgt_orient * (*tgt_qs[1])).angle_axis((*src_qs[1]) , vector_z)
+    // "These two should be equal... or near as... 1,0,0,0"
+    if (0) {
+        for (int i=1; i>=0; i--) {
+            c_quaternion q=(src_from_tgt_orient * (*tgt_qs[i])).angle_axis((*src_qs[i]), vector_z);
+            char buffer[1024];
+            fprintf(stderr, "%d:%s\n",i,q.__str__(buffer,sizeof(buffer)));
+        }
+    }
 }
 
 /*f c_qi_src_tgt_pair_mapping::test_add
@@ -242,24 +247,36 @@ c_qi_src_tgt_pair_mapping::test_add(const c_quaternion *src_q0,
 void
 c_qi_src_tgt_pair_mapping::calculate(c_quaternion &src_from_tgt_orient, const t_angle_axis *src_angle_axis, const t_angle_axis *tgt_angle_axis)
 {
-    double diff_cos_angle, diff_sin_angle;
     c_vector sp0 = c_vector(src_qs[0]->rotate_vector(vector_z));
     c_vector tp0 = c_vector(tgt_qs[0]->rotate_vector(vector_z));
-    c_vector diff_axis = c_vector(3,src_angle_axis->axis);
-    diff_axis = diff_axis.angle_axis_to_v(c_vector(3,tgt_angle_axis->axis),
-                                          &diff_cos_angle,
-                                          &diff_sin_angle);
-    if (diff_cos_angle>0.99999999) {
-        double cos_angle, sin_angle;
-        c_vector tp0_to_sp0 = tp0.angle_axis_to_v(sp0, &cos_angle, &sin_angle);
-        src_from_tgt_orient = c_quaternion::of_rotation(cos_angle, sin_angle, tp0_to_sp0.coords());
+    c_vector diff_axis;
+
+    c_quaternion diff_q = src_angle_axis->axis.angle_axis_to_v(tgt_angle_axis->axis);
+    double diff_angle   = diff_q.as_rotation(diff_axis);
+    if (0) {
+        char buffer[1024];
+        fprintf(stderr, "diff_q %s\n",                        diff_q.__str__(buffer,sizeof(buffer)));
+        fprintf(stderr, "sp0 %lf, %lf, %lf\n",sp0.coords()[0],sp0.coords()[1],sp0.coords()[2]);
+        fprintf(stderr, "tp0 %lf, %lf, %lf\n",tp0.coords()[0],tp0.coords()[1],tp0.coords()[2]);
+        fprintf(stderr, "diff %lf: %lf, %lf, %lf\n",diff_angle, diff_axis.coords()[0],diff_axis.coords()[1],diff_axis.coords()[2]);
+    }
+
+    if (diff_q.r()>0.99999999) {
+        src_from_tgt_orient = tp0.angle_axis_to_v(sp0);
+        return;
     }
 
     c_quaternion src_sp0_orient_to_diff_axis = diff_axis.angle_axis_to_v(sp0);
     c_quaternion dst_tp0_orient_to_diff_axis = tp0.angle_axis_to_v(diff_axis);
-    c_quaternion diff_q = c_quaternion::of_rotation(diff_cos_angle, diff_sin_angle, diff_axis.coords());
 
-    src_sp0_orient_to_diff_axis = (src_sp0_orient_to_diff_axis / diff_q) * dst_tp0_orient_to_diff_axis;
+    src_from_tgt_orient = src_sp0_orient_to_diff_axis * ~diff_q * dst_tp0_orient_to_diff_axis;
+    if (0) {
+        char buffer[1024];
+        fprintf(stderr, "diff_q %s\n",                        diff_q.__str__(buffer,sizeof(buffer)));
+        fprintf(stderr, "src_sp0_orient_to_diff_axis %s\n",   src_sp0_orient_to_diff_axis.__str__(buffer,sizeof(buffer)));
+        fprintf(stderr, "dst_tp0_orient_to_diff_axis %s\n",   dst_tp0_orient_to_diff_axis.__str__(buffer,sizeof(buffer)));
+        fprintf(stderr, "src_from_tgt_orient %s\n",           src_from_tgt_orient.__str__(buffer,sizeof(buffer)));
+    }
 }
 
 /*a c_quaternion_image_correlator methods
@@ -280,13 +297,13 @@ c_quaternion_image_correlator::c_quaternion_image_correlator(void)
     //max_q_dist_score  = min_q_dists["80pix35"];
 }
 
-/*f c_quaternion_image_correlator::find_closest_src_q
+/*f c_quaternion_image_correlator::find_close_src_qx
 */
 const c_quaternion *
-c_quaternion_image_correlator::find_closest_src_q(const c_quaternion *src_q, double *cos_angle_ptr) const
+c_quaternion_image_correlator::find_close_src_qx(const c_quaternion *src_q, double *cos_angle_ptr) const
 {
-    double cos_angle;
     for (auto src_qx : src_qs) {
+        double cos_angle;
         cos_angle = src_qx->angle_axis(src_q, vector_z).r();
         if (cos_angle>min_cos_angle_src_q) {
             if (cos_angle_ptr) *cos_angle_ptr=cos_angle;
@@ -294,6 +311,49 @@ c_quaternion_image_correlator::find_closest_src_q(const c_quaternion *src_q, dou
         }
     }
     return NULL;
+}
+
+/*f c_quaternion_image_correlator::find_closest_src_qx
+*/
+const c_quaternion *
+c_quaternion_image_correlator::find_closest_src_qx(const c_quaternion *src_q, double *cos_angle_ptr) const
+{
+    double max_cos_angle;
+    const c_quaternion *closest_src_qx=NULL;
+
+    for (auto src_qx : src_qs) {
+        double cos_angle;
+        cos_angle = src_qx->angle_axis(src_q, vector_z).r();
+        if ((!closest_src_qx) || (cos_angle>max_cos_angle)) {
+            closest_src_qx = src_qx;
+            max_cos_angle = cos_angle;
+        }
+    }
+    return closest_src_qx;
+}
+
+/*f c_quaternion_image_correlator::find_closest_tgt_qx
+ */
+const c_qi_src_tgt_match *
+c_quaternion_image_correlator::find_closest_tgt_qx( const c_quaternion *src_qx,
+                                                    const c_quaternion *tgt_q,
+                                                    double *cos_angle_ptr) const
+{
+    double max_cos_angle;
+    const c_qi_src_tgt_match *closest_iqm=NULL;
+
+    if (matches_by_src_q.count(src_qx)<1) return NULL;
+    auto src_qx_ml = &(matches_by_src_q.at(src_qx));
+    for (auto iqm : *src_qx_ml) {
+        double cos_angle;
+        cos_angle = tgt_q->angle_axis(iqm->tgt_qx, vector_z).r();
+        if ((!closest_iqm) || (cos_angle>max_cos_angle)) {
+            closest_iqm = iqm;
+            max_cos_angle = cos_angle;
+        }
+    }
+    if (cos_angle_ptr) *cos_angle_ptr=max_cos_angle;
+    return closest_iqm;
 }
 
 /*f c_quaternion_image_correlator::find_or_add_tgt_q_to_src_q
@@ -314,7 +374,7 @@ c_quaternion_image_correlator::find_or_add_tgt_q_to_src_q(const c_quaternion *sr
         }
     }
     if (!closest_iqm) {
-        closest_iqm = new c_qi_src_tgt_match(src_qx, tgt_q);
+        closest_iqm = new c_qi_src_tgt_match(src_qx, tgt_q->copy());
         if (closest_iqm)
             src_tgt_match_list->push_back(closest_iqm);
     }
@@ -326,9 +386,10 @@ c_quaternion_image_correlator::find_or_add_tgt_q_to_src_q(const c_quaternion *sr
 const c_quaternion *
 c_quaternion_image_correlator::add_src_q(const c_quaternion *src_q)
 {
-    src_qs.push_back(src_q);
-    matches_by_src_q[src_q] = t_quaternion_image_match_list();
-    return src_q;
+    c_quaternion *src_qx = src_q->copy();
+    src_qs.push_back(src_qx);
+    matches_by_src_q[src_qx] = t_quaternion_image_match_list();
+    return src_qx;
 }
 
 /*f c_quaternion_image_correlator::find_of_add_src_q (find current src_q mapping point close enough to proposed src_q, or add a new match)
@@ -336,9 +397,9 @@ c_quaternion_image_correlator::add_src_q(const c_quaternion *src_q)
 const c_quaternion *
 c_quaternion_image_correlator::find_or_add_src_q(const c_quaternion *src_q)
 {
-    const c_quaternion *closest_src_q;
-    closest_src_q = find_closest_src_q(src_q, NULL);
-    if (closest_src_q) return closest_src_q;
+    const c_quaternion *close_src_qx;
+    close_src_qx = find_close_src_qx(src_q, NULL);
+    if (close_src_qx) return close_src_qx;
     return add_src_q(src_q);
 }
 
@@ -381,8 +442,8 @@ c_quaternion_image_correlator::create_mappings(void)
     for (auto src_q0 : src_qs) {
         for (auto src_q1 : src_qs) {
             if (src_q0==src_q1) continue;
-            src_q0_ml = &(matches_by_src_q.find(src_q0)->second);
-            src_q1_ml = &(matches_by_src_q.find(src_q1)->second);
+            src_q0_ml = &(matches_by_src_q[src_q0]);
+            src_q1_ml = &(matches_by_src_q[src_q1]);
             for (auto iqm0 : *src_q0_ml) {
                 tgt_q0 = iqm0->tgt_qx;
                 for (auto iqm1 : *src_q1_ml) {
@@ -429,3 +490,35 @@ c_quaternion_image_correlator::score_src_from_tgt(const c_quaternion *src_from_t
     return total_score.score;
 }
 
+/*f c_quaternion_image_correlator::qstm_src_q
+ */
+const c_quaternion *
+c_quaternion_image_correlator::qstm_src_q(class c_qi_src_tgt_match *qstm) const
+{
+    return qstm->src_qx;
+}
+
+/*f c_quaternion_image_correlator::qstm_tgt_q
+ */
+const c_quaternion *
+c_quaternion_image_correlator::qstm_tgt_q(class c_qi_src_tgt_match *qstm) const
+{
+    return qstm->tgt_qx;
+}
+
+/*f c_quaternion_image_correlator::nth_src_tgt_q_mapping
+ */
+const c_quaternion *
+c_quaternion_image_correlator::nth_src_tgt_q_mapping(const c_qi_src_tgt_match *qstm,
+                                                     int n,
+                                                     const c_quaternion *src_tgt_qs[4]) const
+{
+    if ((n<0) || (n>=qstm->mappings.size()))
+        return NULL;
+
+    src_tgt_qs[0] = qstm->mappings[n]->src_qs[0];
+    src_tgt_qs[1] = qstm->mappings[n]->src_qs[1];
+    src_tgt_qs[2] = qstm->mappings[n]->tgt_qs[0];
+    src_tgt_qs[3] = qstm->mappings[n]->tgt_qs[1];
+    return &(qstm->mappings[n]->src_from_tgt_orient);
+}

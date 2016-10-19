@@ -175,23 +175,13 @@ c_quaternion *c_quaternion::copy(void) const
 
 /*f c_quaternion::__str__
  */
-void c_quaternion::__str__(char *buffer, int buf_size) const
+char *
+c_quaternion::__str__(char *buffer, int buf_size) const
 {
     snprintf(buffer, buf_size, "(%lf, %lf, %lf, %lf)",
              quat.r, quat.i, quat.j, quat.k );
     buffer[buf_size-1] = 0;
-/*        if self.repr_fmt=="euler":
-            result = ("quaternion(euler=("+self.fmt+","+self.fmt+","+self.fmt+"),degrees=True)") % self.to_euler(degrees=True)
-            return result
-        elif self.repr_fmt=="euler_mod":
-            result = ("quaternion(euler=("+self.fmt+","+self.fmt+","+self.fmt+"),length="+self.fmt+",degrees=True)") % self.to_euler(degrees=True,include_modulus=True)
-            return result
-        result = ("quaternion({'r':"+self.fmt+", 'i':"+self.fmt+", 'j':"+self.fmt+", 'k':"+self.fmt+"})") % (self.quat["r"],
-                                                                                       self.quat["i"],
-                                                                                       self.quat["j"],
-                                                                                       self.quat["k"] )
-        return result
-*/
+    return buffer;
 }
 
 /*f c_quaternion::get_rijk
@@ -438,6 +428,28 @@ double c_quaternion::as_rotation(double axis[3]) const
         axis[1] = 0;
         axis[2] = 0;
     }
+    return angle;
+}
+
+/*f c_quaternion::as_rotation
+ */
+double c_quaternion::as_rotation(c_vector &vector) const
+{
+    double axis[3];
+    double m=this->modulus();
+    double angle = 2*acos(quat.r/m);
+
+    double sm = m*sin(angle/2);
+    if (fabs(sm)>EPSILON) {
+        axis[0] = quat.i/sm;
+        axis[1] = quat.j/sm;
+        axis[2] = quat.k/sm;
+    } else {
+        axis[0] = 0;
+        axis[1] = 0;
+        axis[2] = 0;
+    }
+    vector = c_vector(3,axis);
     return angle;
 }
 

@@ -83,15 +83,11 @@ typedef struct
 class c_qi_src_tgt_pair_mapping
 {
 public:
-    static c_qi_src_tgt_pair_mapping *test_add( const c_quaternion *src_q0,
-                                                const c_quaternion *src_q1,
-                                                const c_quaternion *tgt_q0,
-                                                const c_quaternion *tgt_q1,
+    static c_qi_src_tgt_pair_mapping *test_add( const c_qi_src_tgt_match *qstm0,
+                                                const c_qi_src_tgt_match *qstm1,
                                                 double max_angle_diff_ratio );
-    c_qi_src_tgt_pair_mapping(const c_quaternion *src_q0,
-                              const c_quaternion *src_q1,
-                              const c_quaternion *tgt_q0,
-                              const c_quaternion *tgt_q1,
+    c_qi_src_tgt_pair_mapping(const c_qi_src_tgt_match *qstm0,
+                              const c_qi_src_tgt_match *qstm1,
                               const t_angle_axis *src_angle_axis,
                               const t_angle_axis *tgt_angle_axis);
     void calculate(c_quaternion &src_from_tgt_orient, const t_angle_axis *src_angle_axis, const t_angle_axis *tgt_angle_axis);
@@ -100,8 +96,7 @@ public:
     }
     void repr(char *buffer, int buf_size);
 
-    const c_quaternion *src_qs[2];
-    const c_quaternion *tgt_qs[2];
+    const class c_qi_src_tgt_match *qstms[2];
     c_quaternion src_from_tgt_orient;
 };
 
@@ -198,22 +193,18 @@ c_qi_src_tgt_match::score_src_from_tgt(const c_quaternion *src_from_tgt_q, doubl
  */
 /*f c_qi_src_tgt_pair_mapping::c_qi_src_tgt_pair_mapping
 */
-c_qi_src_tgt_pair_mapping::c_qi_src_tgt_pair_mapping(const c_quaternion *src_q0,
-                                                     const c_quaternion *src_q1,
-                                                     const c_quaternion *tgt_q0,
-                                                     const c_quaternion *tgt_q1,
+c_qi_src_tgt_pair_mapping::c_qi_src_tgt_pair_mapping(const c_qi_src_tgt_match *qstm0,
+                                                     const c_qi_src_tgt_match *qstm1,
                                                      const t_angle_axis *src_angle_axis,
                                                      const t_angle_axis *tgt_angle_axis)
 {
-    this->src_qs[0] = src_q0;
-    this->src_qs[1] = src_q1;
-    this->tgt_qs[0] = tgt_q0;
-    this->tgt_qs[1] = tgt_q1;
+    this->qstms[0] = qstm0;
+    this->qstms[1] = qstm1;
     calculate(src_from_tgt_orient, src_angle_axis, tgt_angle_axis);
     // "These two should be equal... or near as... 1,0,0,0"
     if (0) {
         for (int i=1; i>=0; i--) {
-            c_quaternion q=(src_from_tgt_orient * (*tgt_qs[i])).angle_axis((*src_qs[i]), vector_z);
+            c_quaternion q=(src_from_tgt_orient * (*qstms[i]->tgt_qx)).angle_axis((*qstms[i]->src_qx), vector_z);
             char buffer[1024];
             fprintf(stderr, "%d:%s\n",i,q.__str__(buffer,sizeof(buffer)));
         }
@@ -223,14 +214,12 @@ c_qi_src_tgt_pair_mapping::c_qi_src_tgt_pair_mapping(const c_quaternion *src_q0,
 /*f c_qi_src_tgt_pair_mapping::test_add
 */
 c_qi_src_tgt_pair_mapping *
-c_qi_src_tgt_pair_mapping::test_add(const c_quaternion *src_q0,
-                                    const c_quaternion *src_q1,
-                                    const c_quaternion *tgt_q0,
-                                    const c_quaternion *tgt_q1,
+c_qi_src_tgt_pair_mapping::test_add(const c_qi_src_tgt_match *qstm0,
+                                    const c_qi_src_tgt_match *qstm1,
                                     double max_angle_diff_ratio )
 {
-    c_quaternion src_q_diff = src_q0->angle_axis(src_q1, vector_z);
-    c_quaternion tgt_q_diff = tgt_q0->angle_axis(tgt_q1, vector_z);
+    c_quaternion src_q_diff = qstm0->src_qx->angle_axis(qstm1->src_qx, vector_z);
+    c_quaternion tgt_q_diff = qstm0->tgt_qx->angle_axis(qstm1->tgt_qx, vector_z);
 
     t_angle_axis src_angle_axis;
     t_angle_axis tgt_angle_axis;
@@ -240,7 +229,7 @@ c_qi_src_tgt_pair_mapping::test_add(const c_quaternion *src_q0,
     if (fabs((src_angle_axis.angle-tgt_angle_axis.angle)) >=
         fabs(src_angle_axis.angle*max_angle_diff_ratio))
         return NULL;
-    return new c_qi_src_tgt_pair_mapping(src_q0, src_q1, tgt_q0, tgt_q1, &src_angle_axis, &tgt_angle_axis);
+    return new c_qi_src_tgt_pair_mapping(qstm0, qstm1, &src_angle_axis, &tgt_angle_axis);
 }
 
 /*f c_qi_src_tgt_pair_mapping::calculate
@@ -248,8 +237,8 @@ c_qi_src_tgt_pair_mapping::test_add(const c_quaternion *src_q0,
 void
 c_qi_src_tgt_pair_mapping::calculate(c_quaternion &src_from_tgt_orient, const t_angle_axis *src_angle_axis, const t_angle_axis *tgt_angle_axis)
 {
-    c_vector sp0 = c_vector(src_qs[0]->rotate_vector(vector_z));
-    c_vector tp0 = c_vector(tgt_qs[0]->rotate_vector(vector_z));
+    c_vector sp0 = c_vector(qstms[0]->src_qx->rotate_vector(vector_z));
+    c_vector tp0 = c_vector(qstms[0]->tgt_qx->rotate_vector(vector_z));
     c_vector diff_axis;
 
     c_quaternion diff_q = src_angle_axis->axis.angle_axis_to_v(tgt_angle_axis->axis);
@@ -449,7 +438,7 @@ c_quaternion_image_correlator::create_mappings(void)
                 tgt_q0 = qstm0->tgt_qx;
                 for (auto qstm1 : *src_q1_ml) {
                     tgt_q1 = qstm1->tgt_qx;
-                    qm = c_qi_src_tgt_pair_mapping::test_add(src_q0, src_q1, tgt_q0, tgt_q1, max_angle_diff_ratio);
+                    qm = c_qi_src_tgt_pair_mapping::test_add(qstm0, qstm1, max_angle_diff_ratio);
                     if (!qm) continue;
                     qstm0->add_mapping(qm);
                 }
@@ -491,47 +480,132 @@ c_quaternion_image_correlator::score_src_from_tgt(const c_quaternion *src_from_t
     return total_score.score;
 }
 
-/*f c_quaternion_image_correlator::match_list_blah
+/*t t_qstm_count
+ */
+typedef struct
+{
+    int count;
+    const c_qi_src_tgt_match *qstm;
+} t_qstm_count;
+
+/*t t_qstm_count_vector
+ */
+typedef std::vector<t_qstm_count> t_qstm_count_vector;
+
+/*t t_used_matches
+ */
+typedef std::map<const c_quaternion *, t_qstm_count_vector> t_used_matches;
+
+/*f used_matches_add
+ */
+static void
+used_matches_add(t_used_matches &used_matches, const c_qi_src_tgt_match *qstm)
+{
+    for (auto qstm_count : used_matches[qstm->src_qx]) {
+        if (qstm_count.qstm == qstm) {
+            qstm_count.count++;
+            return;
+        }
+    }
+    t_qstm_count qstm_count;
+    qstm_count.count = 1;
+    qstm_count.qstm = qstm;
+    used_matches[qstm->src_qx].push_back(qstm_count);
+}
+
+/*f c_quaternion_image_correlator::best_matches_of_list
  *
  * match_list is a list of max_qstm's from score_src_from_tgt
  *
  * max_qstm is the qstm for a src_qx whose qstm->score_src_from_tgt is largest
  * Hence match_list is a list of 'best match' qstms.
  *
- * For each src_qx
- *  For each tgt_qx that the src_qx maps to
- *   Generate a score
- *   If the score is the best for src_qx ->, then record as max
- *  Add up max scores as the total score
+ * For each qstm there is a list of other src/tgts that go along with the src_qx/tgt_qx of the qstm
+ * However, each src can only really be mapped to a single target
+ * 
+ * So, for each src_qx we need a list of tgt_qx that _all_ the max_qstms demand of it, along with counts
+ * Then the highest count tgt_qx can be the chosen mapping for that src_qx
+ *
+ * This will lead to a set of src_qx->tgt_qx mappings (which must be in matches_by_src_q[])
+ *
+ * However, the src_qx->tgt_qx mappings that are chosen can be searched for chosen src_q/tgt_q matches,
+ * and this will yield a list of chosen mapping pairs (each of which has a src->tgt transformation quaternion).
+ *
+ * From the chosen mapping pairs an 'average' transformation can be gathered - this is calculated by generating the
+ * average mapping for 'vector_z' as the direction to look in, and an average mapping for 'vector_x' as the up direction of the
+ * resultant transformation
+ *
+ * The algorithm is then:
+ *
+ * Clear used matches
+ * clear map of used matches[src_qx] = list of (qstm, count)
+ * clear 'best_matches' in each src_qx
+ *
+ * Accumulate used matches
+ * for qstm in match_list:
+ *    add qstm to set of used matches if not there, and increment its count
+ *    for qstpm in qstm->mappings:
+ *       add qstpm->qstm1 to set of used matches if not there, and increment its count
+ *
+ * Find highest counts, generate best_matches
+ * for src_qx in used_matches:
+ *   find highest count qstm, and record qstm,count in 'best_matches' for src_qx
+ *
+ * for src_qx:
+ *   work out vf, vu for best_qstm
+ *   accumulate total_vf/total_vu by adding (possibly scaled by count) vf, vu of best_qstm
+ *
+ * determine quaternion of transformation looking at vf with up of vu
+*/
 c_quaternion *
-c_quaternion_image_correlator::match_list_blah(const c_quaternion *src_from_tgt_q)
+c_quaternion_image_correlator::best_matches_of_list(const t_quaternion_image_src_tgt_match_list *match_list)
 {
-    total_score.score = 0;
-    total_score.match_list.clear();
-    for (auto src_qx_ml : matches_by_src_q) {
-        double max_score=-1;
-        c_qi_src_tgt_match *max_qstm=NULL;
-        for (auto qstm : src_qx_ml.second) {
-            double score;
-            score = qstm->score_src_from_tgt(src_from_tgt_q, min_cos_sep_score, max_q_dist_score);
-            if (score>max_score) {
-                max_score = score;
-                max_qstm = qstm;
-            }
-        }
-        if (max_qstm) {
-            total_score.score += max_score;
-            total_score.match_list.push_back(max_qstm);
+    t_used_matches used_matches;
+    std::map<const c_quaternion *, t_qstm_count> best_matches;
+
+    /*b Clear used_matches
+     */
+    for (auto src_qx : src_qs) {
+        used_matches[src_qx] = t_qstm_count_vector();
+        best_matches[src_qx].count = 0;
+        best_matches[src_qx].qstm = NULL;
+    }
+
+    /*b Accumulate used_matches
+     */
+    for (auto qstm : *match_list) {
+        used_matches_add(used_matches, qstm);
+        for (auto qstpm : qstm->mappings) {
+            used_matches_add(used_matches, qstpm->qstms[1]);
         }
     }
-    return total_score.score;
+
+    /*b Find highest counts, generate best_matches
+     */
+    for (auto src_qx : used_matches) {
+        t_qstm_count best_match;
+        best_match.count = 0;
+        best_match.qstm = NULL;
+        for (auto qstm_count : src_qx.second) {
+            if (qstm_count.count>best_match.count) {
+                best_match.count = qstm_count.count;
+                best_match.qstm = qstm_count.qstm;
+            }
+        }
+        if (best_match.qstm) { // should always be true
+            best_matches[src_qx.first] = best_match;
+        }
+    }
+
+    /*b Return
+     */
+    return NULL;
 }
-*/
 
 /*f c_quaternion_image_correlator::qstm_src_q
  */
 const c_quaternion *
-c_quaternion_image_correlator::qstm_src_q(class c_qi_src_tgt_match *qstm) const
+c_quaternion_image_correlator::qstm_src_q(const c_qi_src_tgt_match *qstm) const
 {
     return qstm->src_qx;
 }
@@ -539,7 +613,7 @@ c_quaternion_image_correlator::qstm_src_q(class c_qi_src_tgt_match *qstm) const
 /*f c_quaternion_image_correlator::qstm_tgt_q
  */
 const c_quaternion *
-c_quaternion_image_correlator::qstm_tgt_q(class c_qi_src_tgt_match *qstm) const
+c_quaternion_image_correlator::qstm_tgt_q(const c_qi_src_tgt_match *qstm) const
 {
     return qstm->tgt_qx;
 }
@@ -554,9 +628,9 @@ c_quaternion_image_correlator::nth_src_tgt_q_mapping(const c_qi_src_tgt_match *q
     if ((n<0) || (n>=qstm->mappings.size()))
         return NULL;
 
-    src_tgt_qs[0] = qstm->mappings[n]->src_qs[0];
-    src_tgt_qs[1] = qstm->mappings[n]->src_qs[1];
-    src_tgt_qs[2] = qstm->mappings[n]->tgt_qs[0];
-    src_tgt_qs[3] = qstm->mappings[n]->tgt_qs[1];
+    src_tgt_qs[0] = qstm->mappings[n]->qstms[0]->src_qx;
+    src_tgt_qs[1] = qstm->mappings[n]->qstms[1]->src_qx;
+    src_tgt_qs[2] = qstm->mappings[n]->qstms[0]->tgt_qx;
+    src_tgt_qs[3] = qstm->mappings[n]->qstms[1]->tgt_qx;
     return &(qstm->mappings[n]->src_from_tgt_orient);
 }

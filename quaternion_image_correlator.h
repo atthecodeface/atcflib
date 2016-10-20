@@ -67,12 +67,12 @@ public:
                   const t_point_value *pv);
     int create_mappings(void);
     double score_src_from_tgt(const c_quaternion *src_from_tgt_q);
-    const c_quaternion *qstm_tgt_q(class c_qi_src_tgt_match *qstm) const;
-    const c_quaternion *qstm_src_q(class c_qi_src_tgt_match *qstm) const;
+    const c_quaternion *qstm_tgt_q(const class c_qi_src_tgt_match *qstm) const;
+    const c_quaternion *qstm_src_q(const class c_qi_src_tgt_match *qstm) const;
     const c_quaternion *nth_src_tgt_q_mapping(const class c_qi_src_tgt_match *qstm,
                                               int n,
                                               const c_quaternion *src_tgt_qs[4]) const;
-
+    c_quaternion *best_matches_of_list(const t_quaternion_image_src_tgt_match_list *match_list);
 
     std::vector<const c_quaternion *> src_qs;
     std::map<const c_quaternion *, t_quaternion_image_src_tgt_match_list> matches_by_src_q;

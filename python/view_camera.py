@@ -343,7 +343,7 @@ quaternion(r=0.993473,i=-0.006114,j=-0.007049,k=-0.113690)
     if True:
         image_orientations = [ ("../images/IMG_2173.JPG", None, quaternion(r=1)),
                                ("../images/IMG_2174.JPG", 0, 
-quaternion(r=0.997242,i=-0.005395,j=-0.070274,k=0.023291)
+quaternion(r=0.997334,i=-0.005987,j=-0.070914,k=0.016165)
 #(r=0.997314,i=-0.006328,j=-0.071135,k=0.016289)
                                )]
 # Good at 20.7: quaternion(r=0.997465,i=-0.007825,j=-0.069781,k=0.011491)

@@ -35,16 +35,16 @@
 
 /*a Types
  */
-/*t t_image_quaternion_match_list
+/*t t_quaternion_image_src_tgt_match_list
 */
-typedef std::vector<class c_qi_src_tgt_match *> t_quaternion_image_match_list;
+typedef std::vector<class c_qi_src_tgt_match *> t_quaternion_image_src_tgt_match_list;
 
 /*t t_quaternion_image_match_score
 */
 typedef struct
 {
     double score;
-    t_quaternion_image_match_list match_list;
+    t_quaternion_image_src_tgt_match_list match_list;
 } t_quaternion_image_match_score;
 
 /*c c_quaternion_image_correlator
@@ -55,7 +55,7 @@ private:
     const c_quaternion *find_or_add_src_q(const c_quaternion *src_q);
     const c_quaternion *add_src_q(const c_quaternion *src_q);
     class c_qi_src_tgt_match *find_or_add_tgt_q_to_src_q(const c_quaternion *src_qx,
-                                                         t_quaternion_image_match_list *src_tgt_match_list,
+                                                         t_quaternion_image_src_tgt_match_list *src_tgt_match_list,
                                                          const c_quaternion *tgt_q);
     const c_quaternion *find_close_src_qx(const c_quaternion *src_q, double *cos_angle) const;
 public:
@@ -75,7 +75,7 @@ public:
 
 
     std::vector<const c_quaternion *> src_qs;
-    std::map<const c_quaternion *, t_quaternion_image_match_list> matches_by_src_q;
+    std::map<const c_quaternion *, t_quaternion_image_src_tgt_match_list> matches_by_src_q;
     double min_cos_angle_src_q;
     double min_cos_angle_tgt_q;
     double min_cos_sep_score;

@@ -1133,10 +1133,11 @@ class c_image_pair_quaternion_match(object):
                 pass
             pass
         return
-    #b Find 'best other target matches' for each source match
+    #c c_best_match
     class c_best_match(object):
         unique_id = 0
         qic_qs = {}
+        #f qid_from_q
         @classmethod
         def qid_from_q(cls, q, why="none"):
             r = "%f:%f:%f:%f"%(q.r,q.i,q.j,q.k)
@@ -1146,6 +1147,7 @@ class c_image_pair_quaternion_match(object):
             cls.qic_qs[qic_qid] = (q,qic_qid,why)
             cls.unique_id += 1
             return qic_qid
+        #f __init__
         def __init__(self, src_from_tgt_q, score, min_cos_sep, max_q_dist):
             self.max_distance = score[0]
             self.min_cos_sep = min_cos_sep
@@ -1157,6 +1159,7 @@ class c_image_pair_quaternion_match(object):
             self.best_mappings = []
             self.optimized_src_from_tgt_q = gjslib_c.quaternion(1)
             pass
+        #f calculate
         def calculate(self, mappings_by_src_q, qic=None):
             self.src_tgts = {} # for each src_q, is a dictionary of (tgt_qs=>counts) that it maps to
             self.qs = {} # src,tgt,src,tgt -> orientation, distance for those close enough to the vector to count
@@ -1231,6 +1234,7 @@ class c_image_pair_quaternion_match(object):
             if len(self.best_qs)==0: self.best_qs.append(gjslib_c.quaternion(1))
             self.optimized_src_from_tgt_q = quaternion_average(self.best_qs)
             pass
+        #f add_map_qic
         def add_map_qic(self, src_q, tgt_q):
             src_q = self.__class__.qid_from_q(src_q, "src")
             tgt_q = self.__class__.qid_from_q(tgt_q, "tgt")
@@ -1238,11 +1242,13 @@ class c_image_pair_quaternion_match(object):
             if tgt_q not in self.src_tgts[src_q]: self.src_tgts[src_q][tgt_q]=0
             self.src_tgts[src_q][tgt_q] += 1
             pass
+        #f add_map
         def add_map(self, src_q, tgt_q):
             if src_q not in self.src_tgts: self.src_tgts[src_q]={}
             if tgt_q not in self.src_tgts[src_q]: self.src_tgts[src_q][tgt_q]=0
             self.src_tgts[src_q][tgt_q] += 1
             pass
+        #f old_add_match
         def old_add_match(self, src_q, tgt_q, distance):
             bm.max_distance = -score[0]
             bm.min_cos_sep_score = min_cos_sep_score
@@ -1253,6 +1259,34 @@ class c_image_pair_quaternion_match(object):
                 pass
             pass
         pass
+    #c c_best_match_qic
+    class c_best_match_qic(c_best_match):
+        #f __init__
+        def __init__(self, src_from_tgt_q, score, qic):
+            self.max_distance = score # measure of how good it is - smaller the better
+            self.src_from_tgt_q = src_from_tgt_q
+            self.min_cos_sep = 0
+            self.max_q_dist  = 0
+            self.mappings = [] # list of (src/tgt) pairs
+            self.best_mappings = [] # list of (src,tgt,n) pairs
+            self.qic_scores = qic.scores()
+            self.qic_mappings = qic.src_tgt_mappings_of_best_matches(min_score=0, min_count=0)
+            self.optimized_src_from_tgt_q = gjslib_c.quaternion(1)
+            pass
+        #f calculate
+        def calculate(self, mappings_by_src_q, qic=None):
+            qic_bm_qs = []
+            qs = []
+            for (src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_orient) in self.qic_mappings:
+                src_q0_id = self.qid_from_q(src_q0,"src")
+                tgt_q0_id = self.qid_from_q(tgt_q0,"tgt")
+                src_q1_id = self.qid_from_q(src_q1,"src")
+                tgt_q1_id = self.qid_from_q(tgt_q1,"tgt")
+                qic_bm_qs.append((src_q0_id, tgt_q0_id, src_q1_id, tgt_q1_id, src_from_tgt_orient))
+                qs.append(src_from_tgt_orient)
+                pass
+            self.optimized_src_from_tgt_q = quaternion_average(qs)
+            pass
     #f find_min_error
     def find_min_error(self, src_from_tgt_q, src_qx):
         return self.mappings_by_src_q[src_qx].find_min_error(src_from_tgt_q, src_qx)
@@ -1444,6 +1478,7 @@ class c_image_pair_quaternion_match(object):
         max_scores = []
         n = 0
         if self.qic is not None:
+            cbm = self.c_best_match
             mappings_to_try = self.find_mappings_to_try_qic(min_q_dist, max_q_dist)
             print "Trying %d mappings"%(len(mappings_to_try))
             if False:
@@ -1456,8 +1491,50 @@ class c_image_pair_quaternion_match(object):
                 pass
             for src_from_tgt_q in mappings_to_try:
                 score = self.qic.score_orient(src_from_tgt_q)
-                if (score>2):
+                if (score>6):#2):
                     score = (score,self.qic.scores())
+                    qic_bm_qs = []
+                    if False:
+                        print score
+                        for (src_qx,tgt_qx) in score[1]:
+                            src_qx_id = cbm.qid_from_q(src_qx,"src")
+                            tgt_qx_id = cbm.qid_from_q(tgt_qx,"tgt")
+                            print src_qx_id, tgt_qx_id
+                            pass
+                        qic_bm = self.qic.best_matches()
+                        qic_bm_mappings = {}
+                        for (c,src_qx,tgt_qx) in qic_bm:
+                            src_qx_id = cbm.qid_from_q(src_qx,"src")
+                            tgt_qx_id = cbm.qid_from_q(tgt_qx,"tgt")
+                            qic_bm_mappings[(src_qx_id,tgt_qx_id)] = self.qic.src_tgt_mappings(src_qx, tgt_qx)
+                            pass
+                        for (c,src_qx,tgt_qx) in qic_bm:
+                            src_qx_id = cbm.qid_from_q(src_qx,"src")
+                            tgt_qx_id = cbm.qid_from_q(tgt_qx,"tgt")
+                            for (src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_orient) in qic_bm_mappings[(src_qx_id,tgt_qx_id)]:
+                                src_q1_id = cbm.qid_from_q(src_q1,"src")
+                                tgt_q1_id = cbm.qid_from_q(tgt_q1,"tgt")
+                                if (src_q1_id, tgt_q1_id) in qic_bm_mappings: # since we are going through all mappings to find the ones we are allowed...
+                                    qic_bm_qs.append((src_qx_id, tgt_qx_id, src_q1_id, tgt_q1_id, src_from_tgt_orient))
+                                    pass
+                                pass
+                            pass
+                        pass
+                    else:
+                        for (src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_orient) in self.qic.src_tgt_mappings_of_best_matches(min_score=0, min_count=0):
+                            src_q0_id = cbm.qid_from_q(src_q0,"src")
+                            tgt_q0_id = cbm.qid_from_q(tgt_q0,"tgt")
+                            src_q1_id = cbm.qid_from_q(src_q1,"src")
+                            tgt_q1_id = cbm.qid_from_q(tgt_q1,"tgt")
+                            qic_bm_qs.append((src_q0_id, tgt_q0_id, src_q1_id, tgt_q1_id, src_from_tgt_orient))
+                            pass
+                        pass
+                    qs = []
+                    for q in qic_bm_qs:
+                        qs.append(q[4])
+                        print q, q[4].distance_to(src_from_tgt_q)
+                        pass
+                    print quaternion_average(qs)
                     bm = self.c_best_match(src_from_tgt_q, score, min_cos_sep_score, max_q_dist_score)
                     max_scores.append(bm)
                     pass
@@ -1477,6 +1554,26 @@ class c_image_pair_quaternion_match(object):
             max_scores.append(bm)
             pass
         return max_scores
+
+    #f find_best_target_matches_qic
+    def find_best_target_matches_qic(self,
+                                 min_q_dist=0.00004, # minimum separation betwen src_from_tgt_q's to try
+                                 max_q_dist=0.5,
+                                 min_cos_sep_score=0.9995,
+                                 max_q_dist_score=0.02,
+                                 min_cos_sep="Not used", min_used_factor="not used"):
+        cbm = self.c_best_match
+        result = []
+        mappings_to_try = self.find_mappings_to_try_qic(min_q_dist, max_q_dist)
+        print "Trying %d mappings"%(len(mappings_to_try))
+        for src_from_tgt_q in mappings_to_try:
+            score = self.qic.score_orient(src_from_tgt_q)
+            if (score>6):#2):
+                result.append(self.c_best_match_qic(src_from_tgt_q, score, self.qic))
+                pass
+            pass
+        return result
+    #f ALL DONE
 
 #a Testy functions
 #f test_to_yuv
@@ -2175,7 +2272,7 @@ def quaternion_image_correlate(ipqm, images, initial_dest_orientation):
 
     ipqm.qic = gjslib_c.quaternion_image_correlator()
     for initial_orientation in [gjslib_c.quaternion().from_euler(yaw=-12.0,degrees=1),
-                                gjslib_c.quaternion().from_euler(yaw=+12.0,degrees=1),
+                                #gjslib_c.quaternion().from_euler(yaw=+12.0,degrees=1),
                                 ]:
         src_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
         dst_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
@@ -2189,12 +2286,12 @@ def quaternion_image_correlate(ipqm, images, initial_dest_orientation):
         pass
 
     ipqm.create_mappings()
-    best_other_target_matches = ipqm.find_best_target_matches(max_q_dist = 2, # All directions - actually should be FOV, so about 45 degrees
-                                                              min_q_dist        = min_q_dists["80pix35"], # min separation between src_from_tgt_q's to try to score
-                                                              min_cos_sep       = min_cos_seps["80pix35"],
-                                                              min_cos_sep_score = min_cos_seps["80pix35"],
-                                                              max_q_dist_score  = min_q_dists["80pix35"],
-                                                              )
+    best_other_target_matches = ipqm.find_best_target_matches_qic(max_q_dist = 2, # All directions - actually should be FOV, so about 45 degrees
+                                                                  min_q_dist        = min_q_dists["80pix35"], # min separation between src_from_tgt_q's to try to score
+                                                                  min_cos_sep       = min_cos_seps["80pix35"],
+                                                                  min_cos_sep_score = min_cos_seps["80pix35"],
+                                                                  max_q_dist_score  = min_q_dists["80pix35"],
+                                                                  )
 
     #b Do clusters
     def cmp_matches(x,y):

@@ -35,16 +35,44 @@
 
 /*a Types
  */
+/*t t_qstm_count
+ */
+typedef struct
+{
+    int count;
+    const class c_qi_src_tgt_match *qstm;
+} t_qstm_count;
+
+/*t t_qstm_score
+ */
+typedef struct
+{
+    double score;
+    const class c_qi_src_tgt_match *qstm;
+} t_qstm_score;
+
+/*t t_quaternion_image_src_tgt_match_count_list
+*/
+typedef std::vector<t_qstm_count> t_quaternion_image_src_tgt_match_count_list;
+
 /*t t_quaternion_image_src_tgt_match_list
 */
 typedef std::vector<class c_qi_src_tgt_match *> t_quaternion_image_src_tgt_match_list;
+
+/*t t_quaternion_image_src_tgt_match_score_list
+*/
+typedef std::vector<t_qstm_score> t_quaternion_image_src_tgt_match_score_list;
+
+/*t t_quaternion_image_src_tgt_pair_mapping_list
+ */
+typedef std::vector<const class c_qi_src_tgt_pair_mapping *> t_quaternion_image_src_tgt_pair_mapping_list;
 
 /*t t_quaternion_image_match_score
 */
 typedef struct
 {
     double score;
-    t_quaternion_image_src_tgt_match_list match_list;
+    t_quaternion_image_src_tgt_match_score_list match_list;
 } t_quaternion_image_match_score;
 
 /*c c_quaternion_image_correlator
@@ -72,7 +100,12 @@ public:
     const c_quaternion *nth_src_tgt_q_mapping(const class c_qi_src_tgt_match *qstm,
                                               int n,
                                               const c_quaternion *src_tgt_qs[4]) const;
-    c_quaternion *best_matches_of_list(const t_quaternion_image_src_tgt_match_list *match_list);
+    const c_quaternion *qstpm_data(const class c_qi_src_tgt_pair_mapping *qstpm,
+                                   const c_quaternion *src_tgt_qs[4]) const;
+    const t_quaternion_image_src_tgt_match_count_list *best_matches_of_list(const t_quaternion_image_src_tgt_match_score_list *match_list,
+                                                                            double min_score=0.0);
+    const t_quaternion_image_src_tgt_pair_mapping_list *src_tgt_mappings_from_best_matches(const t_quaternion_image_src_tgt_match_count_list *best_matches,
+                                                                                           int min_count=0);
 
     std::vector<const c_quaternion *> src_qs;
     std::map<const c_quaternion *, t_quaternion_image_src_tgt_match_list> matches_by_src_q;

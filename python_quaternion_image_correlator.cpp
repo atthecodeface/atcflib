@@ -45,6 +45,8 @@ static PyObject *python_quaternion_image_correlator_method_src_qs(PyObject* self
 static PyObject *python_quaternion_image_correlator_method_tgt_qs_of_src_q(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_image_correlator_method_src_tgt_mappings(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_quaternion_image_correlator_method_scores(PyObject* self, PyObject* args);
+static PyObject *python_quaternion_image_correlator_method_best_matches(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_quaternion_image_correlator_method_src_tgt_mappings_of_best_matches(PyObject* self, PyObject* args, PyObject *kwds);
 
 /*a Static variables
  */
@@ -58,6 +60,8 @@ PyMethodDef python_quaternion_image_correlator_methods[] = {
     {"src_tgt_mappings", (PyCFunction)python_quaternion_image_correlator_method_src_tgt_mappings, METH_VARARGS|METH_KEYWORDS},
     {"score_orient",    (PyCFunction)python_quaternion_image_correlator_method_score_orient,      METH_VARARGS|METH_KEYWORDS},
     {"scores",          (PyCFunction)python_quaternion_image_correlator_method_scores,            METH_NOARGS},
+    {"best_matches",    (PyCFunction)python_quaternion_image_correlator_method_best_matches,      METH_VARARGS|METH_KEYWORDS},
+    {"src_tgt_mappings_of_best_matches",    (PyCFunction)python_quaternion_image_correlator_method_src_tgt_mappings_of_best_matches,      METH_VARARGS|METH_KEYWORDS},
     {NULL, NULL},
 };
 
@@ -270,11 +274,83 @@ python_quaternion_image_correlator_method_scores(PyObject* self, PyObject* args)
     if (py_obj->quaternion_image_correlator) {
         c_quaternion_image_correlator *qic=py_obj->quaternion_image_correlator;
         PyObject *list = PyList_New(0);
-        for (auto qstm : qic->total_score.match_list) {
+        for (auto qstmsc : qic->total_score.match_list) {
             PyList_Append(list, Py_BuildValue("OO",
-                                              python_quaternion_from_c(qic->qstm_src_q(qstm)->copy()),
-                                              python_quaternion_from_c(qic->qstm_tgt_q(qstm)->copy()) ));
+                                              python_quaternion_from_c(qic->qstm_src_q(qstmsc.qstm)->copy()),
+                                              python_quaternion_from_c(qic->qstm_tgt_q(qstmsc.qstm)->copy()) ));
         }
+        return list;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_image_correlator_method_best_matches
+ */
+static PyObject *
+python_quaternion_image_correlator_method_best_matches(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion_image_correlator *py_obj = (t_PyObject_quaternion_image_correlator *)self;
+
+    double min_score=0.0;
+    static const char *kwlist[] = {"min_score", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|d", (char **)kwlist, 
+                                     &min_score))
+        return NULL;
+
+    if (py_obj->quaternion_image_correlator) {
+        c_quaternion_image_correlator *qic=py_obj->quaternion_image_correlator;
+        const t_quaternion_image_src_tgt_match_count_list *match_list;
+        match_list = qic->best_matches_of_list(&qic->total_score.match_list, min_score);
+        PyObject *list = PyList_New(0);
+        for (auto qstmc : *match_list) {
+            PyList_Append(list, Py_BuildValue("iOO",
+                                              qstmc.count,
+                                              python_quaternion_from_c(qic->qstm_src_q(qstmc.qstm)->copy()),
+                                              python_quaternion_from_c(qic->qstm_tgt_q(qstmc.qstm)->copy()) ));
+        }
+        return list;
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_quaternion_image_correlator_method_src_tgt_mappings_of_best_matches
+ */
+static PyObject *
+python_quaternion_image_correlator_method_src_tgt_mappings_of_best_matches(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_quaternion_image_correlator *py_obj = (t_PyObject_quaternion_image_correlator *)self;
+
+    double min_score=0.0;
+    int min_count=0;
+    static const char *kwlist[] = {"min_score", "min_count", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|di", (char **)kwlist, 
+                                     &min_score, &min_count))
+        return NULL;
+
+    if (py_obj->quaternion_image_correlator) {
+        c_quaternion_image_correlator *qic=py_obj->quaternion_image_correlator;
+        const t_quaternion_image_src_tgt_match_count_list *best_matches;
+        const t_quaternion_image_src_tgt_pair_mapping_list *src_tgt_mapping_list;
+
+        best_matches = qic->best_matches_of_list(&qic->total_score.match_list, min_score);
+        src_tgt_mapping_list = qic->src_tgt_mappings_from_best_matches(best_matches, min_count);
+        PyObject *list = PyList_New(0);
+        for (auto qstpm : *src_tgt_mapping_list) {
+            const c_quaternion *src_tgt_qs[4];
+            const c_quaternion *src_from_tgt_q;
+            src_from_tgt_q = qic->qstpm_data(qstpm, src_tgt_qs);
+            PyList_Append(list, Py_BuildValue("OOOOO",
+                                              python_quaternion_from_c(src_tgt_qs[0]->copy()),
+                                              python_quaternion_from_c(src_tgt_qs[1]->copy()),
+                                              python_quaternion_from_c(src_tgt_qs[2]->copy()),
+                                              python_quaternion_from_c(src_tgt_qs[3]->copy()),
+                                              python_quaternion_from_c(src_from_tgt_q->copy())
+                              ));
+        }
+        delete (best_matches);
+        delete (src_tgt_mapping_list);
         return list;
     }
     Py_RETURN_NONE;

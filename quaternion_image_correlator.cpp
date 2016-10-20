@@ -120,6 +120,7 @@ public:
     const c_quaternion *tgt_qx;
     std::vector<t_qi_src_tgt_pv> matches;
     std::vector<c_qi_src_tgt_pair_mapping *> mappings;
+    int marked;
 };
 
 /*a Statics
@@ -180,8 +181,8 @@ c_qi_src_tgt_match::score_src_from_tgt(const c_quaternion *src_from_tgt_q, doubl
     if (dst<min_cos_sep) return score;
 
     //if verbose: print "passed src_q/tgt_qx mapping"
-    for (auto qm : mappings) {
-        double dq = qm->distance_to(src_from_tgt_q);
+    for (auto qstm : mappings) {
+        double dq = qstm->distance_to(src_from_tgt_q);
         if (dq>max_q_dist)
             continue;
         score += 1;
@@ -365,8 +366,9 @@ c_quaternion_image_correlator::find_or_add_tgt_q_to_src_q(const c_quaternion *sr
     }
     if (!closest_qstm) {
         closest_qstm = new c_qi_src_tgt_match(src_qx, tgt_q->copy());
-        if (closest_qstm)
+        if (closest_qstm) {
             src_tgt_match_list->push_back(closest_qstm);
+        }
     }
     return closest_qstm;
 }
@@ -462,31 +464,24 @@ c_quaternion_image_correlator::score_src_from_tgt(const c_quaternion *src_from_t
     total_score.score = 0;
     total_score.match_list.clear();
     for (auto src_qx_ml : matches_by_src_q) {
-        double max_score=-1;
-        c_qi_src_tgt_match *max_qstm=NULL;
+        t_qstm_score max_qstm_score;
+        max_qstm_score.score = 0;
+        max_qstm_score.qstm = NULL;
         for (auto qstm : src_qx_ml.second) {
             double score;
             score = qstm->score_src_from_tgt(src_from_tgt_q, min_cos_sep_score, max_q_dist_score);
-            if (score>max_score) {
-                max_score = score;
-                max_qstm = qstm;
+            if (score>max_qstm_score.score) {
+                max_qstm_score.score = score;
+                max_qstm_score.qstm = qstm;
             }
         }
-        if (max_qstm) {
-            total_score.score += max_score;
-            total_score.match_list.push_back(max_qstm);
+        if (max_qstm_score.qstm) {
+            total_score.score += max_qstm_score.score;
+            total_score.match_list.push_back(max_qstm_score);
         }
     }
     return total_score.score;
 }
-
-/*t t_qstm_count
- */
-typedef struct
-{
-    int count;
-    const c_qi_src_tgt_match *qstm;
-} t_qstm_count;
 
 /*t t_qstm_count_vector
  */
@@ -496,22 +491,27 @@ typedef std::vector<t_qstm_count> t_qstm_count_vector;
  */
 typedef std::map<const c_quaternion *, t_qstm_count_vector> t_used_matches;
 
-/*f used_matches_add
+/*f used_matches_inc
  */
 static void
-used_matches_add(t_used_matches &used_matches, const c_qi_src_tgt_match *qstm)
+used_matches_inc(t_used_matches &used_matches, const c_qi_src_tgt_match *qstm, int permit_add)
 {
-    for (auto qstm_count : used_matches[qstm->src_qx]) {
-        if (qstm_count.qstm == qstm) {
-            qstm_count.count++;
+    int n;
+    t_qstm_count_vector *qstmc = &(used_matches[qstm->src_qx]);
+    n = qstmc->size();
+    for (int i=0; i<n; i++) {
+        if ((*qstmc)[i].qstm == qstm) {
+            (&(*qstmc)[i])->count++;
             return;
         }
     }
+    if (!permit_add) return;
     t_qstm_count qstm_count;
     qstm_count.count = 1;
     qstm_count.qstm = qstm;
     used_matches[qstm->src_qx].push_back(qstm_count);
 }
+
 
 /*f c_quaternion_image_correlator::best_matches_of_list
  *
@@ -557,31 +557,37 @@ used_matches_add(t_used_matches &used_matches, const c_qi_src_tgt_match *qstm)
  *
  * determine quaternion of transformation looking at vf with up of vu
 */
-c_quaternion *
-c_quaternion_image_correlator::best_matches_of_list(const t_quaternion_image_src_tgt_match_list *match_list)
+const t_quaternion_image_src_tgt_match_count_list *
+c_quaternion_image_correlator::best_matches_of_list(const t_quaternion_image_src_tgt_match_score_list *match_list,
+                                                    double min_score)
 {
+    t_quaternion_image_src_tgt_match_count_list *result;
     t_used_matches used_matches;
-    std::map<const c_quaternion *, t_qstm_count> best_matches;
 
     /*b Clear used_matches
      */
     for (auto src_qx : src_qs) {
         used_matches[src_qx] = t_qstm_count_vector();
-        best_matches[src_qx].count = 0;
-        best_matches[src_qx].qstm = NULL;
     }
 
     /*b Accumulate used_matches
+     * Only add in those that are in the match list
+     * The others should increment the counts if the mapping already exists
      */
-    for (auto qstm : *match_list) {
-        used_matches_add(used_matches, qstm);
-        for (auto qstpm : qstm->mappings) {
-            used_matches_add(used_matches, qstpm->qstms[1]);
+    for (auto qstmsc : *match_list) {
+        if (qstmsc.score > min_score) {
+            used_matches_inc(used_matches, qstmsc.qstm, 1);
+        }
+    }
+    for (auto qstmsc : *match_list) {
+        for (auto qstpm : qstmsc.qstm->mappings) {
+            used_matches_inc(used_matches, qstpm->qstms[1], 0);
         }
     }
 
-    /*b Find highest counts, generate best_matches
+    /*b Find highest counts, generate result as list of best_matches
      */
+    result = new t_quaternion_image_src_tgt_match_count_list();
     for (auto src_qx : used_matches) {
         t_qstm_count best_match;
         best_match.count = 0;
@@ -593,13 +599,74 @@ c_quaternion_image_correlator::best_matches_of_list(const t_quaternion_image_src
             }
         }
         if (best_match.qstm) { // should always be true
-            best_matches[src_qx.first] = best_match;
+            result->push_back(best_match);
         }
     }
 
     /*b Return
      */
-    return NULL;
+    return result;
+}
+
+/*f c_quaternion_image_correlator::src_tgt_mappings_from_best_matches
+ *
+ * best_matches is a list of qstm's from which a complete list of
+ * known mappings is to be generated
+ *
+ * Every mapping that includes only qstm's from the best_matches must be included 
+ *
+ * The algorithm is then:
+ *
+ * Mark ALL qstms for every source as not on the list
+ *
+ * For each qstm on the best_matches list:
+ *   Mark as on the list
+ *
+ * For each qstm on the best_matches list:
+ *   for each mapping in that qstm:
+ *     if the other qstm in the mapping is marked
+ *       add qstm,qstm,src_from_tgt_q to the list
+ *
+*/
+const t_quaternion_image_src_tgt_pair_mapping_list *
+c_quaternion_image_correlator::src_tgt_mappings_from_best_matches(const t_quaternion_image_src_tgt_match_count_list *best_matches,
+                                                                  int min_count)
+{
+    t_quaternion_image_src_tgt_pair_mapping_list *result;
+    t_used_matches used_matches;
+
+    /*b Clear used_matches
+     */
+    for (auto src_qx_ml : matches_by_src_q) {
+        for (auto qstm : src_qx_ml.second) {
+            qstm->marked = 0;
+        }
+    }
+
+    /*b Mark suitable best_matches 
+     * For each qstm on the best_matches list:
+     *   Mark as on the list
+     */
+    for (auto qstmc : *best_matches) {
+        if (qstmc.count > min_count) {
+            ((c_qi_src_tgt_match *)qstmc.qstm)->marked = 1;
+        }
+    }
+
+    /*b Add any src/tgt pairing that has both qstms marked to the result
+     */
+    result = new t_quaternion_image_src_tgt_pair_mapping_list();
+    for (auto qstmc : *best_matches) {
+        for (auto qstpm : qstmc.qstm->mappings) {
+            if (qstpm->qstms[1]->marked) {
+                result->push_back(qstpm);
+            }
+        }
+    }
+
+    /*b Return
+     */
+    return result;
 }
 
 /*f c_quaternion_image_correlator::qstm_src_q
@@ -628,9 +695,26 @@ c_quaternion_image_correlator::nth_src_tgt_q_mapping(const c_qi_src_tgt_match *q
     if ((n<0) || (n>=qstm->mappings.size()))
         return NULL;
 
-    src_tgt_qs[0] = qstm->mappings[n]->qstms[0]->src_qx;
-    src_tgt_qs[1] = qstm->mappings[n]->qstms[1]->src_qx;
-    src_tgt_qs[2] = qstm->mappings[n]->qstms[0]->tgt_qx;
-    src_tgt_qs[3] = qstm->mappings[n]->qstms[1]->tgt_qx;
+    if (src_tgt_qs) {
+        src_tgt_qs[0] = qstm->mappings[n]->qstms[0]->src_qx;
+        src_tgt_qs[1] = qstm->mappings[n]->qstms[1]->src_qx;
+        src_tgt_qs[2] = qstm->mappings[n]->qstms[0]->tgt_qx;
+        src_tgt_qs[3] = qstm->mappings[n]->qstms[1]->tgt_qx;
+    }
     return &(qstm->mappings[n]->src_from_tgt_orient);
+}
+
+
+/*f c_quaternion_image_correlator::qstpm_data
+ */
+const c_quaternion *
+c_quaternion_image_correlator::qstpm_data(const c_qi_src_tgt_pair_mapping *qstpm, const c_quaternion *src_tgt_qs[4]) const
+{
+    if (src_tgt_qs) {
+        src_tgt_qs[0] = qstpm->qstms[0]->src_qx;
+        src_tgt_qs[1] = qstpm->qstms[1]->src_qx;
+        src_tgt_qs[2] = qstpm->qstms[0]->tgt_qx;
+        src_tgt_qs[3] = qstpm->qstms[1]->tgt_qx;
+    }
+    return &(qstpm->src_from_tgt_orient);
 }

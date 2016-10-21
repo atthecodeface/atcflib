@@ -1,0 +1,93 @@
+#a Templates
+#f image_coarse
+#
+# Compile a C file into the firmware build directory
+#
+# @param $1	image0
+# @param $2	image1
+# @param $3	focal_length
+# @param $4 lens_type
+#
+define image_coarse
+
+$1__$2__LOG := logs/log_$1_$2.txt
+
+$$($1__$2__LOG): $(IMAGE_DIR)/IMG_$1.JPG  $(IMAGE_DIR)/IMG_$2.JPG
+	time $(RUN_QIC)  --max_iteration_depth=1 --focal_length=$3 --lens_type=$4 --image_dir=$(IMAGE_DIR) IMG_$1.JPG IMG_$2.JPG > $$@
+
+IMAGE_LOGS += $$($1__$2__LOG)
+
+endef
+
+IMAGES = IMG_2155.JPG \
+	IMG_2157.JPG \
+	IMG_2158.JPG \
+	IMG_2159.JPG \
+	IMG_2160.JPG \
+	IMG_2161.JPG \
+	IMG_2162.JPG \
+	IMG_2163.JPG \
+	IMG_2164.JPG \
+	IMG_2165.JPG \
+	IMG_2166.JPG \
+	IMG_2167.JPG \
+	IMG_2168.JPG \
+	IMG_2169.JPG \
+	IMG_2170.JPG \
+	IMG_2171.JPG \
+	IMG_2172.JPG \
+	IMG_2173.JPG \
+	IMG_2174.JPG \
+	IMG_2175.JPG \
+	IMG_2176.JPG \
+	IMG_2177.JPG \
+	IMG_2178.JPG \
+	IMG_2179.JPG \
+	IMG_2180.JPG \
+	IMG_2181.JPG \
+	IMG_2183.JPG
+
+IMAGE_DIR := ../images/
+QIC_MATCH := PYTHONPATH=`pwd`/../python:`pwd`/..:`pwd`/gjslib/../python::`pwd`/../../gjslib/python:$(PYTHONPATH) ./qic_match.py
+RUN_QIC := $(QIC_MATCH) --output=octagon_image_maps.py
+
+#$(eval $(call image_coarse,2155,2157,20,rectilinear))
+$(eval $(call image_coarse,2157,2158,20,rectilinear))
+$(eval $(call image_coarse,2158,2159,20,rectilinear))
+$(eval $(call image_coarse,2159,2160,20,rectilinear))
+$(eval $(call image_coarse,2160,2161,20,rectilinear))
+$(eval $(call image_coarse,2157,2162,20,rectilinear))
+$(eval $(call image_coarse,2162,2163,20,rectilinear))
+$(eval $(call image_coarse,2163,2164,20,rectilinear))
+$(eval $(call image_coarse,2164,2165,20,rectilinear))
+$(eval $(call image_coarse,2165,2166,20,rectilinear))
+$(eval $(call image_coarse,2165,2184,20,rectilinear))
+
+$(eval $(call image_coarse,2157,2167,20,rectilinear))
+$(eval $(call image_coarse,2157,2168,20,rectilinear))
+$(eval $(call image_coarse,2157,2169,20,rectilinear))
+$(eval $(call image_coarse,2157,2170,20,rectilinear))
+
+$(eval $(call image_coarse,2170,2171,20,rectilinear))
+$(eval $(call image_coarse,2171,2172,20,rectilinear))
+$(eval $(call image_coarse,2171,2173,20,rectilinear))
+$(eval $(call image_coarse,2173,2174,20,rectilinear))
+$(eval $(call image_coarse,2174,2175,20,rectilinear))
+$(eval $(call image_coarse,2175,2176,20,rectilinear))
+$(eval $(call image_coarse,2176,2177,20,rectilinear))
+$(eval $(call image_coarse,2177,2178,20,rectilinear))
+$(eval $(call image_coarse,2178,2179,20,rectilinear))
+$(eval $(call image_coarse,2170,2180,20,rectilinear))
+$(eval $(call image_coarse,2180,2181,20,rectilinear))
+$(eval $(call image_coarse,2181,2183,20,rectilinear))
+
+
+all: $(IMAGE_LOGS)
+	echo $(IMAGE_LOGS)
+
+
+#55
+#57-62,63,67-70 have nave
+#63-66,84
+#70-72
+#73-81,83

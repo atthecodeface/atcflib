@@ -101,6 +101,11 @@ def quaternion_image_correlate(ipqm, images, focal_length=50.0, accuracy="80pix3
     ci1 = ipqm.camera_images[images[1]]
 
     ipqm.qic = gjslib_c.quaternion_image_correlator()
+    ipqm.qic.min_cos_angle_src_q = min_cos_seps[accuracy]
+    ipqm.qic.min_cos_angle_tgt_q = min_cos_seps[accuracy]
+    ipqm.qic.min_cos_sep_score   = min_cos_seps[accuracy]
+    ipqm.qic.max_q_dist_score    = min_q_dists[accuracy]
+
     for initial_orientation in [gjslib_c.quaternion().from_euler(yaw=-12.0,degrees=1),
                                 gjslib_c.quaternion().from_euler(yaw=+12.0,degrees=1),
                                 ]:
@@ -118,7 +123,7 @@ def quaternion_image_correlate(ipqm, images, focal_length=50.0, accuracy="80pix3
 
     ipqm.qic.create_mappings()
     best_matches = ipqm.find_best_target_matches_qic(max_q_dist        = max_q_dists[accuracy],
-                                                     min_q_dist        = min_q_dists[accuracy],
+                                                     min_q_dist        = min_q_dists[accuracy]/10.0,
                                                      min_cos_sep       = min_cos_seps[accuracy],
                                                      min_cos_sep_score = min_cos_seps[accuracy],
                                                      max_q_dist_score  = min_q_dists[accuracy],
@@ -136,7 +141,7 @@ def quaternion_image_correlate(ipqm, images, focal_length=50.0, accuracy="80pix3
     if n>max_n: n=max_n
     best_matches = best_matches[:n]
     for bm in best_matches:
-        bm.calculate( ipqm.mappings_by_src_q, ipqm.qic)
+        bm.calculate( ipqm.qic)
         pass
     return best_matches
 
@@ -346,7 +351,6 @@ class c_image_pair_quaternion_match(object):
                                 extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
                                                "GL_POSITION":"vec4(xsc*x+xc,ysc*y+yc,0,1)",
                                                })
-        self.mappings_by_src_q = None
         self.src_qs = []
         self.qic = None
         pass
@@ -503,55 +507,23 @@ class c_image_pair_quaternion_match(object):
         self.to_yuv.execute((ci1.texture,tb[1]))
         matches = self.im.get_matches(tb)
 
-        save_as_png(tb[0],"a%d.png"%img_png_n)
-        save_as_png(tb[1],"b%d.png"%img_png_n)
-        img_png_n+=1
+        if False:
+            save_as_png(tb[0],"a%d.png"%img_png_n)
+            save_as_png(tb[1],"b%d.png"%img_png_n)
+            img_png_n+=1
+            pass
 
         #b Add source -> target matches for qic
-        if self.qic is not None:
-            for m in matches:
-                src_xy = self.xy_from_texture(tb[0],m)
-                src_q = src_img_lp_to.orientation_of_xy(src_xy)
-                for mm in matches[m]:
-                    tgt_xy = self.xy_from_texture(tb[1],mm)
-                    tgt_q = dst_img_lp_to.orientation_of_xy(tgt_xy)
-                    self.qic.add_match(src_q, tgt_q, mm[2], mm[3], mm[4])
-                pass
-            return
-
-        #b Add source -> target matches for non-qic
-        if self.mappings_by_src_q is None:
-            self.mappings_by_src_q = {}
-            self.src_qs = []
-            pass
         for m in matches:
             src_xy = self.xy_from_texture(tb[0],m)
             src_q = src_img_lp_to.orientation_of_xy(src_xy)
-            found_src_q = None
-            for src_qx in self.src_qs:
-                cos_angle = src_qx.angle_axis(src_q,vector_z).r
-                if cos_angle>min_cos_sep:
-                    found_src_q = src_qx
-                    break
-                pass
-            if found_src_q is None:
-                self.mappings_by_src_q[src_q] = c_mappings(src_xy, src_q)
-                self.src_qs.append(src_q)
-                pass
-            else:
-                #print "Found src q",found_src_q,src_q,cos_angle
-                src_q = found_src_q
-                pass
             for mm in matches[m]:
                 tgt_xy = self.xy_from_texture(tb[1],mm)
-                fft_rot = 180/math.pi*math.atan2(mm[3],mm[4])
                 tgt_q = dst_img_lp_to.orientation_of_xy(tgt_xy)
-                fft_power= mm[2]
-                self.mappings_by_src_q[src_q].add_match(tgt_xy, tgt_q, fft_rot, fft_power, min_cos_sep=min_cos_sep)
+                self.qic.add_match(src_q, tgt_q, mm[2], mm[3], mm[4])
                 pass
             pass
-
-        return
+        pass
     #c c_best_match
     class c_best_match(object):
         unique_id = 0
@@ -580,7 +552,7 @@ class c_image_pair_quaternion_match(object):
             self.optimized_src_from_tgt_q = gjslib_c.quaternion(1)
             pass
         #f calculate
-        def calculate(self, mappings_by_src_q, qic=None):
+        def calculate(self, qic=None):
             qic_bm_qs = []
             qs = []
             for (src_q0, src_q1, tgt_q0, tgt_q1, src_from_tgt_orient) in self.qic_mappings:
@@ -662,7 +634,7 @@ class c_image_pair_quaternion_match(object):
 
 #a Do it
 #f do it
-def do_it(images, focal_length, lens_type):
+def do_it(images, focal_length, lens_type, max_iteration_depth=2):
 
     ipqm = c_image_pair_quaternion_match()
     ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
@@ -690,26 +662,92 @@ def do_it(images, focal_length, lens_type):
             rq1 = bm.optimized_src_from_tgt_q
             print bm.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k), "(r=%f,i=%f,j=%f,k=%f)"%(rq1.r,rq1.i,rq1.j,rq1.k), rq1.to_rotation_str(1)
 
-            if bm.max_distance>[10,20,30][iteration_depth]:
-                results.append((bm,iteration_depth))
-                if iteration_depth<2:
+            if (len(results)==0) or (bm.max_distance>[10,20,30][iteration_depth]):
+                results.append((bm,iteration_depth,(iteration_depth+1)*100*bm.max_distance))
+                if iteration_depth<max_iteration_depth:
                     trial_orientations.append( (bm.optimized_src_from_tgt_q, iteration_depth+1) )
                     pass
                 pass
             pass
         pass
-    for (bm, iteration_depth) in results:
+    results.sort(cmp=lambda x,y:cmp(y[2],x[2]))
+    for (bm, iteration_depth, score) in results:
         rq0 = bm.src_from_tgt_q
         rq1 = bm.optimized_src_from_tgt_q
         print iteration_depth, bm.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k), "(r=%f,i=%f,j=%f,k=%f)"%(rq1.r,rq1.i,rq1.j,rq1.k), rq1.to_rotation_str(1)
         pass
-    pass
+    return results
 
 #a Toplevel
-tb = initialize(size=1024, num_textures=12)
+import getopt
+print sys.argv
+long_opts = [ 'image_dir=', 'focal_length=', 'lens_type=', 'max_iteration_depth=', 'output=' ]
+optlist,args = getopt.getopt(sys.argv[1:], '', long_opts)
+image_dir = ""
+focal_length = 35.0
+lens_type = 'rectilinear'
+max_iteration_depth = 2
+output_filename = None
+for (opt, value) in optlist:
+    if opt in ["--image_dir"]:
+        image_dir = value
+        pass
+    if opt in ["--focal_length"]:
+        focal_length = float(value)
+        pass
+    if opt in ["--lens_type"]:
+        lens_type = value
+        pass
+    if opt in ["--max_iteration_depth"]:
+        max_iteration_depth = int(value)
+        pass
+    if opt in ["--output"]:
+        output_filename = value
+        pass
+    pass
+if len(args)!=2:
+    print >>sys.stderr, "Expected two image names"
+    sys.exit(4)
 
-do_it( images = ('../images/IMG_1900.JPG', '../images/IMG_1902.JPG'),
-       focal_length = 35.0,
-       lens_type="rectilinear",
-       )
+images = args
+tb = initialize(size=1024, num_textures=12)
+full_image_filenames = (image_dir+images[0], image_dir+images[1])
+print "Running QIC on",full_image_filenames,"at focal length",focal_length,"type",lens_type,"max_iter",max_iteration_depth
+results = do_it( images=full_image_filenames, focal_length=focal_length, lens_type=lens_type, max_iteration_depth=max_iteration_depth)
+
+f=sys.stdout
+if output_filename is not None:    
+    f = open(output_filename,"a")
+    pass
+iteration_depths_written = set()
+optimized_qs_written = set()
+output_data = {}
+output_data["best_qs"]=[]
+output_data["optimized_qs"]=[]
+
+for (bm, iteration_depth, score) in results:
+    best_qs      = output_data["best_qs"]
+    optimized_qs = output_data["optimized_qs"]
+    if iteration_depth not in iteration_depths_written:
+        iteration_depths_written.add(iteration_depth)
+        while len(best_qs)<=iteration_depth:
+            best_qs.append(None)
+            pass
+        best_qs[iteration_depth] = (iteration_depth,
+                                    bm.max_distance,
+                                    bm.optimized_src_from_tgt_q.rijk,
+                                    bm.src_from_tgt_q.rijk)
+        pass
+    rq0 = bm.optimized_src_from_tgt_q
+    rq0s = "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k)
+    if rq0s not in optimized_qs_written:
+        optimized_qs_written.add(rq0s)
+        optimized_qs.append( (iteration_depth,
+                              bm.max_distance,
+                              bm.optimized_src_from_tgt_q.rijk,
+                              bm.src_from_tgt_q.rijk)
+                             )
+        pass
+    pass
+print >>f, "image_map_data[('%s','%s')] = "%(images[0],images[1]),repr(output_data)
 

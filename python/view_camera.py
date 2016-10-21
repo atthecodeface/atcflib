@@ -212,6 +212,7 @@ class c_view_camera_obj(opengl_obj.c_opengl_obj):
     pass
     def should_display(self, selection, n, tick):
         if not self.selectable:
+            return True
             if (n%2) == (tick%2):
                 return False
             return True
@@ -336,24 +337,28 @@ quaternion(r=0.979007,i=-0.015306,j=-0.013493,k=-0.202803)
     focal_length = 35.0
     lens_type = "rectilinear"
 
-    if False:
+    if True:
         image_orientations = [ ("../images/IMG_2173.JPG", None, quaternion(r=1)),
                                ("../images/IMG_2174.JPG", 0, 
-quaternion(r=0.997334,i=-0.005987,j=-0.070914,k=0.016165)
-#(r=0.997314,i=-0.006328,j=-0.071135,k=0.016289)
+quaternion(r=0.997179,i=-0.006334,j=-0.072740,k=0.017404) # 20.0
                                )]
-# Good at 20.7: quaternion(r=0.997465,i=-0.007825,j=-0.069781,k=0.011491)
-# Better at 20.6: quaternion(r=0.997539,i=-0.007213,j=-0.067968,k=0.015646)
-# Approximately: (r=0.997425,i=-0.007999,j=-0.070465,k=0.010689)
-#(r=0.998548,i=-0.004666,j=-0.053508,k=0.004202)
-#(r=0.997590,i=-0.021140,j=-0.061052,k=0.025295)
-#~quaternion(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)#(r=0.997499,i=0.006470,j=0.067833,k=-0.018762)
-#(r=0.997465,i=0.011834,j=0.061485,k=-0.033796)
-# given (r=0.997484,i=0.011707,j=0.069910,k=0.000644)...        
-# best was (r=0.997583,i=0.006527,j=0.067192,k=-0.016425)
-#derived from 24 hits on center match (r=0.997333,i=-0.006595,j=0.060502,k=-0.040275)
         focal_length = 20.0
-        focal_length = 20.5
+        lens_type = "rectilinear"
+        pass
+
+    if True:
+        image_orientations = [ ("../images/IMG_2157.JPG", None, quaternion(r=1)),
+                               ("../images/IMG_2158.JPG", 0, quaternion(r=0.997922,i=-0.005129,j=-0.063480,k=0.009833)),
+                               ("../images/IMG_2159.JPG", 1, quaternion(r=0.995836,i=-0.006257,j=-0.090949,k=0.000438)),
+                               ("../images/IMG_2160.JPG", 2, quaternion(r=0.994766,i=-0.006976,j=-0.101329,k=-0.011162)),
+                               ("../images/IMG_2161.JPG", 3, quaternion(r=0.995398,i=-0.009837,j=-0.094008,k=-0.015774)),
+                               ("../images/IMG_2162.JPG", 0, quaternion(r=0.736613,i=0.162316,j=-0.099955,k=-0.648894)),
+                               ("../images/IMG_2163.JPG", 5, quaternion(r=0.996007,i=-0.069667,j=0.047261,k=0.029700)), 
+                               ("../images/IMG_2164.JPG", 6, quaternion(r=0.998962,i=-0.030478,j=0.032808,k=-0.008316)),
+                               ("../images/IMG_2165.JPG", 7, quaternion(r=0.979175,i=0.051083,j=0.061833,k=0.186504)),
+                               #("../images/IMG_2162.JPG", 0, quaternion(r=0.736613,i=0.162316,j=-0.099955,k=-0.648894)),
+                               ]
+        focal_length = 20.0
         lens_type = "rectilinear"
         pass
 
@@ -373,7 +378,7 @@ quaternion(r=0.997334,i=-0.005987,j=-0.070914,k=0.016165)
         build_add_projected_image_mesh(obj, obj.camera, src_w, src_h, 64, z=8+n*2)
         image_objects.append(obj)
         orientations.append(orientation)
-        #n += 1
+        n += 1
         pass
     for i in range(len(orientations)-1):
         src_q = orientations[i]

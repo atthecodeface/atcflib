@@ -53,6 +53,7 @@ static PyObject *python_vector_method_unary_negate(PyObject* self);
 
 static PyObject *python_vector_getattr(PyObject *self, char *attr);
 static PyObject *python_vector_str(PyObject *self);
+static PyObject *python_vector_repr(PyObject *self);
 static void      python_vector_dealloc(PyObject *self);
 
 /*a Static variables
@@ -158,7 +159,7 @@ PyTypeObject PyTypeObject_vector_frame = {
     python_vector_getattr, /*tp_getattr*/
     0, /*tp_setattr*/
     0, /*tp_compare*/
-    0, /*tp_repr - ideally a represenation that is python that recreates this object */
+	python_vector_repr,     /* tp_repr */
     &python_vector_number_methods, /*tp_as_number*/
     0, /*tp_as_sequence*/
     0, /*tp_as_mapping*/
@@ -433,6 +434,24 @@ python_vector_method_angle_axis_to_v(PyObject* self, PyObject* args, PyObject *k
 
 /*a Python vector infrastructure mthods
  */
+/*f python_vector_repr
+ */
+static PyObject *
+python_vector_repr(PyObject* self)
+{
+    t_PyObject_vector *py_obj = (t_PyObject_vector *)self;
+    if (py_obj->vector) {
+        char buffer[1024];
+        sprintf(buffer,"vector((");
+        for (int i=0; i<py_obj->vector->length(); i++) {
+            sprintf(buffer+strlen(buffer),"%lf,",py_obj->vector->coords()[i]);
+        }
+        sprintf(buffer+strlen(buffer),"))");
+        return PyString_FromFormat("%s", buffer);
+    }
+    Py_RETURN_NONE;
+}
+
 /*f python_vector_str
  */
 static PyObject *

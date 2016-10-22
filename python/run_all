@@ -18,6 +18,16 @@ $$($1__$2__LOG): $(IMAGE_DIR)/IMG_$1.JPG  $(IMAGE_DIR)/IMG_$2.JPG
 IMAGE_LOGS += $$($1__$2__LOG)
 
 endef
+define image_coarse_reverse
+
+$1__$2__RLOG := logs/log_$1_$2_r.txt
+
+$$($1__$2__RLOG): $(IMAGE_DIR)/IMG_$1.JPG  $(IMAGE_DIR)/IMG_$2.JPG
+	time $(RUN_QIC) --reverse=1 --max_iteration_depth=1 --focal_length=$3 --lens_type=$4 --image_dir=$(IMAGE_DIR) IMG_$1.JPG IMG_$2.JPG > $$@
+
+IMAGE_LOGS += $$($1__$2__RLOG)
+
+endef
 
 IMAGES = IMG_2155.JPG \
 	IMG_2157.JPG \
@@ -63,6 +73,7 @@ $(eval $(call image_coarse,2163,2164,20,rectilinear))
 $(eval $(call image_coarse,2164,2165,20,rectilinear))
 $(eval $(call image_coarse,2165,2166,20,rectilinear))
 $(eval $(call image_coarse,2165,2184,20,rectilinear))
+$(eval $(call image_coarse,2166,2184,20,rectilinear))
 
 $(eval $(call image_coarse,2157,2167,20,rectilinear))
 $(eval $(call image_coarse,2157,2168,20,rectilinear))
@@ -105,8 +116,90 @@ $(eval $(call image_coarse,2170,2180,20,rectilinear))
 $(eval $(call image_coarse,2180,2181,20,rectilinear))
 $(eval $(call image_coarse,2181,2183,20,rectilinear))
 
-$(eval $(call image_coarse,2165,2184,20,rectilinear))
 $(eval $(call image_coarse,2181,2184,20,rectilinear))
+
+$(eval $(call image_coarse,2165,2186,20,rectilinear))
+$(eval $(call image_coarse,2181,2186,20,rectilinear))
+
+$(eval $(call image_coarse,2183,2184,20,rectilinear))
+$(eval $(call image_coarse,2183,2186,20,rectilinear))
+
+$(eval $(call image_coarse,2181,2177,20,rectilinear))
+$(eval $(call image_coarse,2181,2178,20,rectilinear))
+$(eval $(call image_coarse,2181,2179,20,rectilinear))
+$(eval $(call image_coarse,2181,2180,20,rectilinear))
+
+$(eval $(call image_coarse,2173,2158,20,rectilinear))
+$(eval $(call image_coarse,2173,2159,20,rectilinear))
+$(eval $(call image_coarse,2173,2160,20,rectilinear))
+$(eval $(call image_coarse,2173,2161,20,rectilinear))
+$(eval $(call image_coarse,2173,2162,20,rectilinear))
+$(eval $(call image_coarse,2173,2163,20,rectilinear))
+$(eval $(call image_coarse,2173,2164,20,rectilinear))
+$(eval $(call image_coarse,2173,2165,20,rectilinear))
+$(eval $(call image_coarse,2173,2166,20,rectilinear))
+$(eval $(call image_coarse,2173,2184,20,rectilinear))
+
+$(eval $(call image_coarse,2173,2167,20,rectilinear))
+$(eval $(call image_coarse,2173,2168,20,rectilinear))
+$(eval $(call image_coarse,2173,2169,20,rectilinear))
+$(eval $(call image_coarse,2173,2170,20,rectilinear))
+$(eval $(call image_coarse,2173,2171,20,rectilinear))
+$(eval $(call image_coarse,2173,2172,20,rectilinear))
+
+$(eval $(call image_coarse,2170,2167,20,rectilinear))
+$(eval $(call image_coarse,2170,2168,20,rectilinear))
+$(eval $(call image_coarse,2170,2169,20,rectilinear))
+$(eval $(call image_coarse,2170,2171,20,rectilinear))
+$(eval $(call image_coarse,2170,2172,20,rectilinear))
+
+$(eval $(call image_coarse,2172,2167,20,rectilinear))
+$(eval $(call image_coarse,2172,2168,20,rectilinear))
+$(eval $(call image_coarse,2172,2169,20,rectilinear))
+$(eval $(call image_coarse,2172,2171,20,rectilinear))
+$(eval $(call image_coarse,2172,2174,20,rectilinear))
+$(eval $(call image_coarse,2172,2175,20,rectilinear))
+$(eval $(call image_coarse,2172,2176,20,rectilinear))
+$(eval $(call image_coarse,2172,2177,20,rectilinear))
+
+$(eval $(call image_coarse,2178,2167,20,rectilinear))
+$(eval $(call image_coarse,2178,2168,20,rectilinear))
+$(eval $(call image_coarse,2178,2169,20,rectilinear))
+$(eval $(call image_coarse,2178,2171,20,rectilinear))
+$(eval $(call image_coarse,2178,2174,20,rectilinear))
+$(eval $(call image_coarse,2178,2175,20,rectilinear))
+$(eval $(call image_coarse,2178,2176,20,rectilinear))
+$(eval $(call image_coarse,2178,2177,20,rectilinear))
+
+$(eval $(call image_coarse,2179,2167,20,rectilinear))
+$(eval $(call image_coarse,2179,2168,20,rectilinear))
+$(eval $(call image_coarse,2179,2169,20,rectilinear))
+$(eval $(call image_coarse,2179,2171,20,rectilinear))
+$(eval $(call image_coarse,2179,2174,20,rectilinear))
+$(eval $(call image_coarse,2179,2175,20,rectilinear))
+$(eval $(call image_coarse,2179,2176,20,rectilinear))
+$(eval $(call image_coarse,2179,2177,20,rectilinear))
+$(eval $(call image_coarse,2179,2180,20,rectilinear))
+$(eval $(call image_coarse,2179,2183,20,rectilinear))
+$(eval $(call image_coarse,2179,2184,20,rectilinear))
+$(eval $(call image_coarse,2179,2186,20,rectilinear))
+
+$(eval $(call image_coarse,2180,2166,20,rectilinear))
+$(eval $(call image_coarse,2180,2183,20,rectilinear))
+$(eval $(call image_coarse,2180,2184,20,rectilinear))
+$(eval $(call image_coarse,2180,2186,20,rectilinear))
+
+$(eval $(call image_coarse_reverse,2184,2180,20,rectilinear))
+$(eval $(call image_coarse_reverse,2166,2180,20,rectilinear))
+
+$(eval $(call image_coarse_reverse,2183,2157,20,rectilinear))
+$(eval $(call image_coarse_reverse,2183,2165,20,rectilinear))
+$(eval $(call image_coarse_reverse,2183,2166,20,rectilinear))
+$(eval $(call image_coarse_reverse,2183,2173,20,rectilinear))
+$(eval $(call image_coarse_reverse,2183,2170,20,rectilinear))
+$(eval $(call image_coarse_reverse,2183,2180,20,rectilinear))
+$(eval $(call image_coarse_reverse,2183,2181,20,rectilinear))
+$(eval $(call image_coarse_reverse,2183,2184,20,rectilinear))
 
 
 all: $(IMAGE_LOGS)

@@ -634,13 +634,17 @@ class c_image_pair_quaternion_match(object):
 
 #a Do it
 #f do it
-def do_it(images, focal_length, lens_type, max_iteration_depth=2):
+def do_it(images, focal_length, lens_type, max_iteration_depth=2, reverse=0):
 
     ipqm = c_image_pair_quaternion_match()
     ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
     ipqm.add_image(image_filename=images[1], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
 
-    trial_orientations = [(gjslib_c.quaternion(r=1), 0)]
+    iq = gjslib_c.quaternion(r=1)
+    if reverse:
+        iq = iq.from_euler(roll=180,degrees=1)
+        pass
+    trial_orientations = [(iq, 0)]
     orientations_attempted = set()
     results = []
     while len(trial_orientations)>0:
@@ -681,13 +685,14 @@ def do_it(images, focal_length, lens_type, max_iteration_depth=2):
 #a Toplevel
 import getopt
 print sys.argv
-long_opts = [ 'image_dir=', 'focal_length=', 'lens_type=', 'max_iteration_depth=', 'output=' ]
+long_opts = [ 'image_dir=', 'focal_length=', 'lens_type=', 'max_iteration_depth=', 'output=', 'reverse=' ]
 optlist,args = getopt.getopt(sys.argv[1:], '', long_opts)
 image_dir = ""
 focal_length = 35.0
 lens_type = 'rectilinear'
 max_iteration_depth = 2
 output_filename = None
+reverse = 0
 for (opt, value) in optlist:
     if opt in ["--image_dir"]:
         image_dir = value
@@ -701,6 +706,9 @@ for (opt, value) in optlist:
     if opt in ["--max_iteration_depth"]:
         max_iteration_depth = int(value)
         pass
+    if opt in ["--reverse"]:
+        reverse = int(value)
+        pass
     if opt in ["--output"]:
         output_filename = value
         pass
@@ -713,7 +721,7 @@ images = args
 tb = initialize(size=1024, num_textures=12)
 full_image_filenames = (image_dir+images[0], image_dir+images[1])
 print "Running QIC on",full_image_filenames,"at focal length",focal_length,"type",lens_type,"max_iter",max_iteration_depth
-results = do_it( images=full_image_filenames, focal_length=focal_length, lens_type=lens_type, max_iteration_depth=max_iteration_depth)
+results = do_it( images=full_image_filenames, focal_length=focal_length, lens_type=lens_type, max_iteration_depth=max_iteration_depth, reverse=reverse)
 
 f=sys.stdout
 if output_filename is not None:    

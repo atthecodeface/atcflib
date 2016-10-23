@@ -746,6 +746,23 @@ int c_filter_find::do_compile(void)
 
 /*f c_filter_find::do_execute
  */
+typedef struct
+{
+    double value_xy;
+    int x;
+    int place;
+} t_xy_value_place;
+
+int cmp_xy_value_place(const void *a, const void *b)
+{
+    const t_xy_value_place *pa, *pb;
+    pa = (const t_xy_value_place *)a;
+    pb = (const t_xy_value_place *)b;
+    double diff = pa->value_xy - pb->value_xy;
+    if (diff<0) return -1;
+    return 1;
+}
+
 int c_filter_find::do_execute(t_exec_context *ec)
 {
     t_texture *texture;
@@ -754,6 +771,7 @@ int c_filter_find::do_execute(t_exec_context *ec)
     float elements_minimum;
     int   n;
     int w, h;
+    t_xy_value_place *h_points;
 
     SL_TIMER_ENTRY(timers[filter_timer_execute]);
 
@@ -772,30 +790,77 @@ int c_filter_find::do_execute(t_exec_context *ec)
 
     if (elements_minimum<parameters.minimum) elements_minimum=parameters.minimum;
     n=0;
-    points = (t_point_value *)malloc(sizeof(t_point_value)*parameters.max_elements);
+    points   = (t_point_value *)malloc(sizeof(t_point_value)*parameters.max_elements);
+    h_points = (t_xy_value_place *)malloc(sizeof(t_xy_value_place)*w);
     for (int y=parameters.perimeter; y<h-parameters.perimeter; y++) {
+        int num_h_points = 0;
         for (int x=parameters.perimeter; x<w-parameters.perimeter; x++) {
-            int i;
             float value_xy;
             value_xy = raw_img[(y*w+x)*4+0];
             if (value_xy<=elements_minimum) continue;
-            for (i=0; i<n; i++) {
-                if (points[i].value<value_xy) break;
-            }
-            if (n==parameters.max_elements) n--;
-            if (i<n) {
-                memmove(&points[i+1], &points[i], sizeof(t_point_value)*(n-i));
-            }
-            n++;
-            points[i].x=x;
-            points[i].y=y;
-            points[i].value = value_xy;
-            points[i].vec_x = raw_img[(y*w+x)*4+1];
-            points[i].vec_y = raw_img[(y*w+x)*4+2];
-            if (n==parameters.max_elements) {
-                elements_minimum = points[n-1].value;
-            }
+            h_points[num_h_points].x        = x;
+            h_points[num_h_points].value_xy = value_xy;
+            num_h_points++;
         }
+        if (num_h_points==0)
+            continue;
+        if (num_h_points>1) {
+            qsort(h_points, num_h_points, sizeof(t_xy_value_place), cmp_xy_value_place);
+        }
+        //fprintf(stderr,"%d:Merging %d points, total %d so far\n",y,num_h_points,n);
+        int i, j;
+        j=0;
+        for (i=0; (i<n) && (j<num_h_points);) {
+            if (points[i].value<h_points[j].value_xy) {
+                i++;
+            }
+            if (i+j>=parameters.max_elements) break;
+            h_points[j].place = i+j;
+            j++;
+        }
+        while ((j<num_h_points) && (n+j<parameters.max_elements)) {
+            h_points[j].place = n+j;
+            j++;
+        }
+        // At this point, h_points[0 .. j-1].place is the index that h_points must end up at
+        // So look at h_points[j-1]  = k1. Move elements k1-j .. n-1 down by j, and set element k from h_points[j-1]
+        // Now look at h_points[j-2] = k2. Move elements k2 .. k1-1 down by j-1, and set element k2 from h_points[j-2]
+        // Hence track 'bottom of range'=l, starting at l=n-j, and start with j=j-1
+        // while j>=0:
+        //   k = h_points[j].place
+        //   move elements k-j..l-1 inclusive down by j+1
+        //   set element[k] from h_points[j]
+        //   j--, l=k
+        // In visual: h_points = 2, 6 (CG); n=12 (ABDEFHIJKLMN); j=2; l=12-2=10; j=j-1=11
+        // j=1, k=6, ABDEFHIJKLMN -> ABDEF__HIJKL -> ABDEF_GHIJKL, l=k, j=j-1=0
+        //    move 5=k-j to 10=l (inc to exc) down by 2=j+1, set [6=k] = G, l=k-j=5, j=j-1=0
+        // j=0, k=2, ABDEF_GHIJKLMN -> AB_DEFGHIJKL -> ABCDEFGHIJKL
+        //    move 2=k-j to 5=l (inc to exc) down by 1=j+1, set [2=k] = C
+        // if we don't start full (i.e. n<parameters.max_elements) then start
+        // with l = min(n, parameters.max_elements-j)
+        // in the above if we had started with n=8 and max of 12, then l=8
+        // in the above if we had started with n=9 and max of 12, then l=9
+        // in the above if we had started with n=10 and max of 12, then l=10
+        // in the above if we had started with n=11 and max of 12, then l=10
+        int l = parameters.max_elements-j;
+        if (l>n) l=n;
+        n = l+j;
+        j--;
+         while (j>=0) {
+            int k = h_points[j].place;
+            if (k-j < l) {
+                memmove(&points[k+1], &points[k-j], sizeof(t_point_value)*(l-(k-j)));
+            }
+            int x = h_points[j].x;
+            points[k].x     = x;
+            points[k].y     = y;
+            points[k].value = h_points[j].value_xy;
+            points[k].vec_x = raw_img[(y*w+x)*4+1];
+            points[k].vec_y = raw_img[(y*w+x)*4+2];
+            l=k-j;
+            j--;
+         }
+         elements_minimum = points[n-1].value;
     }
 
     SL_TIMER_EXIT(timers[filter_timer_internal_1]);

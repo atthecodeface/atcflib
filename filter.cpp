@@ -748,8 +748,9 @@ int c_filter_find::do_compile(void)
  */
 typedef struct
 {
-    double value_xy;
+    float value;
     int x;
+    int y;
     int place;
 } t_xy_value_place;
 
@@ -758,11 +759,43 @@ int cmp_xy_value_place(const void *a, const void *b)
     const t_xy_value_place *pa, *pb;
     pa = (const t_xy_value_place *)a;
     pb = (const t_xy_value_place *)b;
-    double diff = pa->value_xy - pb->value_xy;
+    float diff = pb->value - pa->value;
     if (diff<0) return -1;
     return 1;
 }
 
+/* timings
+new to old (old is constant insertion, new is qsort batch and merge)
+
+matches - max elements 250 - 40 times
+'find_matches': (238509L,  9618763179L,  521580233L, 12275469L), # 256 static
+'find_matches': (239254L,  9900502764L,  768485908L, 11133278L), # 8192 static
+'find_matches': (250526L,  9578334202L,  551259150L, 12300024L), # w=1024
+'find_matches': (221061L,  9904367446L,  787303313L, 11228406L), # w*8=8192
+'find_matches': (0L,       9621001048L,  499848297L, 12351702L), # old
+
+corners - max elements 25000 - 2 times
+'find_corners': (12300L,  7682195367L,   322754691L, 1657920711L), # 256 static
+'find_corners': (8931L,   7654361195L,   159080658L, 1713371743L), # 8192 static
+'find_corners': (8835L,   7586594175L,   149520810L, 1617053328L)  # w
+'find_corners': (9752L,   7326852642L,   139165680L, 1632003231L), # w*8
+'find_corners': (0L,     29570660447L, 22269144279L, 1659029328L), # old
+
+It would seem sensible ot have a max_elements of about 1k-2k
+Clearly for 250 elements there is not a lot of difference old to new, and 256 is the same as 1k 'new points'
+
+For 25k elements it is clearly better to have 1k new points - althought it seems to not be too critical, again
+
+Hence run with 1k new points.
+
+ Then each match is about 5E9 CPU ticks at 2.7GHz for 40 match
+executions, plus 4E9 for 40 buffer fetch from GPU (on Macbook pro,
+Intel HD graphics).
+
+That is about 3.5 seconds, half of which is in the GPU fetch, out of a full run-time of python_test of 12.3 seconds
+
+
+ */
 int c_filter_find::do_execute(t_exec_context *ec)
 {
     t_texture *texture;
@@ -771,11 +804,22 @@ int c_filter_find::do_execute(t_exec_context *ec)
     float elements_minimum;
     int   n;
     int w, h;
-    t_xy_value_place *h_points;
+    
+    int num_new_points = 0;
+    int x, y;
+    int done;
+
+    static const int max_new_points = 1024;
+    static t_xy_value_place *new_points=NULL;
+    if (new_points==NULL) {
+        new_points = (t_xy_value_place *)malloc(sizeof(t_xy_value_place)*max_new_points);
+    }
 
     SL_TIMER_ENTRY(timers[filter_timer_execute]);
 
+    SL_TIMER_ENTRY(timers[filter_timer_compile]);
     set_parameters_from_map(parameter_defns, (void *)&parameters);
+
 
     texture = bound_texture(ec, 0);
 
@@ -784,6 +828,8 @@ int c_filter_find::do_execute(t_exec_context *ec)
     w = texture_hdr->width;
     h = texture_hdr->height;
 
+    SL_TIMER_EXIT(timers[filter_timer_compile]);
+
     elements_minimum = -1.0;
 
     SL_TIMER_ENTRY(timers[filter_timer_internal_1]);
@@ -791,35 +837,50 @@ int c_filter_find::do_execute(t_exec_context *ec)
     if (elements_minimum<parameters.minimum) elements_minimum=parameters.minimum;
     n=0;
     points   = (t_point_value *)malloc(sizeof(t_point_value)*parameters.max_elements);
-    h_points = (t_xy_value_place *)malloc(sizeof(t_xy_value_place)*w);
-    for (int y=parameters.perimeter; y<h-parameters.perimeter; y++) {
-        int num_h_points = 0;
-        for (int x=parameters.perimeter; x<w-parameters.perimeter; x++) {
-            float value_xy;
-            value_xy = raw_img[(y*w+x)*4+0];
-            if (value_xy<=elements_minimum) continue;
-            h_points[num_h_points].x        = x;
-            h_points[num_h_points].value_xy = value_xy;
-            num_h_points++;
+
+    y=parameters.perimeter;
+    x=parameters.perimeter;
+    done = 0;
+    while (!done) {
+        float value_xy;
+        value_xy = raw_img[(y*w+x)*4+0];
+        if (value_xy>elements_minimum) {
+            new_points[num_new_points].x     = x;
+            new_points[num_new_points].y     = y;
+            new_points[num_new_points].value = value_xy;
+            num_new_points++;
         }
-        if (num_h_points==0)
+        x++;
+        if (x>=w-parameters.perimeter) {
+            x = parameters.perimeter;
+            y++;
+            if (y>=h-parameters.perimeter) {
+                done = 1;
+            }
+        }
+        if ((!done) && (num_new_points<max_new_points))
             continue;
-        if (num_h_points>1) {
-            qsort(h_points, num_h_points, sizeof(t_xy_value_place), cmp_xy_value_place);
+
+        if (num_new_points==0)
+            continue;
+        if (num_new_points>1) {
+            qsort(new_points, num_new_points, sizeof(t_xy_value_place), cmp_xy_value_place);
         }
-        //fprintf(stderr,"%d:Merging %d points, total %d so far\n",y,num_h_points,n);
+
         int i, j;
         j=0;
-        for (i=0; (i<n) && (j<num_h_points);) {
-            if (points[i].value<h_points[j].value_xy) {
+        for (i=0; (i<n) && (j<num_new_points);) {
+            if (points[i].value > new_points[j].value) {
                 i++;
+                continue;
             }
             if (i+j>=parameters.max_elements) break;
-            h_points[j].place = i+j;
+            new_points[j].place = i+j;
             j++;
         }
-        while ((j<num_h_points) && (n+j<parameters.max_elements)) {
-            h_points[j].place = n+j;
+
+        while ((j<num_new_points) && (n+j<parameters.max_elements)) {
+            new_points[j].place = n+j;
             j++;
         }
         // At this point, h_points[0 .. j-1].place is the index that h_points must end up at
@@ -846,21 +907,28 @@ int c_filter_find::do_execute(t_exec_context *ec)
         if (l>n) l=n;
         n = l+j;
         j--;
-         while (j>=0) {
-            int k = h_points[j].place;
+        while (j>=0) {
+            int k = new_points[j].place;
             if (k-j < l) {
                 memmove(&points[k+1], &points[k-j], sizeof(t_point_value)*(l-(k-j)));
             }
-            int x = h_points[j].x;
-            points[k].x     = x;
-            points[k].y     = y;
-            points[k].value = h_points[j].value_xy;
-            points[k].vec_x = raw_img[(y*w+x)*4+1];
-            points[k].vec_y = raw_img[(y*w+x)*4+2];
+            int px = new_points[j].x;
+            int py = new_points[j].y;
+            points[k].x     = px;
+            points[k].y     = py;
+            points[k].value = new_points[j].value;
+            points[k].vec_x = raw_img[(py*w+px)*4+1];
+            points[k].vec_y = raw_img[(py*w+px)*4+2];
             l=k-j;
             j--;
          }
+
          elements_minimum = points[n-1].value;
+         if (0) {
+             fprintf(stderr,"%d:Merging %d points, total %d so far %f %f\n",y,num_new_points,n,
+                     new_points[0].value, new_points[1].value);
+         }
+         num_new_points = 0;
     }
 
     SL_TIMER_EXIT(timers[filter_timer_internal_1]);

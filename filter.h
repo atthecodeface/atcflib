@@ -25,6 +25,7 @@
 
 /*a Includes
  */
+#include "timer.h"
 #include "texture.h"
 #include "shader.h"
 #include <map>
@@ -34,6 +35,14 @@
  */
 #define MAX_FILTER_TEXTURES 8
 #define MAX_FILTER_PROJECTIONS 2
+#define MAX_FILTER_TIMERS 8
+typedef enum
+{
+    filter_timer_compile,
+    filter_timer_execute,
+    filter_timer_internal_1,
+    filter_timer_internal_2,
+} t_filter_timer;
 
 /*a Types
  */
@@ -145,6 +154,8 @@ public:
     t_filter_texture textures[MAX_FILTER_TEXTURES];
     int num_projections;
     class c_lens_projection *projections[MAX_FILTER_PROJECTIONS];
+
+    t_sl_timer timers[MAX_FILTER_TIMERS];
 };
 
 /*a External functions

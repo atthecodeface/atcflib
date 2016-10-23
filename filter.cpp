@@ -145,6 +145,9 @@ c_filter::c_filter(t_len_string *textures, t_len_string *parameter_string)
 
     parse_error = NULL;
 
+    for (int i=0; i<MAX_FILTER_TIMERS; i++) {
+        SL_TIMER_INIT(timers[i]);
+    }
     filter_pid = 0;
     for (int i=0; i<MAX_FILTER_TEXTURES; i++) {
         this->textures[i].texture = NULL;
@@ -543,21 +546,25 @@ c_filter_glsl::~c_filter_glsl()
  */
 int c_filter_glsl::do_compile(void)
 {
+    int rc=0;
+    SL_TIMER_ENTRY(timers[filter_timer_compile]);
+
     get_shader_defines(&shader_defines);
     filter_pid = shader_load_and_link(0, "shaders/vertex_shader.glsl", filter_filename, shader_defines);
     if (filter_pid==0) {
         parse_error = "Failed to load and link shader";
-        return 1;
+        rc = 1;
     }
-    if (get_shader_uniform_ids()) {
+    if ((rc==0) && get_shader_uniform_ids()) {
         parse_error = "Failed to get shader uniform ids";
-        return 1;
+        rc = 1;
     }
-    if (get_texture_uniform_ids(1)) {
+    if ((rc==0) && get_texture_uniform_ids(1)) {
         parse_error = "Failed to get texture uniform ids";
-        return 1;
+        rc = 1;
     }
-    return 0;
+    SL_TIMER_EXIT(timers[filter_timer_compile]);
+    return rc;
 }
 
 /*f c_filter_glsl::do_execute
@@ -565,6 +572,8 @@ int c_filter_glsl::do_compile(void)
 int c_filter_glsl::do_execute(t_exec_context *ec)
 {
     GL_GET_ERRORS;
+
+    SL_TIMER_ENTRY(timers[filter_timer_execute]);
 
     set_parameters_from_map(parameter_defns, (void *)&parameters);
 
@@ -584,6 +593,7 @@ int c_filter_glsl::do_execute(t_exec_context *ec)
 
     GL_GET_ERRORS;
 
+    SL_TIMER_EXIT(timers[filter_timer_execute]);
     return 0;
 }
 
@@ -611,16 +621,25 @@ c_filter_correlate::~c_filter_correlate()
  */
 int c_filter_correlate::do_compile(void)
 {
+    int rc=0;
+
+    SL_TIMER_ENTRY(timers[filter_timer_compile]);
+
     get_shader_defines(&shader_defines);
     filter_pid = shader_load_and_link(0, "shaders/vertex_correlation_shader.glsl", filter_filename, shader_defines);
     if (filter_pid==0) {
-        return 1;
+        rc=1;
     }
-    if (get_shader_uniform_ids())
-        return 1;
-    if (get_texture_uniform_ids(1))
-        return 1;
-    return 0;
+    if ((rc==0) && (get_shader_uniform_ids())){
+        rc=1;
+    }
+    if ((rc==0) && (get_texture_uniform_ids(1))) {
+        rc=1;
+    }
+
+    SL_TIMER_EXIT(timers[filter_timer_compile]);
+
+    return rc;
 }
 
 /*f c_filter_correlate::do_execute
@@ -628,6 +647,8 @@ int c_filter_correlate::do_compile(void)
 int c_filter_correlate::do_execute(t_exec_context *ec)
 {
     GL_GET_ERRORS;
+    SL_TIMER_ENTRY(timers[filter_timer_execute]);
+
     texture_target_as_framebuffer(bound_texture(ec,num_textures-1));
 
     glClearColor(0.2,0,0,1);
@@ -648,6 +669,9 @@ int c_filter_correlate::do_execute(t_exec_context *ec)
     //}
 
     texture_draw_tidy();
+
+    SL_TIMER_EXIT(timers[filter_timer_execute]);
+
     return 0;
 }
 
@@ -731,6 +755,8 @@ int c_filter_find::do_execute(t_exec_context *ec)
     int   n;
     int w, h;
 
+    SL_TIMER_ENTRY(timers[filter_timer_execute]);
+
     set_parameters_from_map(parameter_defns, (void *)&parameters);
 
     texture = bound_texture(ec, 0);
@@ -741,6 +767,8 @@ int c_filter_find::do_execute(t_exec_context *ec)
     h = texture_hdr->height;
 
     elements_minimum = -1.0;
+
+    SL_TIMER_ENTRY(timers[filter_timer_internal_1]);
 
     if (elements_minimum<parameters.minimum) elements_minimum=parameters.minimum;
     n=0;
@@ -769,6 +797,10 @@ int c_filter_find::do_execute(t_exec_context *ec)
             }
         }
     }
+
+    SL_TIMER_EXIT(timers[filter_timer_internal_1]);
+    SL_TIMER_ENTRY(timers[filter_timer_internal_2]);
+
     float min_distance_sq;
     min_distance_sq = parameters.min_distance * parameters.min_distance;
     for (int i=0; i<n; i++) {
@@ -789,6 +821,8 @@ int c_filter_find::do_execute(t_exec_context *ec)
             }
         }
     }
+    SL_TIMER_EXIT(timers[filter_timer_internal_2]);
+
     if (0) {
         for (int i=0; (i<n) && (i<10); i++) {
             fprintf(stderr,"%d: (%d,%d) = %f : %5.2f (%8.5f, %8.5f)\n",
@@ -801,6 +835,9 @@ int c_filter_find::do_execute(t_exec_context *ec)
     if (ec->points) free(ec->points);
     ec->points = points;
     ec->num_points = n;
+
+    SL_TIMER_EXIT(timers[filter_timer_execute]);
+
     return 0;
 }
 

@@ -129,6 +129,8 @@ def quaternion_image_correlate(ipqm, images, focal_length=50.0, accuracy="80pix3
                                                      max_q_dist_score  = min_q_dists[accuracy],
                                                      )
 
+    print ipqm.times()
+
     #b Do clusters
     def cmp_matches(x,y):
         return cmp(y.max_distance,x.max_distance)
@@ -182,6 +184,8 @@ class c_filter(object):
         self.f.textures(textures)
         self.f.execute()
         pass
+    def times(self):
+        return self.f.times
     pass
 
 #c c_mandelbrot_filter
@@ -332,6 +336,16 @@ class c_image_match(object):
             matches[xy] = self.find_matches.f.points[0:self.max_matches_per_corner]
             pass
         return matches
+    def times(self):
+        return {"copy_img":self.copy_img.times(),
+                "equalize":self.equalize.times(),
+                "harris":self.harris.times(),
+                "circle_dft":self.circle_dft.times(),
+                "find_corners":self.find_corners.times(),
+                "circle_dft_diff":self.circle_dft_diff.times(),
+                "circle_dft_diff_combine":self.circle_dft_diff_combine.times(),
+                "find_matches":self.find_matches.times(),
+                }
     pass
 
 #c c_image_pair_quaternion_match
@@ -630,11 +644,14 @@ class c_image_pair_quaternion_match(object):
                 pass
             pass
         return result
+    #f times
+    def times(self):
+        return {"image_match":self.im.times()}
     #f ALL DONE
 
 #a Do it
 #f do it
-def do_it(images, focal_length, lens_type, max_iteration_depth=2, reverse=0):
+def do_it(images, focal_length, lens_type, max_iteration_depth=2, reverse=0, initial_dest_orientation=None):
 
     ipqm = c_image_pair_quaternion_match()
     ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
@@ -645,6 +662,9 @@ def do_it(images, focal_length, lens_type, max_iteration_depth=2, reverse=0):
         iq = iq.from_euler(roll=180,degrees=1)
         pass
     trial_orientations = [(iq, 0)]
+    if initial_dest_orientation is not None:
+        trial_orientations = [(initial_dest_orientation,0)]
+        pass
     orientations_attempted = set()
     results = []
     while len(trial_orientations)>0:
@@ -685,7 +705,7 @@ def do_it(images, focal_length, lens_type, max_iteration_depth=2, reverse=0):
 #a Toplevel
 import getopt
 print sys.argv
-long_opts = [ 'image_dir=', 'focal_length=', 'lens_type=', 'max_iteration_depth=', 'output=', 'reverse=' ]
+long_opts = [ 'image_dir=', 'focal_length=', 'fine', 'initial_dest_orientation=', 'lens_type=', 'max_iteration_depth=', 'output=', 'reverse=' ]
 optlist,args = getopt.getopt(sys.argv[1:], '', long_opts)
 image_dir = ""
 focal_length = 35.0
@@ -693,6 +713,7 @@ lens_type = 'rectilinear'
 max_iteration_depth = 2
 output_filename = None
 reverse = 0
+initial_dest_orientation = None
 for (opt, value) in optlist:
     if opt in ["--image_dir"]:
         image_dir = value
@@ -709,6 +730,10 @@ for (opt, value) in optlist:
     if opt in ["--reverse"]:
         reverse = int(value)
         pass
+    if opt in ["--initial_dest_orientation"]:
+        q = eval(value)
+        initial_dest_orientation = gjslib_c.quaternion(r=q[0],i=q[1],j=q[2],k=q[3])
+        pass
     if opt in ["--output"]:
         output_filename = value
         pass
@@ -721,7 +746,7 @@ images = args
 tb = initialize(size=1024, num_textures=12)
 full_image_filenames = (image_dir+images[0], image_dir+images[1])
 print "Running QIC on",full_image_filenames,"at focal length",focal_length,"type",lens_type,"max_iter",max_iteration_depth
-results = do_it( images=full_image_filenames, focal_length=focal_length, lens_type=lens_type, max_iteration_depth=max_iteration_depth, reverse=reverse)
+results = do_it( images=full_image_filenames, focal_length=focal_length, lens_type=lens_type, max_iteration_depth=max_iteration_depth, reverse=reverse, initial_dest_orientation=initial_dest_orientation)
 
 f=sys.stdout
 if output_filename is not None:    

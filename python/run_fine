@@ -1,0 +1,83 @@
+#a Templates
+#f image_coarse
+#
+# @param $1	image0
+# @param $2	image1
+# @param $3	focal_length
+# @param $4 lens_type
+#
+define image_coarse
+
+$1__$2__LOG := logs/log_$1_$2.txt
+
+$$($1__$2__LOG): $(IMAGE_DIR)/IMG_$1.JPG  $(IMAGE_DIR)/IMG_$2.JPG
+	time $(RUN_QIC)  --max_iteration_depth=1 --focal_length=$3 --lens_type=$4 --image_dir=$(IMAGE_DIR) IMG_$1.JPG IMG_$2.JPG > $$@
+
+IMAGE_LOGS += $$($1__$2__LOG)
+
+endef
+define image_coarse_reverse
+
+$1__$2__RLOG := logs/log_$1_$2_r.txt
+
+$$($1__$2__RLOG): $(IMAGE_DIR)/IMG_$1.JPG  $(IMAGE_DIR)/IMG_$2.JPG
+	time $(RUN_QIC) --reverse=1 --max_iteration_depth=1 --focal_length=$3 --lens_type=$4 --image_dir=$(IMAGE_DIR) IMG_$1.JPG IMG_$2.JPG > $$@
+
+IMAGE_LOGS += $$($1__$2__RLOG)
+
+endef
+
+
+#f image_fine
+#
+# @param $1	image0
+# @param $2	image1
+# @param $3	focal_length
+# @param $4 lens_type
+# @param $5 quaternion to have as base
+#
+define image_fine
+
+$1__$2__LOG := logs/log_$1_$2.txt
+
+$$($1__$2__LOG): $(IMAGE_DIR)/$1  $(IMAGE_DIR)/$2
+	time $(RUN_QIC)  --fine --initial_dest_orientation=$5 --max_iteration_depth=2 --focal_length=$3 --lens_type=$4 --image_dir=$(IMAGE_DIR) $1 $2 > $$@
+
+IMAGE_LOGS += $$($1__$2__LOG)
+
+endef
+
+#a Toplevel
+IMAGE_DIR := ../images/
+QIC_MATCH := PYTHONPATH=`pwd`/../python:`pwd`/..:`pwd`/gjslib/../python::`pwd`/../../gjslib/python:$(PYTHONPATH) ./qic_match.py
+RUN_QIC := $(QIC_MATCH) --output=octagon_image_maps_fine.py
+
+$(eval $(call image_fine,IMG_2184.JPG,IMG_2181.JPG,20.5,rectilinear,'(0.6898016660710368, 0.0541954852481535, -0.13646186251305084, -0.7089532219715265)'))
+$(eval $(call image_fine,IMG_2181.JPG,IMG_2180.JPG,20.5,rectilinear,'(-0.9894512787953142, -0.019235147844625586, -0.14296065554985302, -0.013357654826707938)'))
+$(eval $(call image_fine,IMG_2181.JPG,IMG_2178.JPG,20.5,rectilinear,'(0.7670463349455038, 0.09906675065878034, -0.10513106592172843, 0.6251185151143289)'))
+$(eval $(call image_fine,IMG_2178.JPG,IMG_2177.JPG,20.5,rectilinear,'(0.9884394178796903, -0.1468313035388168, 0.002902408613765478, 0.037678395759252754)'))
+$(eval $(call image_fine,IMG_2177.JPG,IMG_2176.JPG,20.5,rectilinear,'(0.9820125864943067, -0.18179639690036414, -0.020397605391048113, 0.04674706124580702)'))
+$(eval $(call image_fine,IMG_2176.JPG,IMG_2175.JPG,20.5,rectilinear,'(0.9829223117365421, -0.18169870133252075, -0.009015570771171023, 0.02771336335124236)'))
+$(eval $(call image_fine,IMG_2175.JPG,IMG_2172.JPG,20.5,rectilinear,'(0.9908618805742009, -0.12118173458457107, -0.0499877828407315, 0.03176385358707577)'))
+$(eval $(call image_fine,IMG_2178.JPG,IMG_2179.JPG,20.5,rectilinear,'(-0.9787657784159248, -0.20371055509694513, 0.01867218709379078, 0.013073261762019943)'))
+$(eval $(call image_fine,IMG_2184.JPG,IMG_2166.JPG,20.5,rectilinear,'(0.7491492794630307, -0.062107264773128286, 0.1420334697301495, -0.6440066290177745)'))
+$(eval $(call image_fine,IMG_2166.JPG,IMG_2165.JPG,20.5,rectilinear,'(0.9867136079335703, -0.05348159228996456, -0.08371932936338905, -0.1285575711336811)'))
+$(eval $(call image_fine,IMG_2165.JPG,IMG_2164.JPG,20.5,rectilinear,'(0.9790978048871162, -0.0506874653235232, -0.061718755359663535, -0.18705364086582912)'))
+$(eval $(call image_fine,IMG_2164.JPG,IMG_2163.JPG,20.5,rectilinear,'(0.9989453299459341, 0.03129040270357243, -0.0323003367419909, 0.009264271380544462)'))
+$(eval $(call image_fine,IMG_2163.JPG,IMG_2162.JPG,20.5,rectilinear,'(0.9959697955434718, 0.06907541869590202, -0.047524000023990265, -0.031846857282976315)'))
+$(eval $(call image_fine,IMG_2162.JPG,IMG_2159.JPG,20.5,rectilinear,'(0.7324218672424034, -0.06556522315284882, -0.019617562965084434, 0.677402805663942)'))
+$(eval $(call image_fine,IMG_2159.JPG,IMG_2158.JPG,20.5,rectilinear,'(0.9958462127374561, 0.006373670080019073, 0.09082263934861691, -0.0009721563290303395)'))
+$(eval $(call image_fine,IMG_2158.JPG,IMG_2157.JPG,20.5,rectilinear,'(0.9979017787434238, 0.0050818921412448675, 0.06382281234984184, -0.009636543816832571)'))
+$(eval $(call image_fine,IMG_2158.JPG,IMG_2167.JPG,20.5,rectilinear,'(0.8683567501881593, -0.07878158598926702, 0.02615583513419832, 0.48894364542358815)'))
+$(eval $(call image_fine,IMG_2167.JPG,IMG_2168.JPG,20.5,rectilinear,'(0.9949392711097247, -0.06796816998053651, 0.04747615094762949, -0.05676433532020535)'))
+$(eval $(call image_fine,IMG_2159.JPG,IMG_2160.JPG,20.5,rectilinear,'(0.994785354405739, -0.0069116454890326105, -0.10116113600352017, -0.010988738733828288)'))
+$(eval $(call image_fine,IMG_2160.JPG,IMG_2161.JPG,20.5,rectilinear,'(0.9954266569384527, -0.009886057447853851, -0.09254017162576814, -0.021548855188819195)'))
+$(eval $(call image_fine,IMG_2161.JPG,IMG_2173.JPG,20.5,rectilinear,'(0.9845329825911276, -0.1314970665146012, -0.009290619723944502, -0.11539935906849219)'))
+$(eval $(call image_fine,IMG_2173.JPG,IMG_2174.JPG,20.5,rectilinear,'(0.9972439319942672, -0.006510844387977922, -0.07231263169937766, 0.01526539559521738)'))
+$(eval $(call image_fine,IMG_2174.JPG,IMG_2183.JPG,20.5,rectilinear,'(0.74800629647255, 0.08356517979468506, 0.03517867409835368, -0.6574693164338414)'))
+$(eval $(call image_fine,IMG_2173.JPG,IMG_2170.JPG,20.5,rectilinear,'(0.9862274872422998, -0.10777767545961382, 0.05135085665240802, -0.11446573985837614)'))
+$(eval $(call image_fine,IMG_2168.JPG,IMG_2169.JPG,20.5,rectilinear,'(0.9815698208381921, -0.05134352809413713, 0.09279462584828617, -0.15897699945653365)'))
+$(eval $(call image_fine,IMG_2174.JPG,IMG_2171.JPG,20.5,rectilinear,'(0.9875868029139331, -0.1409019301480411, -0.04876813318694437, -0.04940265151035073)'))
+
+all: $(IMAGE_LOGS)
+	echo $(IMAGE_LOGS)

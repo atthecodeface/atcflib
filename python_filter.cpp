@@ -276,6 +276,14 @@ python_filter_getattr(PyObject *self, char *attr)
     t_PyObject_filter *py_obj = (t_PyObject_filter *)self;
     
     if (py_obj->filter) {
+        c_filter *f = py_obj->filter;
+        if (!strcmp(attr, "times")) {
+            unsigned long long int times[MAX_FILTER_TIMERS];
+            for (int i=0; i<MAX_FILTER_TIMERS; i++) {
+                times[i] = SL_TIMER_VALUE(f->timers[i]);
+            }
+            return Py_BuildValue("KKKK", times[0], times[1], times[2], times[3]);
+        }
     }
     if (!strcmp(attr, "num_points")) {
         return PyInt_FromLong(py_obj->ec.num_points);

@@ -10,6 +10,7 @@ img_png_n=0
 vector_z = gjslib_c.vector(vector=(0,0,1))
 vector_x = gjslib_c.vector(vector=(1,0,0))
 
+#c c_great_circle_arc
 class c_great_circle_arc(object):
     """
     Points on a great circle are p such that p.n=0, where |p| =
@@ -57,6 +58,7 @@ class c_great_circle_arc(object):
     def __init__(self, p0, p1):
         self.p1 = p1
         self.axis = p0.cross_product(p1)
+        self.axis.normalize()
         self.gx = p0
         self.gy = (self.axis.cross_product(self.gx)).normalize()
         self.p1_quad_gx_gy = self.quad_coords(p1)
@@ -136,8 +138,38 @@ class c_great_circle_arc(object):
         return None
         
 
+#f spherical_area_of_polygon
+def spherical_area_of_polygon(p):
+    l = len(p)
+    area = 0
+    for i in range(l):
+        area += -spherical_angle(p[(i+1)%l], p[i], p[(i+2)%l])
+        pass
+    area -= (l-2)*math.pi
+    return area
+
+#c spherical_angle
+def spherical_angle(p, p0, p1):
+    """
+    A spherical angle is formed from three points on the sphere, p, p0 and p1
+
+    Two great circles (p,p0) and (p,p1) have an angle between them (the rotation
+    anticlockwise about p that it takes to move the p,p0 great circle p,p1).
+    Hence there is an axis through (p, 0, -p) about which p0 rotates to p1
+
+    Consider the great circle for (p, p0); this is a rotation around
+    an axis p x p0. Similarly for (p, p1).  If unit rotation axes are
+    chosen (p_p0_r and p_p1_r) then the angle can be determined from
+    p_p0_r.p_p1_r (cos of angle) and p.(p_p0_r x p_p1_r) (sin of angle)
+    """
+    p_p0_r = p.cross_product(p0).normalize()
+    p_p1_r = p.cross_product(p1).normalize()
+    ps = p_p0_r.cross_product(p_p1_r).dot_product(p)
+    pc = p_p0_r.dot_product(p_p1_r)
+    return math.atan2(ps, pc)
+
 #c c_image_data
-from octagon_image_maps import image_map_data
+from octagon_image_maps_fine import image_map_data
 class c_image_data(object):
     #f __init__
     def __init__(self, image_filename, focal_length, lens_type):
@@ -164,6 +196,7 @@ class c_image_data(object):
                       c_great_circle_arc(self.corners[1], self.corners[2]),
                       c_great_circle_arc(self.corners[2], self.corners[3]),
                       c_great_circle_arc(self.corners[3], self.corners[0]))
+        self.area = spherical_area_of_polygon(self.corners)
         pass
     #f find_overlap
     def find_overlap(self, other):
@@ -301,7 +334,7 @@ ids_sorted = []
 for i in image_names:
     ids_sorted.append(ids[i])
     pass
-key_image = ids[image_names[-2]]
+key_image = ids[image_names[-1]]
 key_image.set_base_orientation(gjslib_c.quaternion(r=1))
 
 ids_to_propagate=[key_image]
@@ -310,6 +343,38 @@ while len(ids_to_propagate)>0:
     next_id = ids_to_propagate.pop(0)
     ids_propagated_to.add(next_id)
     ids_to_propagate.extend(next_id.propagate(ids_propagated_to))
+    pass
+
+image_evaluation_path = []
+image_overlaps = []
+images_evaluated = set()
+images_evaluated.add(key_image)
+images_not_evaluated = set()
+for id in ids.values():
+    images_not_evaluated.add(id)
+    pass
+image_to_evaluate = key_image    
+while image_to_evaluate is not None:
+    images_not_evaluated.discard(image_to_evaluate)
+    overlaps = image_to_evaluate.find_overlaps(ids.values()) # dict of name => overlap
+    for i_name in overlaps:
+        if ids[i_name] not in images_not_evaluated: continue
+        polygon = overlaps[i_name]
+        polygon_area = spherical_area_of_polygon(polygon)
+        image_overlaps.append( (polygon_area, image_to_evaluate, ids[i_name], polygon) )
+        pass
+    image_overlaps.sort(cmp=lambda x,y:cmp(y[0],x[0])) # Sort image_overlaps largest overlap first
+    image_to_evaluate = None
+    while len(image_overlaps)>0:
+        overlap = image_overlaps.pop(0)
+        if overlap[2] not in images_not_evaluated: continue
+        image_evaluation_path.append(overlap)
+        image_to_evaluate = overlap[2]
+        break
+    pass
+print "Image evaluation path", len(image_evaluation_path)
+for (area, src, tgt, polygon) in image_evaluation_path:
+    print src.image_filename, "->", tgt.image_filename, area
     pass
 
 for i in image_names:
@@ -327,32 +392,14 @@ for i in image_names:
     pass
 
 overlaps = key_image.find_overlaps(ids.values())
-print key_image.corners
-print ids["IMG_2180.JPG"].corners
 for i in overlaps:
     print "'%s':"%i, overlaps[i],","
     pass
 
+print "Image evaluation path", len(image_evaluation_path)
+for (area, src, tgt, polygon) in image_evaluation_path:
+    rq = ~src.base_orientation * tgt.base_orientation
+    print "$(eval $(call image_fine,%s,%s,20,rectilinear,'%s'))"%(src.image_filename, tgt.image_filename,
+                                                                  str(rq.rijk))
+    pass
 
-vector = gjslib_c.vector
-gc0 = c_great_circle_arc(vector((0.308765,0.463147,0.830758,)), vector((0.308765,-0.463147,0.830758,)))
-gc1 = c_great_circle_arc(vector((0.212482,-0.436523,0.874242,)), vector((-0.669362,-0.450107,0.591065,)))
-#, vector((-0.308765,-0.463147,0.830758,)), vector((-0.308765,0.463147,0.830758,)))
-#vector((-0.709442,0.158658,0.686673,)), vector((0.172402,0.172243,0.969850,)))
-
-print "gc0",gc0.gx, gc0.p1
-print "gc1",gc1.gx, gc1.p1
-print "intersection", gc0.intersect(gc1)
-print gc0.gx, gc0.gy, gc0.axis, gc0.gx.cross_product(gc0.gy)
-print gc0.p1_quad_gx_gy
-import math
-#print "angle on gc0 between p0 and p1",180.0/3.14159*math.atan2(gc0.p1_quad_gx_gy[2],gc0.p1_quad_gx_gy[1])
-nn = -gc0.axis.cross_product(gc1.axis)
-print "nn prenormalize", nn
-nn.normalize()
-print "nn normalized", nn
-(pgx, pgy)=nn.dot_product(gc0.gx),nn.dot_product(gc0.gy)
-print "should be zero", nn.dot_product(gc0.axis), gc0.gx.dot_product(gc0.gy)
-print "should be equal (except quadrant)", gc0.quad_coords(nn), (pgx, pgy)
-print "should be one", math.sqrt(pgx*pgx+pgy*pgy)
-print "should be equal", nn, gc0.gx.copy().scale(pgx) + gc0.gy.copy().scale(pgy)

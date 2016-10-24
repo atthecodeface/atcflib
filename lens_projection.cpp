@@ -37,9 +37,74 @@
 #include <math.h>
 #include "quaternion.h"
 #include "lens_projection.h"
+#include <string>
+
+/*a Defines
+ */
+#define MAX_POLY_COEFFS 8
 
 /*a Types
  */
+/*t t_polynomial
+ */
+typedef struct
+{
+    int length;
+    double coeffs[MAX_POLY_COEFFS];
+} t_polynomial;
+
+/*t t_named_polynomial
+ */
+typedef struct t_named_polynomial
+{
+    std::string name;
+    t_polynomial poly;
+    t_polynomial inv_poly;
+} t_named_polynomial;
+
+/*a Polynomial functions
+ */
+/*f polynomial_calc
+ */
+static double
+polynomial_calc(const t_polynomial *poly, double x)
+{
+    double r = 0;
+    for (int i=poly->length-1; i>=0; i--) {
+        r = r*x + poly->coeffs[i];
+    }
+    return r;
+}
+
+/*f add_named_polynomial
+ */
+std::map<std::string, struct t_named_polynomial *>c_lens_projection::named_polynomials;
+int
+c_lens_projection::add_named_polynomial(const char *name,
+                                        int poly_length, const double poly_coeffs[],
+                                        int inv_poly_length, const double inv_poly_coeffs[])
+{
+    std::string name_str = name;
+    t_named_polynomial *np;
+    if (named_polynomials.count(name_str)>0)
+        return -1;
+
+    np = (t_named_polynomial *)malloc(sizeof(t_named_polynomial));
+    if (!np) return -1;
+
+    named_polynomials[name] = np;
+
+    np->poly.length = poly_length;
+    for (int i=0; (i<poly_length) && (i<MAX_POLY_COEFFS); i++) {
+        np->poly.coeffs[i] = poly_coeffs[i];
+    }
+
+    np->inv_poly.length = inv_poly_length;
+    for (int i=0; (i<inv_poly_length) && (i<MAX_POLY_COEFFS); i++) {
+        np->inv_poly.coeffs[i] = inv_poly_coeffs[i];
+    }
+    return 0;
+}
 
 /*a c_lens_projection methods
  */
@@ -54,6 +119,10 @@ c_lens_projection::c_lens_projection(void)
     offset_to_angle = &c_lens_projection::offset_to_angle_equidistant;
     angle_to_offset = &c_lens_projection::angle_to_offset_equidistant;
     orientation = c_quaternion::identity();
+    if (named_polynomials.count("__linear")==0) {
+        static double linear_poly[1]={1.0};
+        add_named_polynomial("__linear", 1, linear_poly, 1, linear_poly);
+    }
 }
 
 /*f c_lens_projection::~c_lens_projection
@@ -88,6 +157,12 @@ void c_lens_projection::set_lens(double frame_width, double focal_length, t_lens
         angle_to_offset = &c_lens_projection::angle_to_offset_stereographic;
         break;
     }
+    case lens_projection_type_polynomial: {
+        offset_to_angle = &c_lens_projection::offset_to_angle_polynomial;
+        angle_to_offset = &c_lens_projection::angle_to_offset_polynomial;
+        polynomial = named_polynomials["__linear"];
+        break;
+    }
     default: {
         offset_to_angle = &c_lens_projection::offset_to_angle_equidistant;
         angle_to_offset = &c_lens_projection::angle_to_offset_equidistant;
@@ -96,10 +171,25 @@ void c_lens_projection::set_lens(double frame_width, double focal_length, t_lens
     }
 }
 
+/*f c_lens_projection::set_sensor
+ */
 void c_lens_projection::set_sensor(double width, double height)
 {
     this->width = width;
     this->height = height;
+}
+
+/*f c_lens_projection::set_polynomial
+ */
+int
+c_lens_projection::set_polynomial(const char *name)
+{
+    if (named_polynomials.count(name)==0)
+        return -1;
+    offset_to_angle = &c_lens_projection::offset_to_angle_polynomial;
+    angle_to_offset = &c_lens_projection::angle_to_offset_polynomial;
+    polynomial = named_polynomials[name];
+    return 0;
 }
 
 /*f c_lens_projection::offset_to_angle_equidistant
@@ -132,6 +222,18 @@ double c_lens_projection::offset_to_angle_stereographic(double fraction_from_cen
     return 2*atan2(fraction_from_center*frame_width, 2*focal_length);
 }
 
+/*f c_lens_projection::offset_to_angle_polynomial
+  fraction_from_center is 0.0 to 1.0 of the frame width (i.e. right-hand edge is 0.5)
+
+  Polynomial angle=sum(ai.x^i)(offset/(frame_width/focal_length))
+ */
+double c_lens_projection::offset_to_angle_polynomial(double fraction_from_center) const
+{
+    double x = fraction_from_center*frame_width / focal_length;
+    double angle = polynomial_calc(&(polynomial->poly), x);
+    return angle;
+}
+
 /*f c_lens_projection::angle_to_offset_equidistant
   Must be the inverse of offset_to_angle
  */
@@ -154,6 +256,15 @@ double c_lens_projection::angle_to_offset_rectilinear(double angle) const
 double c_lens_projection::angle_to_offset_stereographic(double angle) const
 {
     return 2*tan(angle/2)*focal_length/frame_width;
+}
+
+/*f c_lens_projection::angle_to_offset_polynomial
+  Must be the inverse of offset_to_angle
+ */
+double c_lens_projection::angle_to_offset_polynomial(double angle) const
+{
+    double x= polynomial_calc(&(polynomial->inv_poly), angle)*focal_length/frame_width;
+    return x;
 }
 
 /*f c_lens_projection::xy_to_roll_yaw
@@ -253,6 +364,9 @@ t_lens_projection_type c_lens_projection::lens_projection_type(const char *name)
         }
         if (!strcmp(name,"stereographic")) {
             lp_type = lens_projection_type_stereographic;
+        }
+        if (!strcmp(name,"polynomial")) {
+            lp_type = lens_projection_type_polynomial;
         }
     }
     return lp_type;

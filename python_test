@@ -120,8 +120,8 @@ class c_image_match(object):
         self.copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
         self.equalize = c_windowed_equalization_filter()
         self.harris = c_harris_filter()
-        self.find_corners = c_find_filter(extra_parameters={"min_distance":self.min_corner_distance, "minimum":0.05, "max_elements":25000})
-        self.find_matches = c_find_filter(extra_parameters={"min_distance":self.min_match_distance, "minimum":0.04,  "max_elements":250})
+        self.find_corners = c_find_filter(extra_parameters={"min_distance":self.min_corner_distance, "minimum":0.05, "max_elements":2500})
+        self.find_matches = c_find_filter(extra_parameters={"min_distance":self.min_match_distance, "minimum":0.04,  "max_elements":2500})
         self.circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":self.radius,
                                                              "CIRCLE_COMPONENT":"r",
                                                              })

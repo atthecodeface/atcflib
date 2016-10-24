@@ -26,6 +26,8 @@
 /*a Includes
  */
 #include "quaternion.h"
+#include <map>
+#include <string>
 
 /*t t_lens_projection_type
  */
@@ -34,7 +36,8 @@ typedef enum
     lens_projection_type_equidistant   = 0,
     lens_projection_type_equiangular   = 0, // same as equidistant
     lens_projection_type_stereographic = 1,
-    lens_projection_type_rectilinear   = 2
+    lens_projection_type_rectilinear   = 2,
+    lens_projection_type_polynomial    = 3
 } t_lens_projection_type;
 
 /*f c_lens_projection
@@ -48,9 +51,11 @@ private:
     double offset_to_angle_equidistant(double fraction_from_center) const;
     double offset_to_angle_rectilinear(double fraction_from_center) const;
     double offset_to_angle_stereographic(double fraction_from_center) const;
+    double offset_to_angle_polynomial(double fraction_from_center) const;
     double angle_to_offset_equidistant(double angle) const;
     double angle_to_offset_rectilinear(double angle) const;
     double angle_to_offset_stereographic(double angle) const;
+    double angle_to_offset_polynomial(double angle) const;
 
     double width, height; // in 'sensor' or 'image' units (e.g. pixels)
     double frame_width;   // in lens units, same as focal length
@@ -59,13 +64,19 @@ private:
     c_quaternion orientation;
     f_offset_to_angle offset_to_angle;
     f_angle_to_offset angle_to_offset;
+    struct t_named_polynomial *polynomial;
 
+    static std::map<std::string, struct t_named_polynomial *>named_polynomials;
 public:
     c_lens_projection(void);
     ~c_lens_projection();
 
     static t_lens_projection_type lens_projection_type(const char *name);
     static void xy_b_of_a(const c_lens_projection *a, const c_lens_projection *b, const double xy_a[2], double xy_b[2]);
+    static int add_named_polynomial(const char *name,
+                                    int poly_length, const double poly_coeffs[],
+                                    int inv_poly_length, const double inv_poly_coeffs[]);
+    static int remove_named_polynomial(const char *name);
 
     inline double get_frame_width(void) { return frame_width; }
     inline double get_focal_length(void) { return focal_length; }
@@ -77,6 +88,7 @@ public:
     void orient(const c_quaternion &orientation);
     void set_lens(double frame_width, double focal_length, t_lens_projection_type lens_type);
     void set_sensor(double width, double height);
+    int set_polynomial(const char *name);
     void xy_to_roll_yaw(const double xy[2], double ry[2]) const;
     void roll_yaw_to_xy(const double ry[2], double xy[2]) const;
     c_quaternion orientation_of_xy(const double xy[2]) const;

@@ -2,6 +2,37 @@
 #
 # PYTHONPATH=`pwd`/../python:`pwd`/..:`pwd`/gjslib/../python::`pwd`/../../gjslib/python:$PYTHONPATH ./qic_match.py
 #
+#a Imports
+import OpenGL.GLUT
+import OpenGL.GL
+import gjslib_c
+import math
+import sys
+from filters import *
+img_png_n=0
+vector_z = gjslib_c.vector(vector=(0,0,1))
+vector_x = gjslib_c.vector(vector=(1,0,0))
+
+#a Basic lens setup
+gjslib_c.lens_projection.add_named_polynomial("canon_20_35_rebel2Ti_20", canon_20_35_rebel2Ti_20_polynomial[0], canon_20_35_rebel2Ti_20_polynomial[1])
+
+#a Cos seps etc
+wobbles = []
+r = gjslib_c.quaternion().from_euler(roll=0.303,degrees=1)
+p = gjslib_c.quaternion().from_euler(pitch=0.303,degrees=1)
+y = gjslib_c.quaternion().from_euler(yaw=0.303,degrees=1)
+for i in range(8):
+    q = gjslib_c.quaternion(1)
+    if i&1: q= r*q
+    else:   q=~r*q
+    if i&2: q= p*q
+    else:   q=~p*q
+    if i&4: q= y*q
+    else:   q=~y*q
+    wobbles.append(q)
+    pass
+del r, p, y
+
 # Useful cosines / min q dists:
 # 0.04     : 0.99    => 8.1   degrees
 # 0.02     : 0.995   => 5.76  degrees
@@ -19,41 +50,91 @@ max_q_dists = {
     "1.8deg"   :2,
     "200pix35" :2,
     "80pix35"  :2,
+    "80pix35_fine"  :0.02,
     "0.18deg"  :2,
     "20pix35"  :0.002,
+    "20pix35_fine"  :0.002,
     "0.081deg" :0.002,
-    "8pix35"   :0.002,
+    "8pix35"   :0.0002,
 }
 min_cos_seps = {
     "1.8deg"   :0.9995,
     "200pix35" :0.9995,
     "80pix35"  :0.9999,
+    "80pix35_fine"  :0.9999,
     "0.18deg"  :0.999995,
     "20pix35"  :0.999995,
+    "20pix35_fine"  :0.999995,
     "0.081deg" :0.999999,
     "8pix35"   :0.999999,
+}
+# Need these to be really close to 1 - more points, the better the refinement of pairs of points
+# Actually got best results with >1...
+# For the finest, when zoomed and so there is better precision for src/tgt points, probably should be pretty much all in...
+min_cos_seps_same_pt = {
+    "1.8deg"        :0.999995,
+    "200pix35"      :0.999995,
+    "80pix35"       :0.999995,
+    "80pix35_fine"  :0.999995,
+    "0.18deg"       :0.9999995,
+    "20pix35"       :0.9999995,
+    "20pix35_fine"  :0.9999999,
+    "0.081deg"      :0.9999999,
+    "8pix35"        :0.9999999,
 }
 min_q_dists = {
     "5.76deg"  :0.02,
     "1.8deg"   :0.002,
     "200pix35" :0.002,
     "80pix35"  :0.0004,
+    "80pix35_fine"  :0.0004,
     "0.18deg"  :0.00002,
     "20pix35"  :0.00002,
+    "20pix35_fine"  :0.00002,
     "0.081deg" :0.000004,
     "8pix35"   :0.000004,
 }
-
-#a Imports
-import OpenGL.GLUT
-import OpenGL.GL
-import gjslib_c
-import math
-import sys
-from filters import *
-img_png_n=0
-vector_z = gjslib_c.vector(vector=(0,0,1))
-vector_x = gjslib_c.vector(vector=(1,0,0))
+# To permit both of a pair of mappings they have to be at least this apart
+# For final resolution, this is the key metric
+min_q_dists_for_mapping = {
+    "5.76deg"  :0.02,
+    "1.8deg"   :0.002,
+    "200pix35" :0.002,
+    "80pix35"  :0.0004,
+    "80pix35_fine"  :0.0004,
+    "0.18deg"  :0.00002,
+    "20pix35"  :0.00002,
+    "20pix35_fine"  :0.00002,
+    "0.081deg" :0.000004,
+    "8pix35"   :0.000004,
+}
+# If there are a lot of src/tgt pairs (i.e. min_cos_seps_same_pt is very near 1) then this can be smaller
+# Then one gets better refinement, but lower number of correspondences
+#    ipqm.qic.min_cos_sep_score   = min_cos_seps[accuracy] # tgt point must be within this separation for any match of src->tgt to count
+#    ipqm.qic.max_q_dist_score    = max_q_dists_for_score[accuracy] # src/src/tgt/tgt orientation must be within this for a point for src->tgt
+min_cos_seps_for_score = {
+    "80pix35_fine"  :math.cos(math.radians( 0.80)),
+    "20pix35_fine"  :math.cos(math.radians( 0.20)),
+    "1.8deg"        :math.cos(math.radians( 1.80)),
+    "200pix35"      :math.cos(math.radians( 1.80)),
+    "80pix35"       :math.cos(math.radians( 0.80)),
+    "0.18deg"       :math.cos(math.radians( 0.18)),
+    "20pix35"       :math.cos(math.radians( 0.200)),
+    "0.081deg"      :math.cos(math.radians( 0.081)),
+    "8pix35"        :math.cos(math.radians( 0.081)),
+}
+max_q_dists_for_score = {
+    "5.76deg"       :0.02,
+    "1.8deg"        :0.002,
+    "200pix35"      :0.002,
+    "80pix35"       :0.0004,
+    "80pix35_fine"  :0.0004,
+    "0.18deg"       :0.00002,
+    "20pix35"       :0.00002,
+    "20pix35_fine"  :0.00002,
+    "0.081deg"      :0.000004,
+    "8pix35"        :0.000004,
+}
 
 #a Support functions
 #f init_opengl
@@ -94,22 +175,55 @@ def initialize(num_textures=12, size=1024):
     return tb
 
 #f quaternion_image_correlate
-def quaternion_image_correlate(ipqm, images, focal_length=50.0, accuracy="80pix35", max_n=10):
+def quaternion_image_correlate(ipqm, images, focal_length=50.0, accuracy="80pix35", max_n=10, num_proj=2):
 
     print "Quaternion_Image_Correlate"
+
+    orientations_to_use = (gjslib_c.quaternion().from_euler(yaw=-12.0,degrees=1),
+                           gjslib_c.quaternion().from_euler(yaw=+12.0,degrees=1),
+                           )
+    if num_proj==1:
+        orientations_to_use = (gjslib_c.quaternion().from_euler(yaw=0,degrees=1),
+                               )
+                                
+    if num_proj>2:
+        src_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=15, lens_type="rectilinear")
+        dst_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=15, lens_type="rectilinear")
+        src_img_lp_to.orient(gjslib_c.quaternion(1))
+        dst_img_lp_to.orient(gjslib_c.quaternion(1))
+        if not ipqm.overlap_projections((images[0], images[1]), (src_img_lp_to, dst_img_lp_to), verbose=False):
+            raise Exception,"Failed to organize projections"
+        print "Focal length now ",src_img_lp_to.focal_length,"centered on",src_img_lp_to.orientation.rotate_vector(vector_z)
+        print "For num_proj=4, want to double the focal_length and center on quadrants"
+        vs = []
+        for i in range(4):
+            dxy = ( (-1,-1), (1,-1), (1,1), (-1,1) )[i]
+            vs.append( (src_img_lp_to.orientation_of_xy(dxy).rotate_vector(vector_z),
+                        src_img_lp_to.orientation_of_xy(dxy).rotate_vector(vector_x)) )
+            pass
+        orientations_to_use = []
+        for factors in ( (9,3,1,3), (3,9,3,1), (1,3,9,3), (3,1,3,9) ):
+            vf = gjslib_c.vector(vector=(0,0,0))
+            vu = gjslib_c.vector(vector=(0,0,0))
+            for i in range(4):
+                vf += vs[i][0].copy().scale(factors[i])
+                vu += vs[i][1].copy().scale(factors[i])
+                pass
+            orientations_to_use.append(gjslib_c.quaternion().lookat(vf,vu))
+            pass
+        focal_length = src_img_lp_to.focal_length*2
+        pass
 
     ci0 = ipqm.camera_images[images[0]]
     ci1 = ipqm.camera_images[images[1]]
 
     ipqm.qic = gjslib_c.quaternion_image_correlator()
-    ipqm.qic.min_cos_angle_src_q = min_cos_seps[accuracy]
-    ipqm.qic.min_cos_angle_tgt_q = min_cos_seps[accuracy]
-    ipqm.qic.min_cos_sep_score   = min_cos_seps[accuracy]
-    ipqm.qic.max_q_dist_score    = min_q_dists[accuracy]
+    ipqm.qic.min_cos_angle_src_q = min_cos_seps_same_pt[accuracy]
+    ipqm.qic.min_cos_angle_tgt_q = min_cos_seps_same_pt[accuracy]
+    ipqm.qic.min_cos_sep_score   = min_cos_seps_for_score[accuracy] # tgt point must be within this separation for any match of src->tgt to count
+    ipqm.qic.max_q_dist_score    = max_q_dists_for_score[accuracy] # src/src/tgt/tgt orientation must be within this for a point for src->tgt
 
-    for initial_orientation in [gjslib_c.quaternion().from_euler(yaw=-12.0,degrees=1),
-                                gjslib_c.quaternion().from_euler(yaw=+12.0,degrees=1),
-                                ]:
+    for initial_orientation in orientations_to_use:
         src_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
         dst_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=focal_length, lens_type="rectilinear")
         src_img_lp_to.orient(initial_orientation)
@@ -159,7 +273,7 @@ class c_camera_image(object):
         # So the uv for that must be = width/height. Hence, for wider than high, width=2.0, height=2.0*width/height
         # For example, an image that is 300 wide and 200 high will have width=2.0, height=3.0
         self.lp      = gjslib_c.lens_projection(width=2.0,
-                                                height=2.0*self.texture.width/self.texture.height,
+                                                height=2.0*self.texture.width/self.texture.height*0.99,
                                                 frame_width=frame_width,
                                                 focal_length=focal_length,
                                                 lens_type=lens_type)
@@ -199,8 +313,8 @@ class c_image_match(object):
         self.copy_img = c_alu_filter(extra_defines={"OP":"src_a"})
         self.equalize = c_windowed_equalization_filter()
         self.harris = c_harris_filter()
-        self.find_corners = c_find_filter(extra_parameters={"min_distance":self.min_corner_distance, "minimum":0.05, "max_elements":1250})
-        self.find_matches = c_find_filter(extra_parameters={"min_distance":self.min_match_distance, "minimum":0.04,  "max_elements":250})
+        self.find_corners = c_find_filter(extra_parameters={"min_distance":self.min_corner_distance, "minimum":0.05, "max_elements":2500})
+        self.find_matches = c_find_filter(extra_parameters={"min_distance":self.min_match_distance, "minimum":0.04,  "max_elements":2500})
         self.circle_dft = c_circle_dft_filter(extra_defines={"DFT_CIRCLE_RADIUS":self.radius,
                                                              "CIRCLE_COMPONENT":"r",
                                                              })
@@ -251,6 +365,7 @@ class c_image_match(object):
 
 #c c_image_pair_quaternion_match
 class c_image_pair_quaternion_match(object):
+    save_pngs = False
     #f __init__
     def __init__(self, filenames=[]):
         self.camera_images = {}
@@ -258,9 +373,11 @@ class c_image_pair_quaternion_match(object):
             self.add_image(f)
             pass
         self.im = c_image_match()
-        self.im.max_corners=40
-        self.im.max_matches_per_corner=10
+        # for the original run_all and run_fine
         self.im.max_corners=20
+        self.im.max_matches_per_corner=10 # Not too many matches, as a good match is a good match
+        # in focus to out of focus did not work (2716 - 2175) angel panels
+        self.im.max_corners=40
         self.im.max_matches_per_corner=10 # Not too many matches, as a good match is a good match
         self.to_yuv = c_yuv_from_rgb(extra_parameters={"xsc":2.0,"ysc":2.0,"xc":1.0,"yc":1.0},
                                 extra_defines={"EXTRA_VERTEX_UNIFORMS":"uniform float xsc, ysc, xc, yc;",
@@ -332,16 +449,19 @@ class c_image_pair_quaternion_match(object):
         if in_bounds: return None
         return off_edge
     #f overlap_projections
-    def overlap_projections(self, images, projections, scale=0.9, max_iter=80):
+    def overlap_projections(self, images, projections, scale=0.9, max_iter=80, verbose=False):
         ci0 = self.camera_images[images[0]]
         ci1 = self.camera_images[images[1]]
         ci0_tp = projections[0]
         ci1_tp = projections[1]
+        overflow_trail = []
         for i in range(max_iter):
+            if verbose: print "Iteration",i
             overflow = self.find_overflows_for_projections(images, projections)
             size = None
             dxy = [0,0]
-            if overflow is None: return projections
+            if overflow is None:
+                return projections
             overflow_bits = ( ((overflow[0]>0) and 1) |
                               ((overflow[1]>0) and 2) |
                               ((overflow[2]>0) and 4) |
@@ -365,13 +485,21 @@ class c_image_pair_quaternion_match(object):
                 dq = q1.angle_axis(q0,vector_z)
                 ci1_tp.orient(dq*ci1_tp.orientation)
 
+                if len(overflow_trail)>2:
+                    if ((overflow_trail[-2]==overflow_bits) and
+                        (overflow_trail[-1]==15^overflow_bits)):
+                        size = 0.99
+                        pass
+                    pass
+
                 pass
+            overflow_trail.append(overflow_bits)
             if size is not None:
                 ci0_tp.focal_length = ci0_tp.focal_length / scale
                 ci1_tp.focal_length = ci1_tp.focal_length / scale
                 pass
-            if False:
-                print overflow_bits, size, dxy, ci0_tp.orientation_of_xy((0,0)).rotate_vector(vector_z)
+            if verbose:
+                print overflow_bits, size, dxy, ci0_tp.orientation_of_xy((0,0)).rotate_vector(vector_z), ci0_tp.focal_length, ci1_tp.focal_length
                 pass
             pass
         return None
@@ -422,7 +550,7 @@ class c_image_pair_quaternion_match(object):
         self.to_yuv.execute((ci1.texture,tb[1]))
         matches = self.im.get_matches(tb)
 
-        if False:
+        if self.save_pngs:
             save_as_png(tb[0],"a%d.png"%img_png_n)
             save_as_png(tb[1],"b%d.png"%img_png_n)
             img_png_n+=1
@@ -438,6 +566,22 @@ class c_image_pair_quaternion_match(object):
                 self.qic.add_match(src_q, tgt_q, mm[2], mm[3], mm[4])
                 pass
             pass
+        pass
+    #f project_and_save
+    def project_and_save(self, base_filename, images, projections):
+        #b Set to/from projections
+        ci0 = self.camera_images[images[0]]
+        ci1 = self.camera_images[images[1]]
+        (src_img_lp_to, dst_img_lp_to) = projections
+
+        #b Find matches
+        self.to_yuv.set_parameters( {"ysc":2.0, "yc":-1.0, "xsc":2.0, "xc":-1.0} )
+        self.to_yuv.set_projections(projections=(ci0.lp,src_img_lp_to), num_x_divisions=40, num_y_divisions=40)
+        self.to_yuv.execute((ci0.texture,tb[0]))
+        self.to_yuv.set_projections(projections=(ci1.lp,dst_img_lp_to), num_x_divisions=40, num_y_divisions=40)
+        self.to_yuv.execute((ci1.texture,tb[1]))
+        save_as_png(tb[0],"%s_0.png"%base_filename)
+        save_as_png(tb[1],"%s_1.png"%base_filename)
         pass
     #c c_best_match
     class c_best_match(object):
@@ -603,6 +747,73 @@ def do_it(images, focal_length, lens_type, max_iteration_depth=2, reverse=0, ini
         pass
     return results
 
+#f do it_fine
+def do_it_fine(images, focal_length, lens_type, max_iteration_depth=2, reverse=0, initial_dest_orientation=None, save_wobbles=False):
+
+    ipqm = c_image_pair_quaternion_match()
+    ipqm.save_pngs = True
+    ipqm.add_image(image_filename=images[0], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
+    ipqm.add_image(image_filename=images[1], orientation=gjslib_c.quaternion(r=1), focal_length=focal_length, lens_type=lens_type )
+
+    ipqm.orient(images[1], initial_dest_orientation)
+    best_matches = quaternion_image_correlate(ipqm, images, focal_length=30.0, accuracy="80pix35_fine", num_proj=1)
+
+    results = []
+    iteration_depth=0
+    if True:
+        for bm in best_matches:
+            bm.src_from_tgt_q *= initial_dest_orientation
+            bm.optimized_src_from_tgt_q *= initial_dest_orientation
+            rq0 = bm.src_from_tgt_q
+            rq1 = bm.optimized_src_from_tgt_q
+            print bm.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k), "(r=%f,i=%f,j=%f,k=%f)"%(rq1.r,rq1.i,rq1.j,rq1.k), rq1.to_rotation_str(1)
+
+            results.append((bm,iteration_depth,(iteration_depth+1)*100*bm.max_distance))
+        pass
+
+    if len(best_matches)==0:
+        return []
+    # Second pass can use more tighter projections - and hence better accuracy is worthwhile
+    initial_dest_orientation = best_matches[0].optimized_src_from_tgt_q
+    ipqm.orient(images[1], initial_dest_orientation)
+    best_matches = quaternion_image_correlate(ipqm, images, focal_length=100.0, num_proj=4, accuracy="20pix35_fine")
+    iteration_depth += 1
+
+    if True:
+        for bm in best_matches:
+            bm.src_from_tgt_q *= initial_dest_orientation
+            bm.optimized_src_from_tgt_q *= initial_dest_orientation
+            rq0 = bm.src_from_tgt_q
+            rq1 = bm.optimized_src_from_tgt_q
+            print bm.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k), "(r=%f,i=%f,j=%f,k=%f)"%(rq1.r,rq1.i,rq1.j,rq1.k), rq1.to_rotation_str(1)
+
+            results.append((bm,iteration_depth,(iteration_depth+1)*100*bm.max_distance))
+        pass
+    results.sort(cmp=lambda x,y:cmp(y[2],x[2]))
+    for (bm, iteration_depth, score) in results:
+        rq0 = bm.src_from_tgt_q
+        rq1 = bm.optimized_src_from_tgt_q
+        print iteration_depth, bm.max_distance, "(r=%f,i=%f,j=%f,k=%f)"%(rq0.r,rq0.i,rq0.j,rq0.k), "(r=%f,i=%f,j=%f,k=%f)"%(rq1.r,rq1.i,rq1.j,rq1.k), rq1.to_rotation_str(1)
+        pass
+    if save_wobbles:
+        chosen_q = results[0][0].optimized_src_from_tgt_q
+        ipqm.orient(images[1], chosen_q)
+        src_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=15, lens_type="rectilinear")
+        dst_img_lp_to = gjslib_c.lens_projection(width=2.0, height=2.0, frame_width=36.0, focal_length=15, lens_type="rectilinear")
+        src_img_lp_to.orient(gjslib_c.quaternion(1))
+        dst_img_lp_to.orient(gjslib_c.quaternion(1))
+        if not ipqm.overlap_projections((images[0], images[1]), (src_img_lp_to, dst_img_lp_to)):
+            raise Exception,"Failed to get final projection"
+        ipqm.project_and_save("found", (images[0], images[1]), (src_img_lp_to, dst_img_lp_to))
+        base_dst_orient = dst_img_lp_to.orientation
+        for i in range(len(wobbles)):
+            dst_img_lp_to.orient(base_dst_orient*wobbles[i])
+            ipqm.project_and_save("wobble_%d_"%i, (images[0], images[1]), (src_img_lp_to, dst_img_lp_to))
+            pass
+        pass
+        
+    return results
+
 #a Toplevel
 import getopt
 print sys.argv
@@ -615,7 +826,11 @@ max_iteration_depth = 2
 output_filename = None
 reverse = 0
 initial_dest_orientation = None
+operation = do_it
 for (opt, value) in optlist:
+    if opt in ["--fine"]:
+        operation = do_it_fine
+        pass
     if opt in ["--image_dir"]:
         image_dir = value
         pass
@@ -647,7 +862,7 @@ images = args
 tb = initialize(size=1024, num_textures=12)
 full_image_filenames = (image_dir+images[0], image_dir+images[1])
 print "Running QIC on",full_image_filenames,"at focal length",focal_length,"type",lens_type,"max_iter",max_iteration_depth
-results = do_it( images=full_image_filenames, focal_length=focal_length, lens_type=lens_type, max_iteration_depth=max_iteration_depth, reverse=reverse, initial_dest_orientation=initial_dest_orientation)
+results = operation( images=full_image_filenames, focal_length=focal_length, lens_type=lens_type, max_iteration_depth=max_iteration_depth, reverse=reverse, initial_dest_orientation=initial_dest_orientation)
 
 f=sys.stdout
 if output_filename is not None:    

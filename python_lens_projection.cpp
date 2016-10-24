@@ -39,8 +39,11 @@ static PyObject *python_lens_projection_getattr(PyObject *self, char *attr);
 static int       python_lens_projection_setattr(PyObject *o, char *attr_name, PyObject *v);
 static PyObject *python_lens_projection_str(PyObject *self);
 
+static PyObject *python_lens_projection_class_method_add_named_polynomial(PyObject* cls, PyObject* args, PyObject *kwds);
+
 static PyObject *python_lens_projection_method_set_lens(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_lens_projection_method_set_sensor(PyObject* self, PyObject* args, PyObject *kwds);
+static PyObject *python_lens_projection_method_set_polynomial(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_lens_projection_method_orient(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_lens_projection_method_orientation_of_xy(PyObject* self, PyObject* args, PyObject *kwds);
 static PyObject *python_lens_projection_method_xy_of_orientation(PyObject* self, PyObject* args, PyObject *kwds);
@@ -50,8 +53,10 @@ static PyObject *python_lens_projection_method_xy_of_orientation(PyObject* self,
 /*v python_lens_projection_methods
  */
 PyMethodDef python_lens_projection_methods[] = {
+    {"add_named_polynomial",     (PyCFunction)python_lens_projection_class_method_add_named_polynomial,           METH_CLASS|METH_VARARGS|METH_KEYWORDS},
     {"set_lens",    (PyCFunction)python_lens_projection_method_set_lens,   METH_VARARGS|METH_KEYWORDS},
     {"set_sensor",  (PyCFunction)python_lens_projection_method_set_sensor, METH_VARARGS|METH_KEYWORDS},
+    {"set_polynomial",    (PyCFunction)python_lens_projection_method_set_polynomial,   METH_VARARGS|METH_KEYWORDS},
     {"orient",      (PyCFunction)python_lens_projection_method_orient,     METH_VARARGS|METH_KEYWORDS},
     {"orientation_of_xy",  (PyCFunction)python_lens_projection_method_orientation_of_xy,     METH_VARARGS|METH_KEYWORDS},
     {"xy_of_orientation",  (PyCFunction)python_lens_projection_method_xy_of_orientation,     METH_VARARGS|METH_KEYWORDS},
@@ -102,6 +107,44 @@ static PyTypeObject PyTypeObject_lens_projection = {
     python_lens_projection_new,     /* tp_new */
 };
 
+
+/*f python_lens_projection_class_method_add_named_polynomial
+ */
+static PyObject *
+python_lens_projection_class_method_add_named_polynomial(PyObject* cls, PyObject* args, PyObject *kwds)
+{
+    const char *name;
+    PyObject *poly, *inv_poly;
+
+    static const char *kwlist[] = {"name", "poly", "inv_poly", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sOO", (char **)kwlist, 
+                                     &name, &poly, &inv_poly))
+        return NULL;
+
+#define MAX_COEFFS 20
+    double poly_coeffs[MAX_COEFFS];
+    double inv_poly_coeffs[MAX_COEFFS];
+    PyObject *seq = PySequence_Fast(poly, "Polynomials be a sequence of doubles");
+    int poly_len = PySequence_Size(seq);
+    for (int i=0; (i<poly_len) && (i<MAX_COEFFS); i++) {
+        PyObject *item = PySequence_Fast_GET_ITEM(seq, i);
+        poly_coeffs[i] = PyFloat_AsDouble(item);
+    }
+    Py_DECREF(seq);
+    seq = PySequence_Fast(inv_poly, "Polynomials be a sequence of doubles");
+    int inv_poly_len = PySequence_Size(seq);
+    for (int i=0; (i<inv_poly_len) && (i<MAX_COEFFS); i++) {
+        PyObject *item = PySequence_Fast_GET_ITEM(seq, i);
+        inv_poly_coeffs[i] = PyFloat_AsDouble(item);
+    }
+    Py_DECREF(seq);
+    fprintf(stderr,"%d:%d\n",poly_len,inv_poly_len);
+    if (!PyErr_Occurred()) {
+        return Py_BuildValue("i",c_lens_projection::add_named_polynomial(name, poly_len, poly_coeffs, inv_poly_len, inv_poly_coeffs));
+    }
+    return NULL;
+}
+
 /*a Python lens_projection object methods
  */
 /*f python_lens_projection_method_set_lens
@@ -120,8 +163,16 @@ python_lens_projection_method_set_lens(PyObject* self, PyObject* args, PyObject 
         return NULL;
 
     if (py_obj->lens_projection) {
-        t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
-        py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
+        if (!py_obj->lens_projection->set_polynomial(lens_type)) {
+            t_lens_projection_type lp_type = c_lens_projection::lens_projection_type("polynomial");
+            py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
+            py_obj->lens_projection->set_polynomial(lens_type);
+            fprintf(stderr,"Using lens_type %s\n",lens_type);
+        } else {
+            t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
+            fprintf(stderr,"Using lp_type %d\n",lp_type);
+            py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
+        }
     }
     Py_RETURN_NONE;
 }
@@ -144,6 +195,29 @@ python_lens_projection_method_set_sensor(PyObject* self, PyObject* args, PyObjec
     height = (height==0)?width:height;
     if (py_obj->lens_projection) {
         py_obj->lens_projection->set_sensor(width, height);
+    }
+    Py_RETURN_NONE;
+}
+
+/*f python_lens_projection_method_set_polynomial
+ */
+static PyObject *
+python_lens_projection_method_set_polynomial(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    t_PyObject_lens_projection *py_obj = (t_PyObject_lens_projection *)self;
+
+    const char *name;
+    static const char *kwlist[] = {"name", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", (char **)kwlist, 
+                                     &name))
+        return NULL;
+
+    if (py_obj->lens_projection) {
+        if (py_obj->lens_projection->set_polynomial(name)) {
+            PyErr_SetString(PyExc_RuntimeError, "Unknown polynomial name");
+            return NULL;
+        }
     }
     Py_RETURN_NONE;
 }
@@ -348,6 +422,7 @@ void python_lens_projection_init_postmodule(PyObject *module)
 {
     Py_INCREF(&PyTypeObject_lens_projection);
     PyModule_AddObject(module, "lens_projection", (PyObject *)&PyTypeObject_lens_projection);
+    PyModule_AddObject(module, "lens_projection", (PyObject *)&PyTypeObject_lens_projection);
 }
 
 /*f python_lens_projection_new
@@ -380,15 +455,23 @@ python_lens_projection_init(PyObject *self, PyObject *args, PyObject *kwds)
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|dddds", (char **)kwlist, 
                                      &width, &height, &focal_length, &frame_width, &lens_type))
-        return NULL;
-
-    t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
+        return -1;
 
     py_obj->lens_projection = new c_lens_projection();
     if (!py_obj->lens_projection)
         return -1;
 
-    py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
+    if (!py_obj->lens_projection->set_polynomial(lens_type)) {
+        t_lens_projection_type lp_type = c_lens_projection::lens_projection_type("polynomial");
+        py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
+        py_obj->lens_projection->set_polynomial(lens_type);
+        fprintf(stderr,"Using lens_type %s\n",lens_type);
+    } else {
+        t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
+        fprintf(stderr,"Using lp_type %d\n",lp_type);
+        py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
+    }
+
     height = (height==0)?width:height;
     py_obj->lens_projection->set_sensor(width, height);
 

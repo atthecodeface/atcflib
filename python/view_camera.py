@@ -11,6 +11,7 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 import gjslib_c
 vector_z = gjslib_c.vector(vector=(0,0,1))
+gjslib_c.lens_projection.add_named_polynomial("canon_20_35_rebel2Ti_20", canon_20_35_rebel2Ti_20_polynomial[0], canon_20_35_rebel2Ti_20_polynomial[1])
 
 #a Classes
 #c c_view_obj
@@ -185,7 +186,7 @@ def conjugation(q,p):
 #c c_view_camera_obj
 class c_view_camera_obj(opengl_obj.c_opengl_obj):
     color = None
-    selectable_id = -1
+    selectable_id = 0
     last_note_shown = None
     def __init__(self, has_surface=False, texture_filename=None, color=None, selectable=None, note=None):
         opengl_obj.c_opengl_obj.__init__(self)
@@ -206,6 +207,7 @@ class c_view_camera_obj(opengl_obj.c_opengl_obj):
             self.selectable_id = c_view_camera_obj.selectable_id
             pass
         self.note = note
+        print selectable, c_view_camera_obj.selectable_id
         #if note is not None:
         #    print self.selectable_id,note
         pass
@@ -219,7 +221,7 @@ class c_view_camera_obj(opengl_obj.c_opengl_obj):
         if selection is None:
             return True
         if c_view_camera_obj.selectable_id==0: return True
-        if (selection%c_view_camera_obj.selectable_id)==self.selectable_id:
+        if (selection%c_view_camera_obj.selectable_id)==(self.selectable_id%c_view_camera_obj.selectable_id):
             if ((c_view_camera_obj.last_note_shown!=self.selectable_id) and
                 self.note is not None):
                 print self.selectable_id,self.note
@@ -346,56 +348,124 @@ quaternion(r=0.997179,i=-0.006334,j=-0.072740,k=0.017404) # 20.0
         lens_type = "rectilinear"
         pass
 
+    objects_selectable =True
     polys = None
     if True:
         image_orientations = [ 
-('../images/IMG_2157.JPG',None,quaternion(r=0.873898774365,i=-0.246081826269,j=0.305201494129,k=-0.287396442089)),
-('../images/IMG_2158.JPG',None,quaternion(r=0.892784552449,i=-0.264867489793,j=0.253806538552,k=-0.26146356677)),
-('../images/IMG_2159.JPG',None,quaternion(r=0.910483968879,i=-0.291998851595,j=0.1759145837,k=-0.234114656361)),
-('../images/IMG_2160.JPG',None,quaternion(r=0.918690115993,i=-0.32169570652,j=0.0831829597875,k=-0.213543762225)),
-('../images/IMG_2161.JPG',None,quaternion(r=0.91589028353,i=-0.349602855255,j=-0.00450915065685,k=-0.197237166107)),
-('../images/IMG_2162.JPG',None,quaternion(r=0.527730580496,i=-0.269725029024,j=-0.0653566053232,k=-0.802793471117)),
-('../images/IMG_2163.JPG',None,quaternion(r=0.534512456235,i=-0.269629177505,j=0.0209328366776,k=-0.800723645908)),
-('../images/IMG_2164.JPG',None,quaternion(r=0.51917209409,i=-0.260508164002,j=0.0590637211748,k=-0.811854241873)),
-('../images/IMG_2165.JPG',None,quaternion(r=0.67073482571,i=-0.170223420862,j=0.0985984975621,k=-0.715134334827)),
-('../images/IMG_2166.JPG',None,quaternion(r=0.749742364737,i=-0.0634208638941,j=0.136764098165,k=-0.644328923761)),
-('../images/IMG_2167.JPG',None,quaternion(r=0.866822609662,i=-0.175305843172,j=0.409835573036,k=0.223430588334)),
-('../images/IMG_2168.JPG',None,quaternion(r=0.843890267114,i=-0.26680402536,j=0.423860352236,k=0.192372635592)),
-('../images/IMG_2169.JPG',None,quaternion(r=0.807564742665,i=-0.389884237204,j=0.439683335774,k=0.0500802578585)),
-('../images/IMG_2170.JPG',None,quaternion(r=0.736191240676,i=-0.534793054189,j=-0.00738080430692,k=-0.414685869147)),
-('../images/IMG_2171.JPG',None,quaternion(r=0.735414316769,i=-0.61355396828,j=-0.100171921474,k=-0.269597657348)),
-('../images/IMG_2172.JPG',None,quaternion(r=0.730259536265,i=-0.643433736771,j=-0.211299384429,k=-0.0898142873818)),
-('../images/IMG_2173.JPG',None,quaternion(r=0.830215513667,i=-0.471180110505,j=-0.0249964109349,k=-0.29682770048)),
-('../images/IMG_2174.JPG',None,quaternion(r=0.828163031052,i=-0.497064041297,j=-0.0747143578401,k=-0.247973985692)),
-('../images/IMG_2175.JPG',None,quaternion(r=0.807886677848,i=-0.539585473086,j=-0.204945799795,k=-0.119011983166)),
-('../images/IMG_2176.JPG',None,quaternion(r=0.889229936659,i=-0.375936493017,j=-0.234865753678,k=-0.113048444118)),
-('../images/IMG_2177.JPG',None,quaternion(r=0.939692251518,i=-0.197393266242,j=-0.25191352033,k=-0.120639749479)),
-('../images/IMG_2178.JPG',None,quaternion(r=0.953003284357,i=-0.0491502477046,j=-0.275606785531,k=-0.115801092072)),
-('../images/IMG_2179.JPG',None,quaternion(r=-0.93845586036,i=-0.141921192717,j=0.307480129629,k=0.067933372481)),
-# IMG_2180.JPG has no orientation
-('../images/IMG_2181.JPG',None,quaternion(r=0.685251979233,i=0.0522552416841,j=-0.134074211778,k=-0.713949032081)),
-('../images/IMG_2183.JPG',None,quaternion(r=0.498191662482,i=-0.246596921173,j=-0.375057152117,k=-0.741840386166)),
-('../images/IMG_2184.JPG',None,quaternion(r=1.0,i=0.0,j=0.0,k=0.0)),
+
+#2181 to 2178
+# 21.5 : 1 417.0 (r=0.769131,i=0.092447,j=-0.096866,k=0.624906) (r=0.768204,i=0.092498,j=-0.096972,k=0.626022)  79.61:(0.144482,-0.151470,0.977845)
+# 21.4 : 1 233.0 (r=0.769226,i=0.094089,j=-0.097378,k=0.624464) (r=0.768465,i=0.093588,j=-0.097964,k=0.625384)  79.57:(0.146255,-0.153094,0.977329)x
+# 21.3 : 1 650.0 (r=0.768453,i=0.094119,j=-0.096986,k=0.625472) (r=0.769359,i=0.093733,j=-0.097299,k=0.624367)  79.41:(0.146729,-0.152311,0.977380)
+# 21.2 : 1 368.0 (r=0.767563,i=0.094998,j=-0.098568,k=0.626184) (r=0.768901,i=0.094572,j=-0.098359,k=0.624638)  79.49:(0.147915,-0.153838,0.976962)
+# 21.1 : 1 315.0 (r=0.768167,i=0.095541,j=-0.099083,k=0.625279) (r=0.768445,i=0.094912,j=-0.098933,k=0.625057)  79.57:(0.148320,-0.154603,0.976780)
+# 21.0 : 1 555.0 (r=0.769232,i=0.095706,j=-0.098276,k=0.624070) (r=0.769276,i=0.095400,j=-0.098753,k=0.623988)  79.42:(0.149315,-0.154564,0.976635)
+# 20.9 : 1 341.0 (r=0.769277,i=0.095995,j=-0.099887,k=0.623715) (r=0.767736,i=0.095682,j=-0.099982,k=0.625644)  79.70:(0.149324,-0.156036,0.976399)
+# 20.8 : 1 420.0 (r=0.770275,i=0.097004,j=-0.099588,k=0.622374) (r=0.770084,i=0.096780,j=-0.100126,k=0.622559)  79.28:(0.151706,-0.156951,0.975885)
+# 20.7 : 1 270.0 (r=0.767516,i=0.095850,j=-0.100451,k=0.625812) (r=0.768147,i=0.096568,j=-0.100550,k=0.624912)  79.62:(0.150823,-0.157042,0.976007)
+# 20.6 : 1 468.0 (r=0.767765,i=0.097265,j=-0.100048,k=0.625354) (r=0.768215,i=0.097317,j=-0.100842,k=0.624664)  79.61:(0.152012,-0.157519,0.975746)
+# 20.5 : 1 142.0 (r=0.755855,i=0.099231,j=-0.102901,k=0.638943) (r=0.760029,i=0.098960,j=-0.102794,k=0.634032)  81.07:(0.152272,-0.158172,0.975600)
+# 20.4 : 1 316.0 (r=0.768317,i=0.098527,j=-0.101057,k=0.624315) (r=0.769024,i=0.098244,j=-0.101465,k=0.623422)  79.47:(0.153694,-0.158732,0.975286)
+# 20.3 : 1 229.0 (r=0.768702,i=0.098801,j=-0.103050,k=0.623471) (r=0.768499,i=0.098768,j=-0.102650,k=0.623793)  79.56:(0.154360,-0.160428,0.974903)
+# 20.1 : 1 182.0 (r=0.768085,i=0.100267,j=-0.102555,k=0.624079) (r=0.768643,i=0.099773,j=-0.103265,k=0.623354)  79.54:(0.155974,-0.161433,0.974480)
+
+#('../images/IMG_2181.JPG',None,20.8,quaternion(r=0.689734910077,i=0.053184853808,j=-0.134445094474,k=-0.709479838839)),
+#('../images/IMG_2178.JPG',0,20.8,quaternion(r=0.770084,i=0.096780,j=-0.100126,k=0.622559)),
+#('../images/IMG_2181.JPG',None,21.0,quaternion(r=0.689734910077,i=0.053184853808,j=-0.134445094474,k=-0.709479838839)),
+#('../images/IMG_2178.JPG',0,21.0,quaternion(r=0.769276,i=0.095400,j=-0.098753,k=0.623988)),
+#('../images/IMG_2181.JPG',None,21.3,quaternion(r=0.689734910077,i=0.053184853808,j=-0.134445094474,k=-0.709479838839)),
+#('../images/IMG_2178.JPG',0,21.3,quaternion(r=0.769359,i=0.093733,j=-0.097299,k=0.624367)),
+
+
+#('../images/IMG_2176.JPG',None,21.3,quaternion(1)),
+#('../images/IMG_2175.JPG',0,21.3,quaternion(r=0.983959,i=-0.174295,j=-0.008297,k=0.037103)),
+#('../images/IMG_2176.JPG',None,20.8,quaternion(1)),
+#('../images/IMG_2175.JPG',0,20.8,quaternion(r=0.983256,i=-0.178408,j=-0.008481,k=0.036141)),
+
+('../images/IMG_2165.JPG',None,20.0,quaternion(1)),
+('../images/IMG_2164.JPG',0,   20.0,quaternion(r=0.979403,i=-0.048752,j=-0.059300,k=-0.186752)),
+
+#('../images/IMG_2178.JPG',None,quaternion(r=0.954967940233,i=-0.0494948303831,j=-0.277013921209,k=-0.0940732818042)),
+#('../images/IMG_2180.JPG',None,quaternion(r=-0.497018799929,i=-0.183674708766,j=0.0281886225961,k=0.847609176114)),
+# from 2181
+
+# from 2184
+#('../images/IMG_2181.JPG',None,quaternion(r=0.689734910077,i=0.053184853808,j=-0.134445094474,k=-0.709479838839)),
+#('../images/IMG_2166.JPG',None,quaternion(r=0.750766257325,i=-0.0626460971721,j=0.136806745474,k=-0.643202462499)),
+
+#('../images/IMG_2184.JPG',None,quaternion(r=1.0,i=0.0,j=0.0,k=0.0)),
+
+# IMG_2167.JPG has no orientation
+# IMG_2168.JPG has no orientation
+# IMG_2169.JPG has no orientation
+# IMG_2170.JPG has no orientation
+# IMG_2171.JPG has no orientation
+#('../images/IMG_2172.JPG',None,quaternion(r=0.732570424733,i=-0.643857732533,j=-0.195378626968,k=-0.103029050217)),
+# IMG_2173.JPG has no orientation
+# IMG_2174.JPG has no orientation
+#('../images/IMG_2175.JPG',None,quaternion(r=0.809040868112,i=-0.538701192734,j=-0.191710872587,k=-0.136017792963)),
+#('../images/IMG_2176.JPG',None,quaternion(r=0.88920148509,i=-0.3770829874,j=-0.243517434789,k=-0.0884782373294)),
+#('../images/IMG_2177.JPG',None,quaternion(r=0.941119314314,i=-0.198435713477,j=-0.256436721882,k=-0.0956969775548)),
+#('../images/IMG_2178.JPG',None,quaternion(r=0.954967940233,i=-0.0494948303831,j=-0.277013921209,k=-0.0940732818042)),
+#('../images/IMG_2179.JPG',None,quaternion(r=-0.940477583524,i=-0.142755006227,j=0.305033383995,k=0.0455802340328)),
+#('../images/IMG_2180.JPG',None,quaternion(r=-0.497018799929,i=-0.183674708766,j=0.0281886225961,k=0.847609176114)),
+# IMG_2183.JPG has no orientation
+
+#('../images/IMG_2157.JPG',None,quaternion(r=0.876639352422,i=-0.241602264532,j=0.30356149888,k=-0.284573730265)),
+#('../images/IMG_2158.JPG',None,quaternion(r=0.894904505137,i=-0.259915398441,j=0.253044499884,k=-0.259919975024)),
+#('../images/IMG_2159.JPG',None,quaternion(r=0.911719607084,i=-0.286924204863,j=0.175646724718,k=-0.235775500888)),
+#('../images/IMG_2160.JPG',None,quaternion(r=0.919581174185,i=-0.316395558856,j=0.0846978550371,k=-0.21700365843)),
+#('../images/IMG_2161.JPG',None,quaternion(r=0.916545400428,i=-0.345241891722,j=-0.00280050241489,k=-0.201853219794)),
+#('../images/IMG_2162.JPG',None,quaternion(r=0.525347785312,i=-0.266998017825,j=-0.0625487209466,k=-0.80548707032)),
+#('../images/IMG_2163.JPG',None,quaternion(r=0.531357608186,i=-0.266342043416,j=0.0220872374547,k=-0.80388628678)),
+#('../images/IMG_2164.JPG',None,quaternion(r=0.517829078641,i=-0.257653057349,j=0.0604959173962,k=-0.813515944116)),
+#('../images/IMG_2165.JPG',None,quaternion(r=0.668007514065,i=-0.167959728431,j=0.0979370333883,k=-0.718306221795)),
+#('../images/IMG_2166.JPG',None,quaternion(r=0.751674830865,i=-0.0618738477884,j=0.134790754217,k=-0.64264144605)),
+#('../images/IMG_2167.JPG',None,quaternion(r=0.868941844498,i=-0.168174942786,j=0.405504491949,k=0.22852432367)),
+#('../images/IMG_2168.JPG',None,quaternion(r=0.847649336196,i=-0.257557756599,j=0.419534490739,k=0.197852005151)),
+#('../images/IMG_2169.JPG',None,quaternion(r=0.81430168683,i=-0.380443439137,j=0.435046372651,k=0.0539463259871)),
+#('../images/IMG_2170.JPG',None,quaternion(r=0.737599348599,i=-0.528529545178,j=-0.00287376648846,k=-0.420232628773)),
+#('../images/IMG_2171.JPG',None,quaternion(r=0.74384220092,i=-0.604823704026,j=-0.0908435397158,k=-0.269507919125)),
+#('../images/IMG_2172.JPG',None,quaternion(r=0.742179973929,i=-0.630724131935,j=-0.213203732077,k=-0.0768122667446)),
+#('../images/IMG_2173.JPG',None,quaternion(r=0.833497801582,i=-0.465458289753,j=-0.0189163588952,k=-0.297106322087)),
+#('../images/IMG_2174.JPG',None,quaternion(r=0.832611268653,i=-0.49028516146,j=-0.0663776723968,k=-0.248943648987)),
+#('../images/IMG_2175.JPG',None,quaternion(r=0.816975071027,i=-0.527984064514,j=-0.205761315045,k=-0.106989916212)),
+#('../images/IMG_2176.JPG',None,quaternion(r=0.894610067226,i=-0.367816994652,j=-0.232798448894,k=-0.100937447244)),
+#('../images/IMG_2177.JPG',None,quaternion(r=0.943084748422,i=-0.192756947523,j=-0.247589864534,k=-0.1101597724)),
+#('../images/IMG_2178.JPG',None,quaternion(r=0.955298941011,i=-0.0476220319942,j=-0.269932300967,k=-0.110781895034)),
+#('../images/IMG_2179.JPG',None,quaternion(r=-0.941226881643,i=-0.139551382749,j=0.300792039072,k=0.0643546274721)),
+#('../images/IMG_2180.JPG',None,quaternion(r=-0.68624550572,i=-0.167989351691,j=0.0428979663466,k=0.706403884531)),
+#('../images/IMG_2181.JPG',None,quaternion(r=0.688281299561,i=0.0513609985304,j=-0.131630769448,k=-0.711550589234)),
+#('../images/IMG_2183.JPG',None,quaternion(r=0.496011193362,i=-0.247619109473,j=-0.365204021126,k=-0.747852723226)),
+#('../images/IMG_2184.JPG',None,quaternion(r=1.0,i=0.0,j=0.0,k=0.0)),
+
 ]
-        focal_length = 20.5
+        default_focal_length = 20.0
         vector = gjslib_c.vector
         polys = {
 }
-        lens_type = "rectilinear"
+        lens_type = "canon_20_35_rebel2Ti_20"
         pass
 
     orientations = []
     image_objects = []
     n = 0
-    for (texture_filename, previous_orientation, orientation) in image_orientations:
+    for tpo in image_orientations:
+        if len(tpo)==3:
+            (texture_filename, previous_orientation, orientation) = tpo
+            focal_length = default_focal_length
+            pass
+        if len(tpo)==4:
+            (texture_filename, previous_orientation, focal_length, orientation) = tpo
+            pass
         if previous_orientation is not None:
             orientation = orientations[previous_orientation] * orientation
             if separate:
                 orientation = quaternion().from_euler(pitch=45,degrees=1) * orientations[previous_orientation]
                 pass
             pass
-        obj = c_view_camera_obj(texture_filename = texture_filename, has_surface=True)
-        obj.camera = lens_projection(focal_length=focal_length, lens_type=lens_type, frame_width=22.3*src_ar, width=src_w)
+        obj = c_view_camera_obj(texture_filename = texture_filename, has_surface=True, selectable=objects_selectable, note="%s %f"%(texture_filename, focal_length))
+        obj.camera = lens_projection(focal_length=focal_length, lens_type=lens_type, frame_width=22.3*src_ar, width=src_w, height=src_w)
         obj.camera.orient(orientation)
         build_add_projected_image_mesh(obj, obj.camera, src_w, src_h, 64, z=8+n*2)
         image_objects.append(obj)

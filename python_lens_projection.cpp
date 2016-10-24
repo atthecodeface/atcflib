@@ -167,10 +167,8 @@ python_lens_projection_method_set_lens(PyObject* self, PyObject* args, PyObject 
             t_lens_projection_type lp_type = c_lens_projection::lens_projection_type("polynomial");
             py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
             py_obj->lens_projection->set_polynomial(lens_type);
-            fprintf(stderr,"Using lens_type %s\n",lens_type);
         } else {
             t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
-            fprintf(stderr,"Using lp_type %d\n",lp_type);
             py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
         }
     }
@@ -465,10 +463,8 @@ python_lens_projection_init(PyObject *self, PyObject *args, PyObject *kwds)
         t_lens_projection_type lp_type = c_lens_projection::lens_projection_type("polynomial");
         py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
         py_obj->lens_projection->set_polynomial(lens_type);
-        fprintf(stderr,"Using lens_type %s\n",lens_type);
     } else {
         t_lens_projection_type lp_type = c_lens_projection::lens_projection_type(lens_type);
-        fprintf(stderr,"Using lp_type %d\n",lp_type);
         py_obj->lens_projection->set_lens(frame_width, focal_length, lp_type);
     }
 

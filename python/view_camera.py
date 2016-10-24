@@ -10,6 +10,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 import gjslib_c
+from filters import *
 vector_z = gjslib_c.vector(vector=(0,0,1))
 gjslib_c.lens_projection.add_named_polynomial("canon_20_35_rebel2Ti_20", canon_20_35_rebel2Ti_20_polynomial[0], canon_20_35_rebel2Ti_20_polynomial[1])
 
@@ -382,8 +383,8 @@ quaternion(r=0.997179,i=-0.006334,j=-0.072740,k=0.017404) # 20.0
 #('../images/IMG_2176.JPG',None,20.8,quaternion(1)),
 #('../images/IMG_2175.JPG',0,20.8,quaternion(r=0.983256,i=-0.178408,j=-0.008481,k=0.036141)),
 
-('../images/IMG_2165.JPG',None,20.0,quaternion(1)),
-('../images/IMG_2164.JPG',0,   20.0,quaternion(r=0.979403,i=-0.048752,j=-0.059300,k=-0.186752)),
+#('../images/IMG_2165.JPG',None,20.0,quaternion(1)),
+#('../images/IMG_2164.JPG',0,   20.0,quaternion(r=0.979403,i=-0.048752,j=-0.059300,k=-0.186752)),
 
 #('../images/IMG_2178.JPG',None,quaternion(r=0.954967940233,i=-0.0494948303831,j=-0.277013921209,k=-0.0940732818042)),
 #('../images/IMG_2180.JPG',None,quaternion(r=-0.497018799929,i=-0.183674708766,j=0.0281886225961,k=0.847609176114)),
@@ -438,6 +439,35 @@ quaternion(r=0.997179,i=-0.006334,j=-0.072740,k=0.017404) # 20.0
 #('../images/IMG_2181.JPG',None,quaternion(r=0.688281299561,i=0.0513609985304,j=-0.131630769448,k=-0.711550589234)),
 #('../images/IMG_2183.JPG',None,quaternion(r=0.496011193362,i=-0.247619109473,j=-0.365204021126,k=-0.747852723226)),
 #('../images/IMG_2184.JPG',None,quaternion(r=1.0,i=0.0,j=0.0,k=0.0)),
+
+('../images/IMG_2157.JPG',None,quaternion(r=0.87546808306,i=-0.242188564773,j=0.301121138542,k=-0.290217839839)),
+('../images/IMG_2158.JPG',None,quaternion(r=0.893807930965,i=-0.26086733846,j=0.250558241143,k=-0.265096552344)),
+('../images/IMG_2159.JPG',None,quaternion(r=0.910274073579,i=-0.288675838523,j=0.17301502994,k=-0.241108213541)),
+('../images/IMG_2160.JPG',None,quaternion(r=0.918135322987,i=-0.318489790841,j=0.0819492466829,k=-0.221079403796)),
+('../images/IMG_2161.JPG',None,quaternion(r=0.915489608868,i=-0.347272672496,j=-0.0046008899498,k=-0.203123850897)),
+('../images/IMG_2162.JPG',None,quaternion(r=0.520577997248,i=-0.266981728151,j=-0.0657008613106,k=-0.808333286731)),
+('../images/IMG_2163.JPG',None,quaternion(r=0.529750946684,i=-0.265351890837,j=0.0190576488647,k=-0.805350305479)),
+('../images/IMG_2164.JPG',None,quaternion(r=0.518056594012,i=-0.256470600664,j=0.0571827063081,k=-0.813984234795)),
+('../images/IMG_2165.JPG',None,quaternion(r=0.668511636775,i=-0.166984120612,j=0.0949385351721,k=-0.718467236205)),
+('../images/IMG_2166.JPG',None,quaternion(r=0.752145812463,i=-0.0613905590512,j=0.132234830743,k=-0.642667741211)),
+('../images/IMG_2167.JPG',None,quaternion(r=0.870322934368,i=-0.169264450582,j=0.404415805942,k=0.224355502688)),
+('../images/IMG_2168.JPG',None,quaternion(r=0.843694996686,i=-0.250315365046,j=0.423881732896,k=0.214115032414)),
+('../images/IMG_2169.JPG',None,quaternion(r=0.812848667697,i=-0.374231811727,j=0.440375142199,k=0.0727827496636)),
+('../images/IMG_2170.JPG',None,quaternion(r=0.741406465571,i=-0.530301287096,j=-0.0018745875226,k=-0.41120978057)),
+('../images/IMG_2171.JPG',None,quaternion(r=0.744724688667,i=-0.605243130606,j=-0.0906823029069,k=-0.26616275262)),
+('../images/IMG_2172.JPG',None,quaternion(r=0.743160997031,i=-0.630912599219,j=-0.214088769401,k=-0.0618629408797)),
+('../images/IMG_2173.JPG',None,quaternion(r=0.834117730551,i=-0.466591666191,j=-0.0177196124496,k=-0.293642374252)),
+('../images/IMG_2174.JPG',None,quaternion(r=0.832771928178,i=-0.491104185297,j=-0.0658901600819,k=-0.246913105419)),
+('../images/IMG_2175.JPG',None,quaternion(r=0.818310419789,i=-0.529101037991,j=-0.204627090112,k=-0.0924548671176)),
+('../images/IMG_2176.JPG',None,quaternion(r=0.89619324893,i=-0.365810448143,j=-0.232570645088,k=-0.0945054053728)),
+('../images/IMG_2177.JPG',None,quaternion(r=0.944166807211,i=-0.191322644839,j=-0.246681476945,k=-0.105323001601)),
+('../images/IMG_2178.JPG',None,quaternion(r=0.957035809844,i=-0.046457424184,j=-0.267220830673,k=-0.102553371801)),
+('../images/IMG_2179.JPG',None,quaternion(r=-0.942876764553,i=-0.140202559671,j=0.296851749725,k=0.0566187938196)),
+('../images/IMG_2180.JPG',None,quaternion(r=-0.690889630418,i=-0.172443218949,j=0.0608688865743,k=0.699449664713)),
+('../images/IMG_2181.JPG',None,quaternion(r=0.692832505451,i=0.0510011123222,j=-0.129245934122,k=-0.707585679932)),
+('../images/IMG_2183.JPG',None,quaternion(r=0.502299110919,i=-0.253827805029,j=-0.358160038578,k=-0.744975459549)),
+('../images/IMG_2184.JPG',None,quaternion(r=1.0,i=0.0,j=0.0,k=0.0)),
+
 
 ]
         default_focal_length = 20.0

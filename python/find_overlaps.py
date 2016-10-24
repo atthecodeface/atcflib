@@ -345,6 +345,22 @@ while len(ids_to_propagate)>0:
     ids_to_propagate.extend(next_id.propagate(ids_propagated_to))
     pass
 
+vfs = []
+vf_c = vector_z
+vf_c -= vf_c
+for idn in image_names:
+    vf = ids[idn].base_orientation.rotate_vector(vector_z)
+    vf_c += vf
+    vfs.append( (idn, vf) )
+    pass
+vf_c.normalize()
+vfs.sort(cmp=lambda x,y: cmp(y[1].dot_product(vf_c),x[1].dot_product(vf_c)))
+print vf_c
+for (i,vf) in vfs:
+    print i, vf
+    pass
+key_image = ids[vfs[0][0]]
+
 image_evaluation_path = []
 image_overlaps = []
 images_evaluated = set()
@@ -399,7 +415,7 @@ for i in overlaps:
 print "Image evaluation path", len(image_evaluation_path)
 for (area, src, tgt, polygon) in image_evaluation_path:
     rq = ~src.base_orientation * tgt.base_orientation
-    print "$(eval $(call image_fine,%s,%s,20,rectilinear,'%s'))"%(src.image_filename, tgt.image_filename,
+    print "$(eval $(call image_fine,%s,%s,20,canon_20_35_rebel2Ti_20,'%s'))"%(src.image_filename, tgt.image_filename,
                                                                   str(rq.rijk))
     pass
 

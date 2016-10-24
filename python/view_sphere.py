@@ -447,6 +447,14 @@ def test_object():
     tetrahedron.append( vector((-1,1,-1)).normalize() )
     tetrahedron.append( vector((-1,-1,1)).normalize() )
 
+    octahedron = []
+    octahedron.append( vector(( 1,0,0)).normalize() )
+    octahedron.append( vector((-1,0,0)).normalize() )
+    octahedron.append( vector((0, 1,0)).normalize() )
+    octahedron.append( vector((0,-1,0)).normalize() )
+    octahedron.append( vector((0,0, 1)).normalize() )
+    octahedron.append( vector((0,0,-1)).normalize() )
+
     t_gcs = []
     t_gcs.append( c_great_circle_arc(tetrahedron[2], tetrahedron[3]) )
     t_gcs.append( c_great_circle_arc(tetrahedron[3], tetrahedron[0]) )
@@ -454,8 +462,22 @@ def test_object():
     t_gcs.append( c_great_circle_arc(tetrahedron[1], tetrahedron[2]) )
     t_gcs.append( c_great_circle_arc(tetrahedron[0], tetrahedron[1]) )
     t_gcs.append( c_great_circle_arc(tetrahedron[3], tetrahedron[1]) )
-
     t_faces = ( (0,1,2), (0,5,3), (1,4,-5), (2,-3,-4) )
+
+    t_gcs = []
+    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[2]) )
+    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[3]) )
+    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[4]) )
+    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[5]) )
+    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[2]) )
+    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[3]) )
+    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[4]) )
+    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[5]) )
+    t_gcs.append( c_great_circle_arc(octahedron[2], octahedron[4]) )
+    t_gcs.append( c_great_circle_arc(octahedron[4], octahedron[3]) )
+    t_gcs.append( c_great_circle_arc(octahedron[3], octahedron[5]) )
+    t_gcs.append( c_great_circle_arc(octahedron[5], octahedron[2]) )
+    t_faces = ( (0,8,-2), (0,-11,-3) )
 
     image_orientations = []
     orientations = []
@@ -466,7 +488,7 @@ def test_object():
     obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
                             note="stars")
     image_objects.append(obj)
-    for p in tetrahedron:
+    for p in octahedron: #tetrahedron:
         tq = quaternion(1).lookat(p, vector_y)
         print tq, tq.rotate_vector(vector_z)
         add_blob(obj, tq, style="star", scale=0.1 )
@@ -482,7 +504,7 @@ def test_object():
         pass
 
     t_subfaces = []
-    for f in t_faces[0:1]:
+    for f in t_faces[0:2]:
         hue += 44
         obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
                                 note="centers")
@@ -507,6 +529,7 @@ def test_object():
             pass
         pass
 
+    t_subsubfaces = []
     for f in t_subfaces:
         hue += 44
         obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
@@ -520,7 +543,32 @@ def test_object():
         gcs = ( c_great_circle_arc(midpoints[0], midpoints[1]),
                 c_great_circle_arc(midpoints[1], midpoints[2]),
                 c_great_circle_arc(midpoints[2], midpoints[0]) )
-        #t_subfaces.append(gcs)
+        t_subsubfaces.append(gcs)
+        for g in gcs:
+            cs = []
+            for p in g.interpolate():
+                cs.append(p.coords)
+                pass
+            obj.add_line(cs)
+            cs = ( g.p0.coords, g.p1.coords)
+            obj.add_line(cs)
+            pass
+        pass
+
+    for f in t_subsubfaces:
+        hue += 44
+        obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
+                                note="centers")
+        image_objects.append(obj)
+        midpoints = ( f[0].midpoint(), f[1].midpoint(), f[2].midpoint())
+        for m in midpoints:
+            tq = quaternion(1).lookat(m, vector_y)
+            add_blob(obj, tq, style="triangle", scale=0.01 )
+            pass
+        gcs = ( c_great_circle_arc(midpoints[0], midpoints[1]),
+                c_great_circle_arc(midpoints[1], midpoints[2]),
+                c_great_circle_arc(midpoints[2], midpoints[0]) )
+        #t_subsubfaces.append(gcs)
         for g in gcs:
             cs = []
             for p in g.interpolate():

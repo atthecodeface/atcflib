@@ -10,10 +10,39 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 import gjslib_c
+from gjslib_c import vector, quaternion, lens_projection
 from filters import *
-gjslib_c.lens_projection.add_named_polynomial("canon_20_35_rebel2Ti_20", canon_20_35_rebel2Ti_20_polynomial[0], canon_20_35_rebel2Ti_20_polynomial[1])
+
+vector_x = vector((1,0,0))
+vector_y = vector((0,1,0))
+vector_z = vector((0,0,1))
+lens_projection.add_named_polynomial("canon_20_35_rebel2Ti_20", canon_20_35_rebel2Ti_20_polynomial[0], canon_20_35_rebel2Ti_20_polynomial[1])
 
 #a Classes
+#c spherical_angle
+def spherical_angle(p, p0, p1):
+    """
+    A spherical angle is formed from three points on the sphere, p, p0 and p1
+
+    Two great circles (p,p0) and (p,p1) have an angle between them (the rotation
+    anticlockwise about p that it takes to move the p,p0 great circle p,p1).
+    Hence there is an axis through (p, 0, -p) about which p0 rotates to p1
+
+    Consider the great circle for (p, p0); this is a rotation around
+    an axis p x p0. Similarly for (p, p1).  If unit rotation axes are
+    chosen (p_p0_r and p_p1_r) then the angle can be determined from
+    p_p0_r.p_p1_r (cos of angle) and p.(p_p0_r x p_p1_r) (sin of angle)
+    """
+    p_p0_r = p.cross_product(p0).normalize()
+    p_p1_r = p.cross_product(p1).normalize()
+    ps = p_p0_r.cross_product(p_p1_r).dot_product(p)
+    pc = p_p0_r.dot_product(p_p1_r)
+    return math.atan2(ps, pc)
+
+#f vector_coord_list
+def vector_coord_list(vl):
+    return [v.coords for v in vl]
+
 #c c_great_circle_arc
 class c_great_circle_arc(object):
     """
@@ -319,6 +348,224 @@ class c_view_obj(opengl_app.c_opengl_camera_app):
     #f All done
     pass
 
+
+#a Polyhedra classes
+class c_polyhedron(object):
+    """
+    Want an area<>area mapping for each triangle, from sphere to texture
+    plot as triangles where color of triangle = green for 1.0, red for area_texture/area_sphere<1, and blue for area_texture/areas_sphere>1
+    Also try pentakis dodecahedron
+    """
+    vertices = []
+    faces = []
+    edges = []
+    class c_face(object):
+        def __init__(self, edge_dirns):
+            self.edge_dirns = edge_dirns
+            self.midpoints = []
+            for (d,e) in self.edge_dirns:
+                self.midpoints.append(e.midpoint())
+                pass
+            self.corners = [ self.edge_dirns[0][1].p0, self.edge_dirns[0][1].p1, self.edge_dirns[2][1].p1 ]
+            if self.edge_dirns[0][0]: self.corners[0]=self.edge_dirns[0][1].p1
+            if self.edge_dirns[0][0]: self.corners[1]=self.edge_dirns[0][1].p0
+            if not self.edge_dirns[2][0]: self.corners[2]=self.edge_dirns[2][1].p0
+            #self.corners = [self.corners[0], self.corners[2], self.corners[1]]
+            self.subfaces = None
+            pass
+        def area(self):
+            area = -math.pi
+            for i in range(3):
+                area += spherical_angle( self.corners[(i+2)%3],
+                                         self.corners[i],
+                                         self.corners[(i+1)%3] )
+                pass
+            return area
+        def midpoint(self, edge):
+            return self.midpoints[edge]
+        def subdivide(self):
+            if self.subfaces is not None:
+                return self.subfaces
+            subedges = ( c_great_circle_arc(self.corners[0], self.midpoints[0]),
+                         c_great_circle_arc(self.midpoints[0], self.corners[1]),
+                         c_great_circle_arc(self.corners[1], self.midpoints[1]),
+                         c_great_circle_arc(self.midpoints[1], self.corners[2]),
+                         c_great_circle_arc(self.corners[2], self.midpoints[2]),
+                         c_great_circle_arc(self.midpoints[2], self.corners[0]),
+
+                         c_great_circle_arc(self.midpoints[0], self.midpoints[1]),
+                         c_great_circle_arc(self.midpoints[1], self.midpoints[2]),
+                         c_great_circle_arc(self.midpoints[2], self.midpoints[0]),
+                         )
+            self.subfaces = []
+            for f in ( (1,-9,6), (3,-7,2), (5,-8,4), (7,8,9) ):
+                face = []
+                for fn in f:
+                    face.append((fn<0, subedges[abs(fn)-1]) )
+                    pass
+                self.subfaces.append(c_polyhedron.c_face(face))
+                pass
+            return self.subfaces
+        pass
+    @staticmethod
+    def faces_from_vertices(faces, vertices, edges):
+        faces_of_edges = []
+        for f in faces:
+            fe = []
+            faces_of_edges.append(fe)
+            ab = vertices[f[0]-1] - vertices[f[1]-1]
+            cb = vertices[f[2]-1] - vertices[f[1]-1]
+            print f,vertices[f[1]-1].dot_product(ab.cross_product(cb))
+            if vertices[f[1]-1].dot_product(ab.cross_product(cb))>0:
+                raise Exception, "Clockwise face %s"%str(f)
+            for i in range(len(f)):
+                a = f[i]
+                b = f[(i+1)%len(f)]
+                if (a,b) in edges:
+                    fe.append(1+edges.index((a,b)))
+                    pass
+                else:
+                    fe.append(-1-edges.index((b,a)))
+                    pass
+                pass
+            pass
+        return faces_of_edges
+    def __init__(self):
+        for i in range(len(self.vertices)):
+            self.vertices[i].normalize()
+            pass
+        self.edge_gcs = []
+        for e in self.edges:
+            self.edge_gcs.append( c_great_circle_arc(self.vertices[e[0]-1], self.vertices[e[1]-1]) )
+            pass
+        self.face_gcs = []
+        for f in self.faces:
+            face = []
+            for fn in f:
+                face.append((fn<0, self.edge_gcs[abs(fn)-1]) )
+                pass
+            self.face_gcs.append(c_polyhedron.c_face(face))
+            pass
+        self.all_faces = {}
+        pass
+    def subface(self, subdivisions):
+        if type(subdivisions)==int: return self.face_gcs[subdivisions]
+        if len(subdivisions)==1:    return self.face_gcs[subdivisions[0]]
+        sd = tuple(subdivisions)
+        if sd in self.all_faces:
+            return self.all_faces[sd]
+        parent = self.subface(subdivisions[:-1])
+        subfaces = parent.subdivide()
+        return subfaces[subdivisions[-1]]
+
+class c_tetrahedron(c_polyhedron):
+    vertices = ( vector((1,1,1)), vector((1,-1,-1)), vector((-1,1,-1)), vector((-1,-1,1)) )
+    edges = ( (1,2), (1,3), (1,4), (2,3), (2,4), (3,4) )
+    faces = ( (1,2,3), (1,4,2), (1,3,4), (2,4,3) )
+    faces = c_polyhedron.faces_from_vertices( faces, vertices, edges )
+
+class c_octahedron(c_polyhedron):
+    vertices = ( vector(( 1,0,0)),
+                 vector((-1,0,0)),
+                 vector((0, 1,0)),
+                 vector((0,-1,0)),
+                 vector((0,0, 1)),
+                 vector((0,0,-1)),
+                 )
+    edges = ( (1,3), (1,4), (1,5), (1,6),
+              (2,3), (2,4), (2,5), (2,6),
+              (3,5), (5,4), (4,6), (6,3) )
+    faces = ( (1,3,5), (1,5,4), (1,4,6), (1,6,3),
+              (3,2,5), (5,2,4), (4,2,6), (6,2,3) )
+    faces = c_polyhedron.faces_from_vertices( faces, vertices, edges )
+    pass
+
+class c_icosahedron(c_polyhedron):
+    """
+    A 20mm lens on a 22.3mm sensor is 58 degree horizontal, 40 degree vertical; this is about 1/20th of a sphere
+    At 30Mpixel there would be 600Mpixel for the sphere
+
+    subdivision of length 5 (i.e. each face subdivided 4 times)
+    has a center that is about .1% away from 1.0 length
+    and each subdivision gets it a factor of 4 closer
+    subdivison of length 8 closest to a vertex has 0.0014% (1 part in 70,000)
+    subdivison of length 8 closest to center has 0.0018% (1 part in 56,000)
+    The earth has a radius of 6,000km; so 1 part in 70,000 is about 80m
+    Subdivision length 8 is each face divided 7 times, so 4^7 faces per triangle,
+    or 2^14 = 16384 faces  - total of 320k faces for the sphere
+    Each edge is 1.1755 long, or 7,053km
+    So subdivision length 8 is divide each side by 128, or 55km
+
+    Subdivision length 6 is 80k faces for the sphere, and a part in 4,500 (at vertex) or 3,500 (center of face)
+    This is an error of 2km at the center.
+    Each edge is 1.1755 long, or 7,053km
+    So subdivision length 6 is divide each side by 32, or 221km
+
+    At 80k faces, with 600Mpixels for a sphere, that is 8k pixels per face - as half of a square, that is 128 pixels per side of each face
+    At 600Mpixels that is 30Mpixels per triangular face, 60Mpixels per face pair - or 8kx8k images
+
+    The base image could be 10Mpixels - or 1Mpixel per face pair, or 1k by 1k for each face edge, 32 pixels per each side of each face
+    """
+    gr = (math.sqrt(5)-1)/2
+    vertices = ( vector(( 1,0, gr)),
+                 vector(( 1,0,-gr)),
+                 vector((-1,0, gr)),
+                 vector((-1,0,-gr)),
+                 vector(( gr, 1,0)),
+                 vector((-gr, 1,0)),
+                 vector(( gr,-1,0)),
+                 vector((-gr,-1,0)),
+                 vector((0, gr, 1)),
+                 vector((0,-gr, 1)),
+                 vector((0, gr,-1)),
+                 vector((0,-gr,-1)),
+                 )
+    edges = ( (1,2), (1,5), (1,7), (1,9), (1,10),    #  1 top
+              (2,5), (5,9), (9,10), (10,7), (7,2),   #  6 ring 2,5,9,10,7
+              (4,3), (4,6), (4,8), (4,11), (4,12),   # 11 bottom
+              (3,6), (6,11), (11,12), (12,8), (8,3), # 16 ring 11,6,3,8,12
+              (12,2), (2,11), (11,5), (5,6), (6,9),
+              (9,3), (3,10), (10,8), (8,7), (7,12),
+              )
+    faces = ( (1,2,5), (1,5,9), (1,9,10), (1,10,7), (1,7,2),
+              (4,3,6), (4,6,11), (4,11,12), (4,12,8), (4,8,3),
+              (2,11,5), (11,6,5), (5,6,9), (6,3,9), (9,3,10),
+              (3,8,10), (10,8,7), (8,12,7), (7,12,2), (12,11,2),
+              )
+    faces = c_polyhedron.faces_from_vertices( faces, vertices, edges )
+    pass
+
+#f add_shape_subdivision
+def add_shape_subdivision(shape, sd, hue, fill=False, color_by_area=True):
+    f = shape.subface(sd)
+    center = vector((0,0,0))
+    for v in f.corners:
+        center += v
+        pass
+    center.scale(1/3.0)
+    center_displacement = 1/(1.0-center.modulus())
+    rel_area = f.area()*(4**len(sd))/shape.subface(0).area()/4
+    if color_by_area:
+        if rel_area<0: rel_area=-1/rel_area
+        hue = 120 * (1+rel_area/2)
+    obj = c_view_sphere_obj( has_surface=True, color=rgb_of_hue(hue), selectable=True,
+                             note="%d : %s : %f : %f : %f"%(len(sd),str(sd),f.area(),rel_area,center_displacement) )
+    if fill:
+        obj.add_triangle(vector_coord_list(f.corners),[(0,0)]*3)
+        return obj
+
+    n = 0
+    for v in f.corners:
+        add_blob(obj, v=v, style=["triangle","diamond","star"][n], scale=0.03/len(sd) )
+        n += 1
+        pass
+    
+    for (d,g) in f.edge_dirns:
+        obj.add_line( vector_coord_list(g.interpolate()) )
+        obj.add_line(( g.p0.coords, g.p1.coords))
+        pass
+    return obj
+
 #a Top level
 #c c_view_sphere_obj
 class c_view_sphere_obj(opengl_obj.c_opengl_obj):
@@ -350,7 +597,6 @@ class c_view_sphere_obj(opengl_obj.c_opengl_obj):
         pass
     pass
     def should_display(self, selection, n, tick):
-        return True
         if not self.selectable:
             return True
             if (n%2) == (tick%2):
@@ -376,29 +622,38 @@ def line_between_qs(src_q, tgt_q, angle_steps = 20):
     points = []
     for j in range(angle_steps+1):
         angle = diff_angle/angle_steps * j
-        rot_q = gjslib_c.quaternion.of_rotation(axis=diff_axis, angle=angle)
+        rot_q = quaternion.of_rotation(axis=diff_axis, angle=angle)
         points.append( (rot_q*src_q).rotate_vector(vector_z).coords )
         pass
     return points
 
 #f add_blob
-def add_blob(obj, src_q, scale=0.001, style="star", distance=1.0):
+def add_blob(obj, src_q=None, v=None, scale=0.001, style="star", distance=1.0):
     angle_rs = {"diamond":      [(i,1) for i in range(0,450,90)],
                 "star":         [(i,[1,0.5][((i/36)&1)]) for i in range(0,396,36)],
                 "triangle":     [(i,1) for i in range(0,450,120)],
                 "inv_triangle": [(i,1) for i in range(60,450,120)],
                 }
-    cxyz= src_q.rotate_vector(gjslib_c.vector((0,0,distance))).coords
+    if v is not None:
+        cxyz = v.coords
+        dv = vector_z
+        if (cxyz[0]==0) and (cxyz[0]==0): dv=vector_y
+        src_q = quaternion().lookat(v, dv)
+        pass
+    else:
+        cxyz= src_q.rotate_vector(vector((0,0,distance))).coords
+        pass
     lxyz = None
     for (angle,r) in angle_rs[style]:
-        vector_z_sc = gjslib_c.vector((0,scale*r,distance))
-        xyz = (src_q*gjslib_c.quaternion().from_euler(roll=angle,degrees=1)).rotate_vector(vector_z_sc).coords
+        vector_z_sc = vector((0,scale*r,distance))
+        xyz = (src_q*quaternion().from_euler(roll=angle,degrees=1)).rotate_vector(vector_z_sc).coords
         if lxyz is not None:
             obj.add_triangle([cxyz,lxyz,xyz],[(0,0)]*3)
             pass
         lxyz = xyz
         pass
     pass
+
 
 #f rgb_of_hue
 def rgb_of_hue(hue):
@@ -420,10 +675,6 @@ def rgb_of_hue(hue):
 #f test_object 
 def test_object():
 
-    lens_projection = gjslib_c.lens_projection
-    quaternion      = gjslib_c.quaternion
-    vector          = gjslib_c.vector
-
     dst_w = 1024.0
     src_w = 1.0
     src_h = 1.0
@@ -436,48 +687,7 @@ def test_object():
     src_ar = 1
     src_h = 3456/5148.0
 
-    vector_x = vector(vector=(1,0,0))
-    vector_y = vector(vector=(0,1,0))
-    vector_z = vector(vector=(0,0,1))
-
     s60 = math.sin(math.radians(60))
-    tetrahedron = []
-    tetrahedron.append( vector((1,1,1)).normalize() )
-    tetrahedron.append( vector((1,-1,-1)).normalize() )
-    tetrahedron.append( vector((-1,1,-1)).normalize() )
-    tetrahedron.append( vector((-1,-1,1)).normalize() )
-
-    octahedron = []
-    octahedron.append( vector(( 1,0,0)).normalize() )
-    octahedron.append( vector((-1,0,0)).normalize() )
-    octahedron.append( vector((0, 1,0)).normalize() )
-    octahedron.append( vector((0,-1,0)).normalize() )
-    octahedron.append( vector((0,0, 1)).normalize() )
-    octahedron.append( vector((0,0,-1)).normalize() )
-
-    t_gcs = []
-    t_gcs.append( c_great_circle_arc(tetrahedron[2], tetrahedron[3]) )
-    t_gcs.append( c_great_circle_arc(tetrahedron[3], tetrahedron[0]) )
-    t_gcs.append( c_great_circle_arc(tetrahedron[0], tetrahedron[2]) )
-    t_gcs.append( c_great_circle_arc(tetrahedron[1], tetrahedron[2]) )
-    t_gcs.append( c_great_circle_arc(tetrahedron[0], tetrahedron[1]) )
-    t_gcs.append( c_great_circle_arc(tetrahedron[3], tetrahedron[1]) )
-    t_faces = ( (0,1,2), (0,5,3), (1,4,-5), (2,-3,-4) )
-
-    t_gcs = []
-    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[2]) )
-    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[3]) )
-    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[4]) )
-    t_gcs.append( c_great_circle_arc(octahedron[0], octahedron[5]) )
-    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[2]) )
-    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[3]) )
-    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[4]) )
-    t_gcs.append( c_great_circle_arc(octahedron[1], octahedron[5]) )
-    t_gcs.append( c_great_circle_arc(octahedron[2], octahedron[4]) )
-    t_gcs.append( c_great_circle_arc(octahedron[4], octahedron[3]) )
-    t_gcs.append( c_great_circle_arc(octahedron[3], octahedron[5]) )
-    t_gcs.append( c_great_circle_arc(octahedron[5], octahedron[2]) )
-    t_faces = ( (0,8,-2), (0,-11,-3) )
 
     image_orientations = []
     orientations = []
@@ -488,12 +698,15 @@ def test_object():
     obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
                             note="stars")
     image_objects.append(obj)
-    for p in octahedron: #tetrahedron:
-        tq = quaternion(1).lookat(p, vector_y)
-        print tq, tq.rotate_vector(vector_z)
-        add_blob(obj, tq, style="star", scale=0.1 )
+
+    shape = c_tetrahedron()
+    #shape = c_octahedron()
+    shape = c_icosahedron()
+    for v in shape.vertices:
+        add_blob(obj, v=v, style="star", scale=0.02 )
         pass
-    for g in t_gcs:
+
+    for g in shape.edge_gcs:
         cs = []
         for p in g.interpolate():
             cs.append(p.coords)
@@ -503,81 +716,42 @@ def test_object():
         obj.add_line(cs)
         pass
 
-    t_subfaces = []
-    for f in t_faces[0:2]:
-        hue += 44
-        obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
-                                note="centers")
-        image_objects.append(obj)
-        midpoints = ( t_gcs[abs(f[0])].midpoint(), t_gcs[abs(f[1])].midpoint(), t_gcs[abs(f[2])].midpoint())
-        for m in midpoints:
-            tq = quaternion(1).lookat(m, vector_y)
-            add_blob(obj, tq, style="triangle", scale=0.1 )
-            pass
-        gcs = ( c_great_circle_arc(midpoints[0], midpoints[1]),
-                c_great_circle_arc(midpoints[1], midpoints[2]),
-                c_great_circle_arc(midpoints[2], midpoints[0]) )
-        t_subfaces.append(gcs)
-        for g in gcs:
-            cs = []
-            for p in g.interpolate():
-                cs.append(p.coords)
-                pass
-            obj.add_line(cs)
-            cs = ( g.p0.coords, g.p1.coords)
-            obj.add_line(cs)
+    subdivisions_to_show = ( (0,), (0,0,0,0,0,0), (0,1), (0,1,1), (0,3), (0,3,0), (0,3,0,3), (0,3,0,3,3), (3,3,3,3,3,3,3) )
+    subdivisions_to_show = ( (0,0,0,0,0,0,0,0), (0,3,0,3), (0,3,0,3,3), (0,3,3,3,3,3,3,3) )
+    subdivisions_to_show = []
+    subdivisions_to_show2 = []
+    subdivisions_to_show3 = []
+    for i in [0,3]:
+        for j in range(4):
+            for k in range(4):
+                #if (i,j,k) not in [(0,0,0),(3,3,3)]:
+                #    subdivisions_to_show.append( (0,i,j,k) )
+                #    pass
+                subdivisions_to_show2.append( (0,0,0,0,i,j,k) )
+                subdivisions_to_show3.append( (0,3,3,3,i,j,k) )
             pass
         pass
-
-    t_subsubfaces = []
-    for f in t_subfaces:
-        hue += 44
-        obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
-                                note="centers")
-        image_objects.append(obj)
-        midpoints = ( f[0].midpoint(), f[1].midpoint(), f[2].midpoint())
-        for m in midpoints:
-            tq = quaternion(1).lookat(m, vector_y)
-            add_blob(obj, tq, style="diamond", scale=0.03 )
-            pass
-        gcs = ( c_great_circle_arc(midpoints[0], midpoints[1]),
-                c_great_circle_arc(midpoints[1], midpoints[2]),
-                c_great_circle_arc(midpoints[2], midpoints[0]) )
-        t_subsubfaces.append(gcs)
-        for g in gcs:
-            cs = []
-            for p in g.interpolate():
-                cs.append(p.coords)
-                pass
-            obj.add_line(cs)
-            cs = ( g.p0.coords, g.p1.coords)
-            obj.add_line(cs)
-            pass
+    subdivisions_to_show.extend(subdivisions_to_show2)
+    subdivisions_to_show.extend(subdivisions_to_show3)
+    subdivisions_to_show = ( (0,), )
+    subdivisions_to_show = []
+    for i in range(len(shape.faces)):
+        #subdivisions_to_show.append((i,))
+        subdivisions_to_show.append((i,3,3,3,3,3))
+        subdivisions_to_show.append((i,0,3))
+        #subdivisions_to_show.append((i,1,3))
+        #subdivisions_to_show.append((i,2,3))
+        subdivisions_to_show.append((i,0,0,3))
+        subdivisions_to_show.append((i,0,0,0,3))
+        subdivisions_to_show.append((i,0,0,0,0,3))
+        subdivisions_to_show.append((i,0,0,0,0,0))
+        #subdivisions_to_show.append((i,0,1,3))
+        #subdivisions_to_show.append((i,0,2,3))
         pass
-
-    for f in t_subsubfaces:
-        hue += 44
-        obj = c_view_sphere_obj(has_surface=True, color=rgb_of_hue(hue), selectable=True,
-                                note="centers")
+    for sd in subdivisions_to_show:
+        obj = add_shape_subdivision(shape, sd, hue, fill=True)
         image_objects.append(obj)
-        midpoints = ( f[0].midpoint(), f[1].midpoint(), f[2].midpoint())
-        for m in midpoints:
-            tq = quaternion(1).lookat(m, vector_y)
-            add_blob(obj, tq, style="triangle", scale=0.01 )
-            pass
-        gcs = ( c_great_circle_arc(midpoints[0], midpoints[1]),
-                c_great_circle_arc(midpoints[1], midpoints[2]),
-                c_great_circle_arc(midpoints[2], midpoints[0]) )
-        #t_subsubfaces.append(gcs)
-        for g in gcs:
-            cs = []
-            for p in g.interpolate():
-                cs.append(p.coords)
-                pass
-            obj.add_line(cs)
-            cs = ( g.p0.coords, g.p1.coords)
-            obj.add_line(cs)
-            pass
+        hue += 44
         pass
 
     og = c_view_obj(obj=image_objects,

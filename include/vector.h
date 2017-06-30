@@ -53,8 +53,10 @@ public:
     c_vector(int length, const double *coords);
     c_vector *copy(void) const;
 
-    inline int length(void) {return _length;}
+    inline int length(void) const {return _length;}
     inline const double *coords(void) const {return &(_coords[0]);};
+    inline void set(int n, double v) {_coords[n]=v;};
+    inline double value(int n) const {return _coords[n];};
     c_vector *add_scaled(const c_vector *other, double scale);
     double modulus_squared(void) const;
     double modulus(void) const;

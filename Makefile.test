@@ -1,5 +1,5 @@
 
-all: libatcf
+all: prog batch
 
 
 OS := $(shell uname)
@@ -23,22 +23,6 @@ PY_OBJS := gjslib_c.o python_texture.o python_filter.o python_lens_projection.o 
 PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks
 
-ATCF_INCLUDE := include
-LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o build/polynomial.o
-
-libatcf: build/libatcf.so
-
-build/libatcf.so: ${LIB_OBJS}
-	c++ -bundle -undefined dynamic_lookup ${LIB_OBJS} -lpng16 -ljpeg -L/usr/local/lib  -o $@
-
-build/quaternion.o: src/math/quaternion.cpp
-build/vector.o:     src/math/vector.cpp
-build/matrix.o:     src/math/matrix.cpp
-build/polynomial.o: src/math/polynomial.cpp
-
-build/%.o: src/math/%.cpp
-	c++ -I${ATCF_INCLUDE} ${CPPFLAGS} -c $< -o $@
-
 #CC := ${GCC} -dynamic -fno-strict-aliasing  -fno-common -fwrapv
 #CXX := ${GCC} -dynamic -fno-strict-aliasing -fno-common -fwrapv
 #LINK := ${GCC}
@@ -54,7 +38,7 @@ PYTHON=python2.7
 FRAMEWORK_PATH := /Library/Frameworks
 PYTHON_INCLUDES := -I${FRAMEWORK_PATH}/Python.framework/Versions/Current/include/${PYTHON}
 
-#all: gjslib_c.so
+all: gjslib_c.so
 
 python_%.o: python_%.cpp
 	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@

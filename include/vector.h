@@ -57,20 +57,21 @@ public:
     inline const double *coords(void) const {return &(_coords[0]);};
     inline void set(int n, double v) {_coords[n]=v;};
     inline double value(int n) const {return _coords[n];};
-    c_vector *add_scaled(const c_vector *other, double scale);
+    c_vector *assign(const c_vector &other);
+    c_vector *add_scaled(const c_vector &other, double scale);
     double modulus_squared(void) const;
     double modulus(void) const;
     c_vector *scale(double scale);
     c_vector *normalize(void);
     double dot_product(const c_vector &other) const;
-    c_vector &cross_product(const c_vector &other) const;
+    c_vector *cross_product(const c_vector &other) const;
 
     // axis_angle_to_v works for 3-vectors.
-    // It changes 'this' to be the axis of rotation required to
+    // It creates a new vector to be the axis of rotation required to
     // get from 'this' to 'other' (i.e. this <= unit(this x other))
     // and sets the angle; it returns 'this'
-    c_vector &angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle) const;
-    class c_quaternion &angle_axis_to_v(const c_vector &other) const;
+    c_vector *angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle) const;
+    class c_quaternion *angle_axis_to_v(const c_vector &other) const;
     void __str__(char *buffer, int buf_size) const;
 };
 

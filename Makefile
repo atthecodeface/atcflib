@@ -26,10 +26,10 @@ FRAMEWORK_PATH := /Library/Frameworks
 ATCF_INCLUDE := include
 LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o build/polynomial.o
 
-libatcf: build/libatcf.so
+libatcf: libatcf.so
 
-build/libatcf.so: ${LIB_OBJS}
-	c++ -bundle -undefined dynamic_lookup ${LIB_OBJS} -lpng16 -ljpeg -L/usr/local/lib  -o $@
+libatcf.so: ${LIB_OBJS}
+	c++ -Xlinker -dylib -undefined dynamic_lookup ${LIB_OBJS} -lpng16 -ljpeg -L/usr/local/lib  -o $@
 
 build/quaternion.o: src/math/quaternion.cpp
 build/vector.o:     src/math/vector.cpp

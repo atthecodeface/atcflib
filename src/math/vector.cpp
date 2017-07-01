@@ -47,7 +47,7 @@ c_vector &c_vector::operator=(const c_vector &other)
  */
 c_vector &c_vector::operator+=(const c_vector &other)
 {
-    this->add_scaled(&other,1.0);
+    this->add_scaled(other,1.0);
     return *this;
 }
 
@@ -55,7 +55,7 @@ c_vector &c_vector::operator+=(const c_vector &other)
  */
 c_vector &c_vector::operator-=(const c_vector &other)
 {
-    this->add_scaled(&other,-1.0);
+    this->add_scaled(other,-1.0);
     return *this;
 }
 
@@ -137,12 +137,22 @@ void c_vector::__str__(char *buffer, int buf_size) const
     buffer[buf_size-1] = 0;
 }
 
-/*f c_vector::add_scaled
+/*f c_vector::assign
  */
-c_vector *c_vector::add_scaled(const c_vector *other, double scale)
+c_vector *c_vector::assign(const c_vector &other)
 {
     for (int i=0; i<_length; i++) {
-        _coords[i] += other->_coords[i]*scale;
+        _coords[i] = other._coords[i];
+    }
+    return this;
+}
+
+/*f c_vector::add_scaled
+ */
+c_vector *c_vector::add_scaled(const c_vector &other, double scale)
+{
+    for (int i=0; i<_length; i++) {
+        _coords[i] += other._coords[i]*scale;
     }
     return this;
 }
@@ -198,41 +208,42 @@ double c_vector::dot_product(const c_vector &other) const
 
 /*f c_vector::cross_product
  */
-c_vector &c_vector::cross_product(const c_vector &other) const
+c_vector *c_vector::cross_product(const c_vector &other) const
 {
     c_vector *r=new c_vector(_length);
     r->_coords[0] = _coords[1]*other._coords[2] - _coords[2]*other._coords[1];
     r->_coords[1] = _coords[2]*other._coords[0] - _coords[0]*other._coords[2];
     r->_coords[2] = _coords[0]*other._coords[1] - _coords[1]*other._coords[0];
-    return *r;
+    return r;
 }
 
 /*f c_vector::angle_axis_to_v
  */
-c_vector &c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle) const
+c_vector *c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle) const
 {
     double tl, ol;
     tl = this->modulus();
     ol = other.modulus();
 
     //fprintf(stderr,"tl,ol: %lf, %lf\n",tl, ol);
-    c_vector *axis = new c_vector(cross_product(other)/ (tl*ol));
+    c_vector *axis = cross_product(other);
+    *axis /= (tl*ol);
     //fprintf(stderr,"axb:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
     *cos_angle = dot_product(other) / (tl*ol);
     *sin_angle = axis->modulus();
     //fprintf(stderr,"angles:%lf,%lf\n",*cos_angle,*sin_angle);
     axis->normalize();
     //fprintf(stderr,"axis:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
-    return *axis;
+    return axis;
 }
 
 /*f c_vector::angle_axis_to_v (to quaternion)
  */
-c_quaternion &c_vector::angle_axis_to_v(const c_vector &other) const
+c_quaternion *c_vector::angle_axis_to_v(const c_vector &other) const
 {
     c_quaternion *r;
     double cos_angle, sin_angle;
-    c_vector axis = this->angle_axis_to_v(other, &cos_angle, &sin_angle);
-    r = (new c_quaternion())->from_rotation(cos_angle, sin_angle, axis.coords());
-    return *r;
+    c_vector *axis = this->angle_axis_to_v(other, &cos_angle, &sin_angle);
+    r = (new c_quaternion())->from_rotation(cos_angle, sin_angle, axis->coords());
+    return r;
 }

@@ -64,14 +64,14 @@ public:
     c_vector *scale(double scale);
     c_vector *normalize(void);
     double dot_product(const c_vector &other) const;
-    c_vector *cross_product(const c_vector &other) const;
+    c_vector *cross_product3(const c_vector &other) const;
 
     // axis_angle_to_v works for 3-vectors.
     // It creates a new vector to be the axis of rotation required to
     // get from 'this' to 'other' (i.e. this <= unit(this x other))
     // and sets the angle; it returns 'this'
-    c_vector *angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle) const;
-    class c_quaternion *angle_axis_to_v(const c_vector &other) const;
+    c_vector *angle_axis_to_v3(const c_vector &other, double *cos_angle, double *sin_angle) const;
+    class c_quaternion *angle_axis_to_v3(const c_vector &other) const;
     void __str__(char *buffer, int buf_size) const;
 };
 

@@ -206,9 +206,9 @@ double c_vector::dot_product(const c_vector &other) const
     return l;
 }
 
-/*f c_vector::cross_product
+/*f c_vector::cross_product3
  */
-c_vector *c_vector::cross_product(const c_vector &other) const
+c_vector *c_vector::cross_product3(const c_vector &other) const
 {
     c_vector *r=new c_vector(_length);
     r->_coords[0] = _coords[1]*other._coords[2] - _coords[2]*other._coords[1];
@@ -217,16 +217,16 @@ c_vector *c_vector::cross_product(const c_vector &other) const
     return r;
 }
 
-/*f c_vector::angle_axis_to_v
+/*f c_vector::angle_axis_to_v3
  */
-c_vector *c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, double *sin_angle) const
+c_vector *c_vector::angle_axis_to_v3(const c_vector &other, double *cos_angle, double *sin_angle) const
 {
     double tl, ol;
     tl = this->modulus();
     ol = other.modulus();
 
     //fprintf(stderr,"tl,ol: %lf, %lf\n",tl, ol);
-    c_vector *axis = cross_product(other);
+    c_vector *axis = cross_product3(other);
     *axis /= (tl*ol);
     //fprintf(stderr,"axb:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
     *cos_angle = dot_product(other) / (tl*ol);
@@ -237,13 +237,13 @@ c_vector *c_vector::angle_axis_to_v(const c_vector &other, double *cos_angle, do
     return axis;
 }
 
-/*f c_vector::angle_axis_to_v (to quaternion)
+/*f c_vector::angle_axis_to_v3 (to quaternion)
  */
-c_quaternion *c_vector::angle_axis_to_v(const c_vector &other) const
+c_quaternion *c_vector::angle_axis_to_v3(const c_vector &other) const
 {
     c_quaternion *r;
     double cos_angle, sin_angle;
-    c_vector *axis = this->angle_axis_to_v(other, &cos_angle, &sin_angle);
+    c_vector *axis = this->angle_axis_to_v3(other, &cos_angle, &sin_angle);
     r = (new c_quaternion())->from_rotation(cos_angle, sin_angle, axis->coords());
     return r;
 }

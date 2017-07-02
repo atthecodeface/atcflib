@@ -15,7 +15,10 @@ let xy3 = (vector3 1.0 1.0 0.0)#normalize
 let xz3 = (vector3 1.0 0.0 1.0)#normalize
 let yz3 = (vector3 0.0 1.0 1.0)#normalize
 
-;;
+let rt2 = sqrt 2.0
+let n_rt2 = -. rt2
+let rrt2 = 1.0 /. rt2
+let n_rrt2 = -. rrt2
 
 let assert_equal_float msg v0 v1 =
   let diff = abs_float ( v0 -. v1 ) in
@@ -155,52 +158,52 @@ let test_suite_vector =
          assert_equal_float "Commutative" (v1#dot_product v2) (v2#dot_product v1);
          assert_equal_float "Result"      (v1#dot_product v2) 0.0;
       ) ;
-      ("cross_product_0" >::
+      ("cross_product3_0" >::
          fun ctxt ->
-         assert_coords (x3#cross_product y3) z3#coords;
-         assert_coords (y3#cross_product z3) x3#coords;
-         assert_coords (z3#cross_product x3) y3#coords;
+         assert_coords (x3#cross_product3 y3) z3#coords;
+         assert_coords (y3#cross_product3 z3) x3#coords;
+         assert_coords (z3#cross_product3 x3) y3#coords;
       ) ;
-      ("cross_product_1" >::
+      ("cross_product3_1" >::
          fun ctxt ->
-         assert_coords (x3#cross_product ((z3#copy)#scale (-. 1.0))) y3#coords;
-         assert_coords (y3#cross_product ((x3#copy)#scale (-. 1.0))) z3#coords;
-         assert_coords (z3#cross_product ((y3#copy)#scale (-. 1.0))) x3#coords;
+         assert_coords (x3#cross_product3 ((z3#copy)#scale (-. 1.0))) y3#coords;
+         assert_coords (y3#cross_product3 ((x3#copy)#scale (-. 1.0))) z3#coords;
+         assert_coords (z3#cross_product3 ((y3#copy)#scale (-. 1.0))) x3#coords;
       ) ;
-      ("angle_axis_0" >::
+      ("angle_axis3_0" >::
          fun ctxt ->
-         let (v,c,s) = x3#angle_axis_to y3 in
+         let (v,c,s) = x3#angle_axis_to3 y3 in
          assert_coords v z3#coords;
          assert_equal_float "cos" c 0.0;
          assert_equal_float "sin" s 1.0;
       ) ;
-      ("angle_axis_1" >::
+      ("angle_axis3_1" >::
          fun ctxt ->
-         let (v,c,s) = x3#angle_axis_to z3 in
+         let (v,c,s) = x3#angle_axis_to3 z3 in
          assert_coords v ((y3#copy)#scale (-. 1.0))#coords;
          assert_equal_float "cos" c 0.0;
          assert_equal_float "sin" s 1.0;
       ) ;
-      ("angle_axis_2" >::
+      ("angle_axis3_2" >::
          fun ctxt ->
-         let (v,c,s) = x3#angle_axis_to xy3 in
+         let (v,c,s) = x3#angle_axis_to3 xy3 in
          assert_coords v z3#coords;
-         assert_equal_float "cos" c (sqrt 0.5);
-         assert_equal_float "sin" s (sqrt 0.5);
+         assert_equal_float "cos" c rrt2;
+         assert_equal_float "sin" s rrt2;
       ) ;
-      ("angle_axis_3" >::
+      ("angle_axis3_3" >::
          fun ctxt ->
-         let (v,c,s) = xy3#angle_axis_to y3 in
+         let (v,c,s) = xy3#angle_axis_to3 y3 in
          assert_coords v z3#coords;
-         assert_equal_float "cos" c (sqrt 0.5);
-         assert_equal_float "sin" s (sqrt 0.5);
+         assert_equal_float "cos" c rrt2;
+         assert_equal_float "sin" s rrt2;
       ) ;
-      ("angle_axis_4" >::
+      ("angle_axis3_4" >::
          fun ctxt ->
-         let (v,c,s) = xy3#angle_axis_to z3 in
-         assert_equal_float "cos" c (sqrt 0.0);
-         assert_equal_float "sin" s (sqrt 1.0);
-         assert_coords v#repr xz3#coords;
+         let (v,c,s) = xy3#angle_axis_to3 z3 in
+         assert_equal_float "cos" c 0.0;
+         assert_equal_float "sin" s 1.0;
+         assert_coords v#repr [|rrt2 ; n_rrt2 ; 0.0|]
       ) ;
     ]
 

@@ -54,131 +54,6 @@
 static void __discard(void *, ...) {}
 #endif
 
-/*f FN_CM_TO_FLOAT : c_matrix -> float
- *
- * Function to return cm->fn() as a float
- *
- */
-#define FN_CM_TO_FLOAT(fn) \
-    extern "C" CAMLprim value atcf_matrix_ ## fn (value v) {         \
-        CAMLparam1(v);                                               \
-        VERBOSE(stderr,#fn " of matrix %p\n", matrix_of_val(v));     \
-        CAMLreturn(caml_copy_double(matrix_of_val(v)->fn()));        \
-    }
-
-/*f FN_CM_TO_INT : c_matrix -> int
- *
- * Function to return cm->fn() as an int
- *
- */
-#define FN_CM_TO_INT(fn) \
-    extern "C" CAMLprim value atcf_matrix_ ## fn (value v) {         \
-        CAMLparam1(v);                                               \
-        VERBOSE(stderr,#fn " of matrix %p\n", matrix_of_val(v));     \
-        CAMLreturn(Val_long(matrix_of_val(v)->fn()));   \
-    }
-
-/*f FN_CM_TO_UNIT : c_matrix -> unit
- *
- * Function to perform cm->fn() with no return value
- *
- */
-#define FN_CM_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_matrix_ ## fn (value v) {         \
-        CAMLparam1(v);                                               \
-        VERBOSE(stderr,#fn " of matrix %p\n", matrix_of_val(v));     \
-        matrix_of_val(v)->fn();                                      \
-        CAMLreturn0;                                                 \
-    }
-
-/*f FN_CM_CMR_TO_UNIT : c_matrix -> c_matrix -> unit
- *
- * Function to perform cm->fn(*c_matrix) with no return value
- *
- */
-#define FN_CM_CMR_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_matrix_ ## fn (value v, value v2) {  \
-        CAMLparam2(v, v2);                                              \
-        VERBOSE(stderr,#fn " of matrix %p %p\n", matrix_of_val(v), matrix_of_val(v2));     \
-        matrix_of_val(v)->fn(*matrix_of_val(v2));                        \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CM_FLOAT_TO_UNIT : c_matrix -> float -> unit
- *
- * Function to perform cm->fn(double) with no return value
- *
- */
-#define FN_CM_FLOAT_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_matrix_ ## fn (value v, value f) {   \
-        CAMLparam2(v,f);                                                \
-        VERBOSE(stderr,#fn " of matrix %p %f\n", matrix_of_val(v), Double_val(f)); \
-        matrix_of_val(v)->fn(Double_val(f));                            \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CM_INT_FLOAT_TO_UNIT : c_matrix -> int -> float -> unit
- *
- * Function to perform cm->fn(int,double) with no return value
- *
- */
-#define FN_CM_INT_FLOAT_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_matrix_ ## fn (value v, value n, value f) { \
-        CAMLparam3(v,n,f);                                              \
-        VERBOSE(stderr,#fn " of matrix %p %ld %f\n", matrix_of_val(v), Long_val(n), Double_val(f)); \
-        matrix_of_val(v)->fn(Long_val(n), Double_val(f));                \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CM_INT_INT_FLOAT_TO_UNIT : c_matrix -> int -> int -> float -> unit
- *
- * Function to perform cm->fn(int,int,double) with no return value
- *
- */
-#define FN_CM_INT_INT_FLOAT_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_matrix_ ## fn (value v, value r, value c, value f) { \
-        CAMLparam4(v,r,c,f);                                            \
-        VERBOSE(stderr,#fn " of matrix %p %ld %ld %f\n", matrix_of_val(v), Long_val(r), Long_val(c), Double_val(f)); \
-        matrix_of_val(v)->fn(Long_val(r), Long_val(c), Double_val(f));                \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CM_CMR_FLOAT_TO_UNIT : c_matrix -> c_matrix -> float -> unit
- *
- * Function to perform cm->fn(*c_matrix,double) with no return value
- *
- */
-#define FN_CM_CMR_FLOAT_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_matrix_ ## fn (value v, value v2, value f) { \
-        CAMLparam3(v,v2,f);                                             \
-        VERBOSE(stderr,#fn " of matrix %p %p %f\n", matrix_of_val(v),  matrix_of_val(v2), Double_val(f)); \
-        matrix_of_val(v)->fn(*matrix_of_val(v2), Double_val(f));        \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CM_CMR_TO_FLOAT : c_matrix -> c_matrix -> float
- *
- * Function to perform cm->fn(*c_matrix) returning a float
- *
- */
-#define FN_CM_CMR_TO_FLOAT(fn) \
-    extern "C" CAMLprim value atcf_matrix_ ## fn (value v, value v2) { \
-        CAMLparam2(v,v2);                                             \
-        VERBOSE(stderr,#fn " of matrix %p %p\n", matrix_of_val(v),  matrix_of_val(v2)); \
-        CAMLreturn(caml_copy_double(matrix_of_val(v)->fn(*matrix_of_val(v2)))); \
-    }
-
-/*f FN_CM_CMR_TO_CM : c_matrix -> c_matrix -> c_matrix
- *
- * Function to perform cm->fn(*c_matrix) returning a NEW c_matrix
- *
- */
-#define FN_CM_CMR_TO_CM(fn) \
-    extern "C" CAMLprim value atcf_matrix_ ## fn (value v, value v2) {  \
-        CAMLparam2(v,v2);                                               \
-        CAMLreturn(alloc_matrix(matrix_of_val(v)->fn(*matrix_of_val(v2)))); \
-    }
-
 /*a Statics
  */
 static struct custom_operations custom_ops = {
@@ -286,18 +161,18 @@ atcf_matrix_col_vector(value v, value r)
  * Return the number of rows in the matrix
  *
  */
-FN_CM_TO_INT(nrows)
+FN_C_TO_INT(matrix, nrows)
 
 /*f atcf_matrix_ncols : c_matrix -> int
  *
  * Return the number of rows in the matrix
  *
  */
-FN_CM_TO_INT(ncols)
+FN_C_TO_INT(matrix, ncols)
 
 /*a Setting functions */
-FN_CM_TO_UNIT(set_identity)
-FN_CM_INT_INT_FLOAT_TO_UNIT(set)
+FN_C_TO_UNIT(matrix, set_identity)
+FN_C_INT_INT_FLOAT_TO_UNIT(matrix, set)
 
 /*f atcf_vector_assign_m_v
   Assign value to be that of matrix m applied to other vector v2
@@ -325,19 +200,19 @@ atcf_matrix_apply(value m, value v) {
 }
 
 /*f scale : c_matrix -> float -> unit */
-FN_CM_FLOAT_TO_UNIT(scale)
+FN_C_FLOAT_TO_UNIT(matrix, scale)
 
 /*f add_scaled : c_matrix -> c_matrix -> float -> unit */
-FN_CM_CMR_FLOAT_TO_UNIT(add_scaled)
+FN_C_CR_FLOAT_TO_UNIT(matrix, add_scaled)
 
 /*f transpose
  */
-FN_CM_TO_UNIT(transpose)
+FN_C_TO_UNIT(matrix, transpose)
 
 /*f lup_get_l, lup_get_u
  */
-FN_CM_TO_UNIT(lup_get_l)
-FN_CM_TO_UNIT(lup_get_u)
+FN_C_TO_UNIT(matrix, lup_get_l)
+FN_C_TO_UNIT(matrix, lup_get_u)
 
 /*f lup_decompose : c_matrix -> c_vector
  *
@@ -376,4 +251,4 @@ atcf_matrix_lup_invert(value m) {
  * Function to perform m->lup_inverse, and return the new matrix
  *
  */
-FN_CM_TO_UNIT(lup_inverse)
+FN_C_TO_UNIT(matrix, lup_inverse)

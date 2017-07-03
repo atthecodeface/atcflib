@@ -6,6 +6,7 @@
 (*a Atcflib ocaml wrapper C functions *)
 type c_vector
 type c_matrix
+type c_quaternion
 external v_create  : int -> c_vector   = "atcf_vector_create"
 external v_clone   : c_vector -> c_vector   = "atcf_vector_clone"
 external v_destroy : c_vector -> unit  = "atcf_vector_destroy"
@@ -42,13 +43,21 @@ external m_lup_get_l     : c_matrix -> unit = "atcf_matrix_lup_get_l"
 external m_lup_get_u     : c_matrix -> unit = "atcf_matrix_lup_get_u"
 external m_lup_invert    : c_matrix -> unit  = "atcf_matrix_lup_invert"
 external m_lup_inverse   : c_matrix -> c_matrix  = "atcf_matrix_lup_inverse"
+
+external q_create  : int -> int -> c_quaternion   = "atcf_quaternion_create"
+external q_clone   : c_quaternion -> c_quaternion   = "atcf_quaternion_clone"
+external q_destroy : c_quaternion -> unit  = "atcf_quaternion_destroy"
+external q_modulus : c_quaternion -> float = "atcf_quaternion_modulus"
+external q_modulus_squared : c_quaternion -> float = "atcf_quaternion_modulus_squared"
+external q_normalize : c_quaternion -> unit  = "atcf_quaternion_normalize"
+external q_conjugate : c_quaternion -> unit  = "atcf_quaternion_conjugate"
+external q_scale         : c_quaternion -> float -> unit  = "atcf_quaternion_scale"
+external q_add_scaled    : c_quaternion -> c_quaternion -> float -> unit  = "atcf_quaternion_add_scaled"
 (**/**)
 
 let log = Printf.printf
 
-(*a Vector *)
-(*class type vector_type*)
-
+(*a Vector, matrix and quaternion classes - mutually recursive *)
 class vector (cv:c_vector) =
   object (self)
          val v = cv
@@ -112,6 +121,23 @@ and
                            end
                        in
                        show_row 0 (self#nrows) ; self
+  end
+and
+ quaternion (cq:c_quaternion) =
+  object (self)
+         val q = cq
+         initializer
+           Gc.finalise (fun self -> self#destroy ()) self
+         method destroy () =
+           log "destroying matrix %d\n" (Oo.id self) ;
+           q_destroy q
+         method get_cq      = q
+         method copy       = new quaternion(q_clone q)
+         method scale f      = (q_scale q f) ; self
+         method add_scaled (q2:quaternion) f = (q_add_scaled q q2#get_cq f) ; self
+         method modulus = q_modulus q
+         method modulus_squared = q_modulus_squared q
+         method repr = Printf.printf "%f,%f,%f,%f " 0. 1. 2. 3. ; self
   end
 
 let mkvector n =

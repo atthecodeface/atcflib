@@ -81,7 +81,7 @@ public:
     inline double k(void) const {return quat.k;};
     c_quaternion &conjugate(void);
     c_quaternion &reciprocal(void);
-    c_quaternion &add_scaled(const c_quaternion *other, double scale);
+    c_quaternion &add_scaled(const c_quaternion &other, double scale);
     double modulus_squared(void) const;
     double modulus(void) const;
     c_quaternion &scale(double scale);

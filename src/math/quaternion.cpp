@@ -101,12 +101,12 @@ c_quaternion &c_quaternion::operator=(const c_quaternion &other)
 
 c_quaternion &c_quaternion::operator+=(const c_quaternion &other)
 {
-    return this->add_scaled(&other,1.0);
+    return this->add_scaled(other,1.0);
 }
 
 c_quaternion &c_quaternion::operator-=(const c_quaternion &other)
 {
-    return this->add_scaled(&other,-1.0);
+    return this->add_scaled(other,-1.0);
 }
 
 c_quaternion &c_quaternion::operator*=(const c_quaternion &other)
@@ -472,12 +472,12 @@ c_quaternion &c_quaternion::reciprocal(void)
 
 /*f c_quaternion::add_scaled
  */
-c_quaternion &c_quaternion::add_scaled(const c_quaternion *other, double scale)
+c_quaternion &c_quaternion::add_scaled(const c_quaternion &other, double scale)
 {
-    quat.r += other->quat.r*scale;
-    quat.i += other->quat.i*scale;
-    quat.j += other->quat.j*scale;
-    quat.k += other->quat.k*scale;
+    quat.r += other.quat.r*scale;
+    quat.i += other.quat.i*scale;
+    quat.j += other.quat.j*scale;
+    quat.k += other.quat.k*scale;
     return *this;
 }
 

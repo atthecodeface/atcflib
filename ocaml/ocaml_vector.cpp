@@ -55,122 +55,6 @@
 static void __discard(void *, ...) {}
 #endif
 
-/*f vector_of_val c_vector from an OCAML value
- */
-#define vector_of_val(v) (*((c_vector **) Data_custom_val(v)))
-
-/*f FN_CV_TO_FLOAT : c_vector -> float
- *
- * Function to return cv->fn() as a float
- *
- */
-#define FN_CV_TO_FLOAT(fn) \
-    extern "C" CAMLprim value atcf_vector_ ## fn (value v) {         \
-        CAMLparam1(v);                                               \
-        VERBOSE(stderr,#fn " of vector %p\n", vector_of_val(v));     \
-        CAMLreturn(caml_copy_double(vector_of_val(v)->fn()));        \
-    }
-
-/*f FN_CV_TO_INT : c_vector -> int
- *
- * Function to return cv->fn() as an int
- *
- */
-#define FN_CV_TO_INT(fn) \
-    extern "C" CAMLprim value atcf_vector_ ## fn (value v) {         \
-        CAMLparam1(v);                                               \
-        VERBOSE(stderr,#fn " of vector %p\n", vector_of_val(v));     \
-        CAMLreturn(Val_long(vector_of_val(v)->fn()));   \
-    }
-
-/*f FN_CV_TO_UNIT : c_vector -> unit
- *
- * Function to perform cv->fn() with no return value
- *
- */
-#define FN_CV_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_vector_ ## fn (value v) {         \
-        CAMLparam1(v);                                               \
-        VERBOSE(stderr,#fn " of vector %p\n", vector_of_val(v));     \
-        vector_of_val(v)->fn();                                      \
-        CAMLreturn0;                                                 \
-    }
-
-/*f FN_CV_CVR_TO_UNIT : c_vector -> c_vector -> unit
- *
- * Function to perform cv->fn(*c_vector) with no return value
- *
- */
-#define FN_CV_CVR_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_vector_ ## fn (value v, value v2) {  \
-        CAMLparam2(v, v2);                                              \
-        VERBOSE(stderr,#fn " of vector %p %p\n", vector_of_val(v), vector_of_val(v2));     \
-        vector_of_val(v)->fn(*vector_of_val(v2));                        \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CV_FLOAT_TO_UNIT : c_vector -> float -> unit
- *
- * Function to perform cv->fn(double) with no return value
- *
- */
-#define FN_CV_FLOAT_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_vector_ ## fn (value v, value f) {   \
-        CAMLparam2(v,f);                                                \
-        VERBOSE(stderr,#fn " of vector %p %f\n", vector_of_val(v), Double_val(f)); \
-        vector_of_val(v)->fn(Double_val(f));                            \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CV_INT_FLOAT_TO_UNIT : c_vector -> int -> float -> unit
- *
- * Function to perform cv->fn(int,double) with no return value
- *
- */
-#define FN_CV_INT_FLOAT_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_vector_ ## fn (value v, value n, value f) { \
-        CAMLparam3(v,n,f);                                              \
-        VERBOSE(stderr,#fn " of vector %p %ld %f\n", vector_of_val(v), Long_val(n), Double_val(f)); \
-        vector_of_val(v)->fn(Long_val(n), Double_val(f));                \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CV_CVR_FLOAT_TO_UNIT : c_vector -> c_vector -> float -> unit
- *
- * Function to perform cv->fn(*c_vector,double) with no return value
- *
- */
-#define FN_CV_CVR_FLOAT_TO_UNIT(fn) \
-    extern "C" CAMLprim void atcf_vector_ ## fn (value v, value v2, value f) { \
-        CAMLparam3(v,v2,f);                                             \
-        VERBOSE(stderr,#fn " of vector %p %p %f\n", vector_of_val(v),  vector_of_val(v2), Double_val(f)); \
-        vector_of_val(v)->fn(*vector_of_val(v2), Double_val(f));        \
-        CAMLreturn0;                                                    \
-    }
-
-/*f FN_CV_CVR_TO_FLOAT : c_vector -> c_vector -> float
- *
- * Function to perform cv->fn(*c_vector) returning a float
- *
- */
-#define FN_CV_CVR_TO_FLOAT(fn) \
-    extern "C" CAMLprim value atcf_vector_ ## fn (value v, value v2) { \
-        CAMLparam2(v,v2);                                             \
-        VERBOSE(stderr,#fn " of vector %p %p\n", vector_of_val(v),  vector_of_val(v2)); \
-        CAMLreturn(caml_copy_double(vector_of_val(v)->fn(*vector_of_val(v2)))); \
-    }
-
-/*f FN_CV_CVR_TO_CV : c_vector -> c_vector -> c_vector
- *
- * Function to perform cv->fn(*c_vector) returning a NEW c_vector
- *
- */
-#define FN_CV_CVR_TO_CV(fn) \
-    extern "C" CAMLprim value atcf_vector_ ## fn (value v, value v2) {  \
-        CAMLparam2(v,v2);                                               \
-        CAMLreturn(caml_atcf_alloc_vector(vector_of_val(v)->fn(*vector_of_val(v2)))); \
-    }
-
 /*a Statics
  */
 static struct custom_operations custom_ops = {
@@ -269,21 +153,21 @@ atcf_vector_coords(value v)
  * Return the number of coordinates in the vector
  *
  */
-FN_CV_TO_INT(length)
+FN_C_TO_INT(vector,length)
 
 /*f atcf_vector_modulus : c_vector -> float
  *
  * Return the vector modulus
  *
  */
-FN_CV_TO_FLOAT(modulus)
+FN_C_TO_FLOAT(vector,modulus)
 
 /*f atcf_vector_modulus_squared : c_vector -> float
  *
  * Return the vector modulus squared
  *
  */
-FN_CV_TO_FLOAT(modulus_squared)
+FN_C_TO_FLOAT(vector,modulus_squared)
 
 /*a Assignment methods - side effects
  */
@@ -292,14 +176,14 @@ FN_CV_TO_FLOAT(modulus_squared)
  * Set the nth coordinate to a value
  *
  */
-FN_CV_INT_FLOAT_TO_UNIT(set)
+FN_C_INT_FLOAT_TO_UNIT(vector,set)
 
 /*f atcf_vector_assign : c_vector -> c_vector -> unit
  *
  * Assign the vector contents to be the contents of another vector
  *
  */
-FN_CV_CVR_TO_UNIT(assign)
+FN_C_CR_TO_UNIT(vector,assign)
 
 /*f atcf_vector_assign_m_v
   Assign value to be that of matrix m applied to other vector v2
@@ -321,14 +205,14 @@ atcf_vector_assign_m_v(value v, value m, value v2)
  * Scale the vector by a factor
  *
  */
-FN_CV_FLOAT_TO_UNIT(scale)
+FN_C_FLOAT_TO_UNIT(vector,scale)
 
 /*f atcf_vector_add_scaled : c_vector -> c_vector -> float -> unit
  *
  * vector <- vector + (vector2 * scale_factor)
  *
  */
-FN_CV_CVR_FLOAT_TO_UNIT(add_scaled)
+FN_C_CR_FLOAT_TO_UNIT(vector,add_scaled)
 
 /*f atcf_vector_normalize : c_vector -> unit
  *
@@ -337,7 +221,7 @@ FN_CV_CVR_FLOAT_TO_UNIT(add_scaled)
  * If the modulus of the vector is less than epsilon, then leave it unchanged
  *
  */
-FN_CV_TO_UNIT(normalize)
+FN_C_TO_UNIT(vector,normalize)
 
 /*a Operations that have no side-effects
  */
@@ -346,14 +230,14 @@ FN_CV_TO_UNIT(normalize)
  * Return the inner product of two vectors
  *
  */
-FN_CV_CVR_TO_FLOAT(dot_product)
+FN_C_CR_TO_FLOAT(vector,dot_product)
 
 /*f atcf_vector_cross_product3 : c_vector -> c_vector -> NEW c_vector
  *
  * NEW vector = v0 x v1, for length 3 vectors
  *
  */
-FN_CV_CVR_TO_CV(cross_product3)
+FN_C_CR_TO_C(vector,cross_product3)
 
 /*f atcf_vector_angle_axis_to3 : c_vector -> c_vector -> (NEW c_vector * float * float)
  *

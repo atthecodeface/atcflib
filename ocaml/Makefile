@@ -20,14 +20,15 @@ camltest:
 	cp ../libatcf.so .
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_vector.cpp
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_matrix.cpp
+	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_quaternion.cpp
 	# The next one creates atcflib.cmi, atcflib.cmx, atcflib.o
 	$(OCAMLFIND) ocamlopt -c atcflib.ml 
 	# The next one creates atcflib.a
-	$(OCAMLFIND) ocamlopt -a -o atcflib.cmxa atcflib.cmx ocaml_vector.o ocaml_matrix.o -cclib -latcf -cclib -L$(LIBDIR) -cclib -lc++
+	$(OCAMLFIND) ocamlopt -a -o atcflib.cmxa atcflib.cmx ocaml_vector.o ocaml_matrix.o ocaml_quaternion.o -cclib -latcf -cclib -L$(LIBDIR) -cclib -lc++
 	# The next one creates test_atcf.o, test_atcf.native, test_atcf.cmx, test_atcf.cmi
 	$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_atcf.ml -o test_atcf.native
 	# Make toplevel ML
-	ocamlmktop -custom -o atcfml atcflib.ml ocaml_vector.o ocaml_matrix.o -cclib -L. -cclib -latcf  -cclib -lc++
+	ocamlmktop -custom -o atcfml atcflib.ml ocaml_vector.o ocaml_matrix.o ocaml_quaternion.o -cclib -L. -cclib -latcf  -cclib -lc++
 	# Run it...
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_atcf.native -help
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_atcf.native -list-test

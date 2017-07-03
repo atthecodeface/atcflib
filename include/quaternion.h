@@ -69,7 +69,7 @@ public:
     inline c_quaternion operator*(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs *= rhs; return lhs; }
     inline c_quaternion operator/(const c_quaternion &rhs) const { c_quaternion lhs=*this; lhs /= rhs; return lhs; }
 
-    c_quaternion(const c_quaternion *quat);
+    c_quaternion(const c_quaternion &quat);
     c_quaternion(void);
     c_quaternion(const class c_vector &vector);
     c_quaternion(double r, double i, double j, double k);
@@ -79,19 +79,19 @@ public:
     inline double i(void) const {return quat.i;};
     inline double j(void) const {return quat.j;};
     inline double k(void) const {return quat.k;};
-    c_quaternion *conjugate(void);
-    c_quaternion *reciprocal(void);
-    c_quaternion *add_scaled(const c_quaternion *other, double scale);
+    c_quaternion &conjugate(void);
+    c_quaternion &reciprocal(void);
+    c_quaternion &add_scaled(const c_quaternion *other, double scale);
     double modulus_squared(void) const;
     double modulus(void) const;
-    c_quaternion *scale(double scale);
-    c_quaternion *normalize(void);
-    c_quaternion *multiply(const c_quaternion *other, int premultiply=0);
+    c_quaternion &scale(double scale);
+    c_quaternion &normalize(void);
+    c_quaternion &multiply(const c_quaternion &other, int premultiply=0);
 
-    c_quaternion *from_euler(double roll, double pitch, double yaw, int degrees=0);
-    c_quaternion *lookat(const double xyz[3], const double up[3]);
-    c_quaternion *from_rotation(double angle, const double axis[3], int degrees=0);
-    c_quaternion *from_rotation(double cos_angle, double sin_angle, const double *axis);
+    c_quaternion &from_euler(double roll, double pitch, double yaw, int degrees=0);
+    c_quaternion &lookat(const double xyz[3], const double up[3]);
+    c_quaternion &from_rotation(double angle, const double axis[3], int degrees=0);
+    c_quaternion &from_rotation(double cos_angle, double sin_angle, const double *axis);
     double as_rotation(double axis[3]) const;
     double as_rotation(class c_vector &vector) const;
     void as_euler(double rpy[3]) const;
@@ -101,8 +101,8 @@ public:
     // ('other' applied to that vector).
     // The axis will be perpendicular to the axes of rotation represented by 'this'
     // and 'other'
-    c_quaternion &rotate_vector(const class c_vector &vector) const;
-    c_quaternion &angle_axis(const c_quaternion &other, class c_vector &vector) const;
+    c_quaternion *rotate_vector(const class c_vector &vector) const;
+    c_quaternion *angle_axis(const c_quaternion &other, class c_vector &vector) const;
     double distance_to(const c_quaternion &other) const;
     char *__str__(char *buffer, int buf_size) const;
     

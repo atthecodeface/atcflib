@@ -1,10 +1,18 @@
+(** ATCFLIB  module
+ *)
+
+(**/**)
+
+(*a Atcflib ocaml wrapper C functions *)
 type c_vector
+type c_matrix
 external v_create  : int -> c_vector   = "atcf_vector_create"
 external v_clone   : c_vector -> c_vector   = "atcf_vector_clone"
 external v_destroy : c_vector -> unit  = "atcf_vector_destroy"
 external v_modulus : c_vector -> float = "atcf_vector_modulus"
 external v_modulus_squared : c_vector -> float = "atcf_vector_modulus_squared"
 external v_assign  : c_vector -> c_vector -> unit = "atcf_vector_assign"
+external v_assign_m_v  : c_vector -> c_matrix -> c_vector -> unit = "atcf_vector_assign_m_v"
 external v_normalize : c_vector -> unit = "atcf_vector_normalize"
 external v_length  : c_vector -> int = "atcf_vector_length"
 external v_coords  : c_vector -> float array  = "atcf_vector_coords"
@@ -15,11 +23,33 @@ external v_dot_product   : c_vector -> c_vector -> float  = "atcf_vector_dot_pro
 external v_cross_product : c_vector -> c_vector -> c_vector  = "atcf_vector_cross_product3"
 external v_angle_axis_to : c_vector -> c_vector -> (c_vector * float * float)  = "atcf_vector_angle_axis_to3"
 
+external m_create  : int -> int -> c_matrix   = "atcf_matrix_create"
+external m_clone   : c_matrix -> c_matrix   = "atcf_matrix_clone"
+external m_destroy : c_matrix -> unit  = "atcf_matrix_destroy"
+external m_nrows   : c_matrix -> int = "atcf_matrix_nrows"
+external m_ncols   : c_matrix -> int = "atcf_matrix_ncols"
+external m_row_vector  : c_matrix -> int -> c_vector  = "atcf_matrix_row_vector"
+external m_col_vector  : c_matrix -> int -> c_vector  = "atcf_matrix_col_vector"
+external m_apply   : c_matrix -> c_vector -> c_vector  = "atcf_matrix_apply"
+external m_identity      : c_matrix -> unit  = "atcf_matrix_set_identity"
+external m_assign_m_m    : c_matrix -> c_matrix -> c_matrix -> unit  = "atcf_matrix_assign_m_m"
+external m_set           : c_matrix -> int -> int -> float -> unit  = "atcf_matrix_set"
+external m_transpose     : c_matrix -> unit  = "atcf_matrix_transpose"
+external m_scale         : c_matrix -> float -> unit  = "atcf_matrix_scale"
+external m_add_scaled    : c_matrix -> c_matrix -> float -> unit  = "atcf_matrix_add_scaled"
+external m_lup_decompose : c_matrix -> c_vector = "atcf_matrix_lup_decompose"
+external m_lup_get_l     : c_matrix -> unit = "atcf_matrix_lup_get_l"
+external m_lup_get_u     : c_matrix -> unit = "atcf_matrix_lup_get_u"
+external m_lup_invert    : c_matrix -> unit  = "atcf_matrix_lup_invert"
+external m_lup_inverse   : c_matrix -> c_matrix  = "atcf_matrix_lup_inverse"
+(**/**)
+
 let log = Printf.printf
 
-(*class type __vector_type*)
+(*a Vector *)
+(*class type vector_type*)
 
-class __vector (cv:c_vector) =
+class vector (cv:c_vector) =
   object (self)
          val v = cv
          initializer
@@ -28,28 +58,75 @@ class __vector (cv:c_vector) =
            log "destroying vector %d\n" (Oo.id self) ;
            v_destroy v
          method get_cv      = v
-         method copy       = new __vector(v_clone v)
+         method copy       = new vector(v_clone v)
          method coords     = v_coords v
          method length     = v_length v
          method set n f    = v_set v n f ; self
-         method assign (v2:__vector)  = v_assign v v2#get_cv ; self
+         method assign (v2:vector)  = v_assign v v2#get_cv ; self
+         method assign_m_v (m:matrix) (v2:vector)  = v_assign_m_v v m#get_cm v2#get_cv ; self
          method scale f    = v_scale v f ; self
          method modulus    = v_modulus v
          method modulus_squared   = v_modulus_squared v
-         method add (v2:__vector)    = v_add_scaled v v2#get_cv 1.0 ; self
-         method add_scaled (v2:__vector) f = v_add_scaled v v2#get_cv f ; self
+         method add (v2:vector)    = v_add_scaled v v2#get_cv 1.0 ; self
+         method add_scaled (v2:vector) f = v_add_scaled v v2#get_cv f ; self
          method normalize     = v_normalize v ; self
-         method dot_product (v2:__vector) = v_dot_product v v2#get_cv
-         method cross_product3 (v2:__vector) = new __vector(v_cross_product v v2#get_cv)
-         method angle_axis_to3 (v2:__vector) = let (va,c,s) = v_angle_axis_to v v2#get_cv in (new __vector(va),c,s)
+         method dot_product (v2:vector) = v_dot_product v v2#get_cv
+         method cross_product3 (v2:vector) = new vector(v_cross_product v v2#get_cv)
+         method angle_axis_to3 (v2:vector) = let (va,c,s) = v_angle_axis_to v v2#get_cv in (new vector(va),c,s)
          method repr = let f i c = (Printf.printf "%d:%f " i c) in Array.iteri f (v_coords v)  ; self
-  end ;;
+  end
+and
+ matrix (cm:c_matrix) =
+  object (self)
+         val m = cm
+         initializer
+           Gc.finalise (fun self -> self#destroy ()) self
+         method destroy () =
+           log "destroying matrix %d\n" (Oo.id self) ;
+           m_destroy m
+         method get_cm      = m
+         method set r c f  = m_set m r c f ; self
+         method copy       = new matrix(m_clone m)
+         method identity   = m_identity m ; self
+         method nrows      = m_nrows m
+         method ncols      = m_ncols m
+         method row_vector n     = new vector(m_row_vector m n)
+         method col_vector n     = new vector(m_col_vector m n)
+         method scale f      = (m_scale m f) ; self
+         method transpose    = (m_transpose m) ; self
+         method add_scaled (m2:matrix) f = (m_add_scaled m m2#get_cm f) ; self
+         method apply (v:vector) = new vector(m_apply m v#get_cv)
+         method assign_m_m (m1:matrix) (m2:matrix) = m_assign_m_m m m1#get_cm m2#get_cm ; self
+         method lup_decompose = new vector(m_lup_decompose m)
+         method lup_get_l     = (m_lup_get_l m) ; self
+         method lup_get_u     = (m_lup_get_u m) ; self
+         method lup_invert    = (m_lup_invert m) ; self
+         method lup_inverse   = new matrix(m_lup_inverse m)
+         method repr = let rec show_row r l =
+                         if r==l then ()
+                         else begin
+                             let f c d = (Printf.printf "%d,%d:%f " r c d) in
+                             Array.iteri f (self#row_vector r)#coords ;
+                             Printf.printf "\n" ;
+                             show_row (r+1) l ;
+                           end
+                       in
+                       show_row 0 (self#nrows) ; self
+  end
 
-let vector n =
-  new __vector (v_create n)
-let vector2 c0 c1 =
-  ((new __vector (v_create 2))#set 0 c0)#set 1 c1
-let vector3 c0 c1 c2 =
-  (((new __vector (v_create 3))#set 0 c0)#set 1 c1)#set 2 c2
-let vector4 c0 c1 c2 c3 =
-  ((((new __vector (v_create 4))#set 0 c0)#set 1 c1)#set 2 c2)#set 3 c3
+let mkvector n =
+  new vector (v_create n)
+let mkvector2 c0 c1 =
+  ((new vector (v_create 2))#set 0 c0)#set 1 c1
+let mkvector3 c0 c1 c2 =
+  (((new vector (v_create 3))#set 0 c0)#set 1 c1)#set 2 c2
+let mkvector4 c0 c1 c2 c3 =
+  ((((new vector (v_create 4))#set 0 c0)#set 1 c1)#set 2 c2)#set 3 c3
+
+let matrix_x_vector m v = (v#copy)#assign_m_v m v
+
+(*a Matrix *)
+
+let mkmatrix r c =
+  new matrix (m_create r c)
+let matrix_x_matrix m1 m2 = (m1#copy)#assign_m_m m1 m2

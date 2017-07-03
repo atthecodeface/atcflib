@@ -139,24 +139,15 @@ void c_vector::__str__(char *buffer, int buf_size) const
 
 /*f c_vector::assign
  */
-c_vector *c_vector::assign(const c_vector &other)
+c_vector &c_vector::assign(const c_vector &other)
 {
     for (int i=0; i<_length; i++) {
         _coords[i] = other._coords[i];
     }
-    return this;
+    return *this;
 }
 
-/*f c_vector::add_scaled
- */
-c_vector *c_vector::add_scaled(const c_vector &other, double scale)
-{
-    for (int i=0; i<_length; i++) {
-        _coords[i] += other._coords[i]*scale;
-    }
-    return this;
-}
-
+/*a Interrogation methods */
 /*f c_vector::modulus_squared
  */
 double c_vector::modulus_squared(void) const
@@ -175,19 +166,30 @@ double c_vector::modulus(void) const
     return sqrt(modulus_squared());
 }
 
+/*a In-place vector operations */
+/*f c_vector::add_scaled
+ */
+c_vector &c_vector::add_scaled(const c_vector &other, double scale)
+{
+    for (int i=0; i<_length; i++) {
+        _coords[i] += other._coords[i]*scale;
+    }
+    return *this;
+}
+
 /*f c_vector::scale
  */
-c_vector *c_vector::scale(double scale)
+c_vector &c_vector::scale(double scale)
 {
     for (int i=0; i<_length; i++) {
         _coords[i] *= scale;
     }
-    return this;
+    return *this;
 }
 
 /*f c_vector::normalize
  */
-c_vector *c_vector::normalize(void)
+c_vector &c_vector::normalize(void)
 {
     double l = this->modulus();
     if ((l>-EPSILON) && (l<EPSILON))
@@ -195,6 +197,7 @@ c_vector *c_vector::normalize(void)
     return this->scale(1.0/l);
 }
 
+/*a Vector operations */
 /*f c_vector::dot_product
  */
 double c_vector::dot_product(const c_vector &other) const

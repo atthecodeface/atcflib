@@ -55,14 +55,15 @@ public:
 
     inline int length(void) const {return _length;}
     inline const double *coords(void) const {return &(_coords[0]);};
+    inline double *coords_to_set(void) {return &(_coords[0]);};
     inline void set(int n, double v) {_coords[n]=v;};
     inline double value(int n) const {return _coords[n];};
-    c_vector *assign(const c_vector &other);
-    c_vector *add_scaled(const c_vector &other, double scale);
+    c_vector &assign(const c_vector &other);
+    c_vector &add_scaled(const c_vector &other, double scale);
     double modulus_squared(void) const;
     double modulus(void) const;
-    c_vector *scale(double scale);
-    c_vector *normalize(void);
+    c_vector &scale(double scale);
+    c_vector &normalize(void);
     double dot_product(const c_vector &other) const;
     c_vector *cross_product3(const c_vector &other) const;
 

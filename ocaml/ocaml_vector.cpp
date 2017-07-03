@@ -21,7 +21,7 @@
  * 
  * This is a wrapper around the ATCF library vector class
  *
- * It
+ * It provides ocaml wrappers for the vector methods in 'vector.h'
  *
  */
 /*a Includes
@@ -37,6 +37,9 @@
 #include <caml/threads.h>
 
 #include <atcf/vector.h>
+#include <atcf/matrix.h>
+
+#include "ocaml_atcflib.h"
 
 #include <stdio.h>
 
@@ -165,7 +168,7 @@ static void __discard(void *, ...) {}
 #define FN_CV_CVR_TO_CV(fn) \
     extern "C" CAMLprim value atcf_vector_ ## fn (value v, value v2) {  \
         CAMLparam2(v,v2);                                               \
-        CAMLreturn(alloc_vector(vector_of_val(v)->fn(*vector_of_val(v2)))); \
+        CAMLreturn(caml_atcf_alloc_vector(vector_of_val(v)->fn(*vector_of_val(v2)))); \
     }
 
 /*a Statics
@@ -182,13 +185,13 @@ static struct custom_operations custom_ops = {
 
 /*a Creation functions
  */
-/*f alloc_vector
+/*f caml_atcf_alloc_vector
  *
  * Creates a vector from a NEW c_vector
  *
  */
-static value
-alloc_vector(c_vector *cv)
+extern value
+caml_atcf_alloc_vector(c_vector *cv)
 {
     value v = caml_alloc_custom(&custom_ops, sizeof(c_vector *), 0, 1);
     vector_of_val(v) = cv;
@@ -207,7 +210,7 @@ atcf_vector_create(value n)
 {
     CAMLparam1(n);
     VERBOSE(stderr,"Create vector %ld\n",Long_val(n));
-    CAMLreturn(alloc_vector(new c_vector(Long_val(n))));
+    CAMLreturn(caml_atcf_alloc_vector(new c_vector(Long_val(n))));
 }
 
 /*f atcf_vector_destroy : c_vector -> unit
@@ -237,7 +240,7 @@ atcf_vector_clone(value v)
 {
     CAMLparam1(v);
     VERBOSE(stderr,"Clone vector %p\n", vector_of_val(v));
-    CAMLreturn(alloc_vector(new c_vector(*vector_of_val(v))));
+    CAMLreturn(caml_atcf_alloc_vector(new c_vector(*vector_of_val(v))));
 }
 
 /*a Interrogation functions - not effecting the c_vector
@@ -297,6 +300,19 @@ FN_CV_INT_FLOAT_TO_UNIT(set)
  *
  */
 FN_CV_CVR_TO_UNIT(assign)
+
+/*f atcf_vector_assign_m_v
+  Assign value to be that of matrix m applied to other vector v2
+ */
+extern "C"
+CAMLprim void
+atcf_vector_assign_m_v(value v, value m, value v2)
+{
+    CAMLparam3(v, m, v2);
+    matrix_of_val(m)->apply(*vector_of_val(v2),
+                            vector_of_val(v)->coords_to_set());
+    CAMLreturn0;
+}
 
 /*a Operations on the vector - have side effects
  */

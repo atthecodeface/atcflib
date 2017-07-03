@@ -50,7 +50,7 @@ c_matrix &c_matrix::operator=(const c_matrix &other)
  */
 c_matrix &c_matrix::operator+=(const c_matrix &other)
 {
-    this->add_scaled(&other,1.0);
+    this->add_scaled(other,1.0);
     return *this;
 }
 
@@ -58,7 +58,7 @@ c_matrix &c_matrix::operator+=(const c_matrix &other)
  */
 c_matrix &c_matrix::operator-=(const c_matrix &other)
 {
-    this->add_scaled(&other,-1.0);
+    this->add_scaled(other,-1.0);
     return *this;
 }
 
@@ -144,16 +144,7 @@ c_matrix::c_matrix(const c_matrix &a, const c_matrix &b)
         return;
     }
     set_size(a._nrows, b._ncols);
-    for (int ar=0; ar<a._nrows; ar++) {
-        for (int bc=0; bc<b._ncols; bc++) {
-            double d;
-            d = 0.0;
-            for (int br_ac=0; br_ac<b._nrows; br_ac++) {
-                d += MATRIX_VALUE_M(a,ar,br_ac) * MATRIX_VALUE_M(b,br_ac,bc);
-            }
-            MATRIX_VALUE(ar,bc) = d;
-        }
-    }
+    this->multiply(a,b);
 }
 
 /*f c_matrix::copy
@@ -190,57 +181,130 @@ void c_matrix::__str__(char *buffer, int buf_size) const
     return;
 }
 
+/*f c_matrix::multiply
+ */
+c_matrix &c_matrix::multiply(const c_matrix &a, const c_matrix &b)
+{
+    if (a._ncols != b._nrows) return *this;
+    if (_nrows != a._nrows) return *this;
+    if (_ncols != b._ncols) return *this;
+    for (int ar=0; ar<a._nrows; ar++) {
+        for (int bc=0; bc<b._ncols; bc++) {
+            double d;
+            d = 0.0;
+            for (int br_ac=0; br_ac<b._nrows; br_ac++) {
+                d += MATRIX_VALUE_M(a,ar,br_ac) * MATRIX_VALUE_M(b,br_ac,bc);
+            }
+            MATRIX_VALUE(ar,bc) = d;
+        }
+    }
+    return *this;
+}
+
 /*f c_matrix::add_scaled
  */
-c_matrix *c_matrix::add_scaled(const c_matrix *other, double scale)
+c_matrix &c_matrix::add_scaled(const c_matrix &other, double scale)
 {
-    if ((other->_nrows!=_nrows) || (other->_ncols!=_ncols)) return NULL;
+    if ((other._nrows!=_nrows) || (other._ncols!=_ncols)) return *this;
     for (int i=0; i<_nrows*_ncols; i++) {
-        _values[i] += other->_values[i]*scale;
+        _values[i] += other._values[i]*scale;
     }
-    return this;
+    return *this;
 }
 
 /*f c_matrix::scale
  */
-c_matrix *c_matrix::scale(double scale)
+c_matrix &c_matrix::scale(double scale)
 {
     for (int i=0; i<_nrows*_ncols; i++) {
         _values[i] *= scale;
     }
-    return this;
+    return *this;
 }
 
 /*f c_matrix::set_identity
  */
-c_matrix *c_matrix::set_identity(void)
+c_matrix &c_matrix::set_identity(void)
 {
     for (int i=0, j=0; i<_nrows*_ncols; i++, j=(j+1)%(_ncols+1)) {
         _values[i] = (j==0)?1.0:0.0;
     }
-    return this;
+    return *this;
+}
+
+/*f c_matrix::transpose
+ *
+ * Run through all the entries of the matrix and see where they map from
+ * after transposition
+ *
+ * Some map to the same index - leave them
+ *
+ * Others map from a different index, and that from another, and so on,
+ * forming a loop. If the index is not the 'lowest' of the loop then
+ * just move on - so each loop is done once.
+ *
+ * In a loop, remember the first value, and copy around the loop
+ *
+ * Finally, swap nrows/ncols
+ *
+ */
+c_matrix &c_matrix::transpose(void)
+{
+    for (int i=0; i<_nrows*_ncols; i++) {
+        int n=0;
+        int start_of_loop=1;
+        double x;
+        for (int j=i;; n++) {
+            int r,c;
+            r = j/_nrows;
+            c = j%_nrows;
+            j = c*_ncols + r; // j is after transposition
+            start_of_loop = (j==i);
+            if (j<=i) break;
+        }
+        if (n==0) continue;
+        if (!start_of_loop) continue;
+        x = _values[i];
+        for (int j=i;;) {
+            int r,c,pj;
+            pj = j;
+            r = j/_nrows;
+            c = j%_nrows;
+            j = c*_ncols + r; // j is after transposition
+            //fprintf(stderr,"%d:%d,%d (%lf):",j,r,c,_values[j]);
+            _values[pj] = _values[j];
+            if (j==i) {
+                _values[pj] = x;
+                break;
+            }
+        }
+        //fprintf(stderr,"\n");
+    }
+    int t;
+    t = _nrows; _nrows = _ncols; _ncols = t;
+    return *this;
 }
 
 /*f c_matrix::get_row
  */
-c_vector &c_matrix::get_row(int row)
+c_vector *c_matrix::get_row(int row)
 {
     c_vector *v = new c_vector(_ncols);
     for (int i=0; i<_ncols; i++) {
         v->set(i,MATRIX_VALUE(row,i));
     }
-    return *v;
+    return v;
 }
 
 /*f c_matrix::get_column
  */
-c_vector &c_matrix::get_column(int col)
+c_vector *c_matrix::get_column(int col)
 {
     c_vector *v = new c_vector(_nrows);
-    for (int i=0; i<_ncols; i++) {
+    for (int i=0; i<_nrows; i++) {
         v->set(i,MATRIX_VALUE(i,col));
     }
-    return *v;
+    return v;
 }
 
 /*f c_matrix::apply(const vector)
@@ -264,10 +328,10 @@ c_vector *c_matrix::apply(const c_vector &v)
  */
 double *c_matrix::apply(const c_vector &v, double *rv)
 {
+    const double *vc = v.coords();
     if (v.length() != _ncols) return NULL;
     for (int r=0; r<_nrows; r++) {
         double d=0.0;
-        const double *vc = v.coords();
         for (int c=0; c<_ncols; c++) {
             d += MATRIX_VALUE(r,c) * vc[c];
         }
@@ -375,11 +439,11 @@ c_matrix &c_matrix::lup_get_u(void)
  * 
  * Since this is messy (and unpivot is not common), a new matrix is returned
  */
-c_matrix *c_matrix::lup_unpivot(c_vector *P)
+c_matrix *c_matrix::lup_unpivot(const c_vector &P)
 {
     c_matrix *UP = new c_matrix(_nrows, _ncols);
     for (int r=0; r<_nrows; r++) {
-        int Pr = (int) P->value(r);
+        int Pr = (int) P.value(r);
         if (Pr<0) Pr=0;
         if (Pr>=_nrows) Pr=_nrows;
         for (int c=0; c<_ncols; c++) {
@@ -419,7 +483,7 @@ c_matrix *c_matrix::lup_unpivot(c_vector *P)
  * Hence again x(c)(r) = (y(c)(r)-sum(U(l,r)*x(c)(l))/U(c,r),
  * for l=r+1..n
  */
-int c_matrix::lup_inverse(double *data)
+int c_matrix::lup_inverse(double *data) const
 {
     for (int c=0; c<_ncols; c++) {
         double *y, *x;
@@ -458,11 +522,12 @@ int c_matrix::lup_inverse(double *data)
 /*f c_matrix::lup_inverse
  *
  */
-c_matrix *c_matrix::lup_inverse(c_vector *P)
+c_matrix *c_matrix::lup_inverse(void) const
 {
     if (_nrows != _ncols) return NULL;
 
-    c_matrix *R = new c_matrix(_nrows,_ncols);
+    c_matrix *R = this->copy();
+    c_vector *P = new c_vector(_ncols);
 
     double stack_data[16];
     double *data = stack_data;
@@ -474,6 +539,7 @@ c_matrix *c_matrix::lup_inverse(c_vector *P)
 
     if (lup_inverse(data)!=0) {
         if (free_me) { free(free_me); }
+        delete P;
         return NULL;
     }
     for (int c=0; c<_ncols; c++) {
@@ -485,6 +551,7 @@ c_matrix *c_matrix::lup_inverse(c_vector *P)
         data += _ncols;
     }
     if (free_me) { free(free_me); }
+    delete P;
     return R;
 }
 
@@ -492,7 +559,7 @@ c_matrix *c_matrix::lup_inverse(c_vector *P)
 /*f c_matrix::lup_invert
  *
  */
-int c_matrix::lup_invert(c_vector *P)
+int c_matrix::lup_invert(const c_vector &P)
 {
     if (_nrows != _ncols) return 0;
     double stack_data[16];
@@ -508,7 +575,7 @@ int c_matrix::lup_invert(c_vector *P)
     }
     for (int c=0; c<_ncols; c++) {
         // L.U.x(c) = c'th column of I; hence R[P[c]] = x(c)
-        int p_c = (int)P->value(c);
+        int p_c = (int)P.value(c);
         for (int r=0; r<_nrows; r++) {
             MATRIX_VALUE(r,p_c) = data[r];
         }

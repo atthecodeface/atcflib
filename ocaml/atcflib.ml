@@ -3,10 +3,13 @@
 
 (**/**)
 
-(*a Atcflib ocaml wrapper C functions *)
+(*a Types *)
 type c_vector
 type c_matrix
 type c_quaternion
+
+(*a Atcflib ocaml wrapper C functions *)
+(*b vector functions *)
 external v_create  : int -> c_vector   = "atcf_vector_create"
 external v_clone   : c_vector -> c_vector   = "atcf_vector_clone"
 external v_destroy : c_vector -> unit  = "atcf_vector_destroy"
@@ -24,6 +27,7 @@ external v_dot_product   : c_vector -> c_vector -> float  = "atcf_vector_dot_pro
 external v_cross_product : c_vector -> c_vector -> c_vector  = "atcf_vector_cross_product3"
 external v_angle_axis_to : c_vector -> c_vector -> (c_vector * float * float)  = "atcf_vector_angle_axis_to3"
 
+(*b matrix functions *)
 external m_create  : int -> int -> c_matrix   = "atcf_matrix_create"
 external m_clone   : c_matrix -> c_matrix   = "atcf_matrix_clone"
 external m_destroy : c_matrix -> unit  = "atcf_matrix_destroy"
@@ -44,9 +48,12 @@ external m_lup_get_u     : c_matrix -> unit = "atcf_matrix_lup_get_u"
 external m_lup_invert    : c_matrix -> unit  = "atcf_matrix_lup_invert"
 external m_lup_inverse   : c_matrix -> c_matrix  = "atcf_matrix_lup_inverse"
 
-external q_create  : int -> int -> c_quaternion   = "atcf_quaternion_create"
+(*b quaternion functions *)
+external q_create  : unit -> c_quaternion   = "atcf_quaternion_create"
+external q_create_rijk  : float -> float -> float -> float -> c_quaternion   = "atcf_quaternion_create_rijk"
 external q_clone   : c_quaternion -> c_quaternion   = "atcf_quaternion_clone"
 external q_destroy : c_quaternion -> unit  = "atcf_quaternion_destroy"
+external q_get_rijk  : c_quaternion -> float array  = "atcf_quaternion_rijk"
 external q_modulus : c_quaternion -> float = "atcf_quaternion_modulus"
 external q_modulus_squared : c_quaternion -> float = "atcf_quaternion_modulus_squared"
 external q_normalize : c_quaternion -> unit  = "atcf_quaternion_normalize"
@@ -58,6 +65,7 @@ external q_add_scaled    : c_quaternion -> c_quaternion -> float -> unit  = "atc
 let log = Printf.printf
 
 (*a Vector, matrix and quaternion classes - mutually recursive *)
+(*b vector *)
 class vector (cv:c_vector) =
   object (self)
          val v = cv
@@ -85,6 +93,7 @@ class vector (cv:c_vector) =
          method repr = let f i c = (Printf.printf "%d:%f " i c) in Array.iteri f (v_coords v)  ; self
   end
 and
+(*b matrix *)
  matrix (cm:c_matrix) =
   object (self)
          val m = cm
@@ -122,6 +131,7 @@ and
                        in
                        show_row 0 (self#nrows) ; self
   end
+(*b quaternion *)
 and
  quaternion (cq:c_quaternion) =
   object (self)
@@ -132,6 +142,7 @@ and
            log "destroying matrix %d\n" (Oo.id self) ;
            q_destroy q
          method get_cq      = q
+         method get_rijk    = q_get_rijk q
          method copy       = new quaternion(q_clone q)
          method scale f      = (q_scale q f) ; self
          method add_scaled (q2:quaternion) f = (q_add_scaled q q2#get_cq f) ; self
@@ -140,6 +151,7 @@ and
          method repr = Printf.printf "%f,%f,%f,%f " 0. 1. 2. 3. ; self
   end
 
+(*a Vector constructors *)
 let mkvector n =
   new vector (v_create n)
 let mkvector2 c0 c1 =
@@ -156,3 +168,11 @@ let matrix_x_vector m v = (v#copy)#assign_m_v m v
 let mkmatrix r c =
   new matrix (m_create r c)
 let matrix_x_matrix m1 m2 = (m1#copy)#assign_m_m m1 m2
+
+(*a Quaternion *)
+
+let mkquaternion =
+  new quaternion (q_create ())
+
+let mkquaternion_rijk r i j k =
+  new quaternion (q_create_rijk r i j k)

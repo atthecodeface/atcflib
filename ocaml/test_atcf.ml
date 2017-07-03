@@ -89,6 +89,19 @@ let assert_equal_int msg v0 v1 =
   let close_enough = (v0 = v1) in
   assert_bool (sfmt "%s:%d:%d" msg v0 v1) close_enough
 
+(*f assert_equal_quat : string -> quaternion -> float array -> unit
+ *
+ * Assert that a quaternion has certain r,i,j,k (or near enough),
+ * with a message msg
+ *
+ *)
+let assert_equal_quat msg q rijk =
+    let qrijk = q#get_rijk in
+    assert_equal_float (sfmt "%s:r:" msg) qrijk.(0) rijk.(0) ;
+    assert_equal_float (sfmt "%s:i:" msg) qrijk.(1) rijk.(1) ;
+    assert_equal_float (sfmt "%s:j:" msg) qrijk.(2) rijk.(2) ;
+    assert_equal_float (sfmt "%s:k:" msg) qrijk.(3) rijk.(3)
+
 (*f assert_coords : vector -> float array -> unit
  *
  * Assert that coordinates of the vector are close enough to the float array
@@ -536,10 +549,35 @@ let test_suite_matrix =
       test_suite_matrix_lup ;
     ]
 
+(*a Quaternion test suite *)
+(*b Quaternion creation tests *)
+let test_suite_quaternion_create = 
+    "create" >::: [
+        ("zero" >::
+           fun ctxt ->
+           let q = mkquaternion in
+           assert_equal_quat "zero" q [|0.0; 0.0; 0.0; 0.0|]
+        ) ;
+        ("1234" >::
+           fun ctxt ->
+           let q = mkquaternion_rijk 1.0 2.0 3.0 4.0 in
+           assert_equal_quat "1234" q [|1.0; 2.0; 3.0; 4.0|]
+        ) ;
+    ]
+(*b Quaternion test suite - combine individual suites *)
+(* to do 
+ *)
+let test_suite_quaternion =
+  "Test quaternions" >:::
+    [
+      test_suite_quaternion_create ;
+    ]
+
 (*a All test suites, toplevel *)
 let test_suites = "All tests" >::: [
      test_suite_vector ;
      test_suite_matrix ;
+     test_suite_quaternion ;
     ]
 let _ = 
   run_test_tt_main  test_suites

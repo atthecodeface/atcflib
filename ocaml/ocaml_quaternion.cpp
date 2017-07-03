@@ -96,6 +96,24 @@ atcf_quaternion_create(void)
     CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion()));
 }
 
+/*f atcf_quaternion_create : r:int -> c:int -> NEW c_quaternion
+ *
+ * Creates a quaternion of length n
+ *
+ */
+extern "C"
+CAMLprim value
+atcf_quaternion_create_rijk(value r, value i, value j, value k)
+{
+    CAMLparam4(r,i,j,k);
+    VERBOSE(stderr,"Create quaternion\n");
+    c_quaternion *q=new c_quaternion(Long_val(r),
+                                     Long_val(i),
+                                     Long_val(j),
+                                     Long_val(k));
+    CAMLreturn(caml_atcf_alloc_quaternion(q));
+}
+
 /*f atcf_quaternion_destroy : c_quaternion -> unit
  *
  * Destroys a quaternion
@@ -124,6 +142,25 @@ atcf_quaternion_clone(value v)
     CAMLparam1(v);
     VERBOSE(stderr,"Clone quaternion %p\n", quaternion_of_val(v));
     CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion(*quaternion_of_val(v))));
+}
+
+/*f atcf_quaternion_rijk : c_quaternion -> float array
+ *
+ * Return an array containing the coordinates of the vector
+ *
+ */
+extern "C"
+CAMLprim value
+atcf_quaternion_rijk(value q)
+{
+    double rijk[4];
+    CAMLparam1(q);
+    c_quaternion *cq = quaternion_of_val(q);
+    value v = caml_alloc_float_array(4);
+    cq->get_rijk(rijk);
+    for (int i=0; i<4; i++) 
+        Store_double_field(v,i,rijk[i]);
+    CAMLreturn(v);
 }
 
 FN_C_TO_UNIT(quaternion, conjugate);

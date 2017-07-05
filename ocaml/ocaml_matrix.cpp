@@ -56,9 +56,14 @@ static void __discard(void *, ...) {}
 
 /*a Statics
  */
+static void finalize_matrix(value v)
+{
+    delete matrix_of_val(v);
+}
+
 static struct custom_operations custom_ops = {
     (char *)"atcf.matrix",
-    custom_finalize_default,
+    finalize_matrix,
     custom_compare_default,
     custom_hash_default,
     custom_serialize_default,
@@ -100,7 +105,6 @@ atcf_matrix_create(value r, value c)
  *
  * Destroys a matrix
  *
- */
 extern "C"
 CAMLprim void
 atcf_matrix_destroy(value v)
@@ -111,6 +115,7 @@ atcf_matrix_destroy(value v)
     matrix_of_val(v) = NULL;
     CAMLreturn0;
 }
+ */
 
 /*f atcf_matrix_clone : c_matrix -> NEW c_matrix
  *

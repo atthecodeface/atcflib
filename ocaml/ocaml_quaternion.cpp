@@ -56,9 +56,14 @@ static void __discard(void *, ...) {}
 
 /*a Statics
  */
+static void finalize_quaternion(value v)
+{
+    delete quaternion_of_val(v);
+}
+
 static struct custom_operations custom_ops = {
     (char *)"atcf.quaternion",
-    custom_finalize_default,
+    finalize_quaternion,
     custom_compare_default,
     custom_hash_default,
     custom_serialize_default,

@@ -16,24 +16,39 @@ OCAML_INCLUDE = $(OCAMLOCAML)
 
 LIBDIR := /Users/gavinprivate/Git/atcflib
 
-camltest:
+all: camltime
+
+.PHONY: atcflib
+atcflib: atcflib.cmxa
+
+atcflib.cmxa: ocaml_timer.cpp ocaml_vector.cpp ocaml_matrix.cpp ocaml_quaternion.cpp ../libatcf.so atcflib.ml
 	cp ../libatcf.so .
+	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_timer.cpp
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_vector.cpp
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_matrix.cpp
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_quaternion.cpp
 	# The next one creates atcflib.cmi, atcflib.cmx, atcflib.o
-	$(OCAMLFIND) ocamlopt -c atcflib.ml 
-	# The next one creates atcflib.a
-	$(OCAMLFIND) ocamlopt -a -o atcflib.cmxa atcflib.cmx ocaml_vector.o ocaml_matrix.o ocaml_quaternion.o -cclib -latcf -cclib -L$(LIBDIR) -cclib -lc++
+	@echo "Compile atcflib.ml"
+	@$(OCAMLFIND) ocamlopt  -linkpkg -package core -c atcflib.ml -thread 
+	# The next one creates atcflib.cmxa
+	@echo "Build atcflib.cmxa"
+	@$(OCAMLFIND) ocamlopt -a -o atcflib.cmxa atcflib.cmx ocaml_timer.o ocaml_vector.o ocaml_matrix.o ocaml_quaternion.o -cclib -latcf -cclib -L$(LIBDIR) -cclib -lc++
+
+camltest: atcflib.cmxa
 	# The next one creates test_atcf.o, test_atcf.native, test_atcf.cmx, test_atcf.cmi
 	$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_atcf.ml -o test_atcf.native
 	# Make toplevel ML
-	ocamlmktop -custom -o atcfml atcflib.ml ocaml_vector.o ocaml_matrix.o ocaml_quaternion.o -cclib -L. -cclib -latcf  -cclib -lc++
+	ocamlmktop -custom -o atcfml atcflib.ml ocaml_timer.o ocaml_vector.o ocaml_matrix.o ocaml_quaternion.o -cclib -L. -cclib -latcf  -cclib -lc++
 	# Run it...
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_atcf.native -help
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_atcf.native -list-test
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_atcf.native 
 #	$(OCAMLFIND) ocamlopt -linkpkg -package tgls,tgls.tgl4,tsdl camltest2.ml camltestlib.cmxa -o camltest2.native
+
+camltime: atcflib.cmxa
+	@echo "Compile test_time.ml with atcflib.cmxa"
+	@$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_time.ml -o test_time.native
+	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_time.native 
 
 .PHONY: doc
 doc:

@@ -58,9 +58,14 @@ static void __discard(void *, ...) {}
 
 /*a Statics
  */
+static void finalize_vector(value v)
+{
+    delete vector_of_val(v);
+}
+
 static struct custom_operations custom_ops = {
     (char *)"atcf.vector",
-    custom_finalize_default,
+    finalize_vector,
     custom_compare_default,
     custom_hash_default,
     custom_serialize_default,

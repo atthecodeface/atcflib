@@ -33,16 +33,6 @@ open Atcflib
 open OUnit
 
 (*a Test stuff *)
-let ncv = Atcflib.no_class_v
-let v  = ncv(v_create 3)
-let v2 = (ncv (v_create 3)) #assign v
-(*
-let ncm = Atcflib.no_class_m
-let m  = ncm(m_create 3 3)
-let v3 = (v#assign_m_v m v2)
-let m2 = m #copy #assign_m_m m m
-let v4 = m2 #apply v2
- *)
 
 (*a Helper functions *)
 (*f sfmt <string format> <arg> * -> string
@@ -127,7 +117,14 @@ let assert_coords v cs =
 (*b Vector creation tests *)
 let test_suite_vector_create = 
     "create" >::: [
-        ("create2" >::
+        (* "module" >::
+           fun ctxt ->
+           let v = Atcflib.Vector.create(Atcflib.v_create 2) in
+           (Atcflib.Vector.set v ~n:0 ~f:1.0) |>
+           Atcflib.Vector.set ~n:1 ~f:2.0 ;
+           assert_equal_int "length" (Atcflib.Vector.length v) 2
+        ) ; *)
+         ("create2" >::
            fun ctxt ->
            let v = mkvector2 1.0 2.0 in
            assert_coords v [| 1.0; 2.0 |] ;

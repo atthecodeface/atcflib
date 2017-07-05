@@ -221,19 +221,34 @@ c_quaternion &c_quaternion::from_euler(double roll, double pitch, double yaw, in
 }
 
 /*f c_quaternion::lookat
+ *
+ * Find rotation that makes Z map to xyz axis, with X map to up (as far as possible)
+ *
+ * Remember the convention: +y to right, +x up, +z in front
+ *  roll + = roll clkwise (around Z) inside looking forward
+ * pitch + = nose up (around Y) inside looking forward
+ *   yaw + = nose left (around X) inside looking forward
+ * when given roll, pitch, yaw the order applies is roll(pitch(yaw())) - i.e. yaw is applied first
+ *
+ * So find yaw that gets axis on to Y=0 plane
+ * Then pitch angle that gets axis rotated onto Y=0 rotated on to Z axis
+ *
+ * Then, find rotate the up vector by pitch and yaw
+ * Then find the roll that gets the rotated Up to be parallel to the X axis
+ *
  */
 c_quaternion &c_quaternion::lookat(const double xyz[3], const double up[3])
 {
     double len_xyz = sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
-    double pitch =  asin(xyz[0] / len_xyz);
-    double yaw   = -atan2(xyz[1] , xyz[2]);
+    double pitch =  asin(xyz[0] / len_xyz); // +ve as ccw around Y to Z
+    double yaw   = -atan2(xyz[1], xyz[2]); // -ve as ccw around X to Z
 
     double cy = cos(yaw);
     double sy = sin(yaw);
     double cp = cos(pitch);
     double sp = sin(pitch);
-    double roll = atan2( up[1]*cy    + up[2]*sy,
-                         up[1]*sy*sp - up[2]*cy*sp + up[0]*cp );
+    double roll = atan2( up[1]*cy    + up[2]*sy, // CCW around X -> Y coord (unchanged by CCW around Y)
+                         up[1]*sy*sp - up[2]*cy*sp + up[0]*cp ); // CCW around X -> CCW around Y -> X coord
     return this->from_euler(-roll, -pitch, -yaw, 0).conjugate();
 }
 
@@ -431,7 +446,7 @@ double c_quaternion::as_rotation(double axis[3]) const
  */
 double c_quaternion::as_rotation(c_vector &vector) const
 {
-    double axis[3];
+    double *axis = vector.coords_to_set();
     double m=this->modulus();
     double angle = 2*acos(quat.r/m);
 
@@ -445,8 +460,30 @@ double c_quaternion::as_rotation(c_vector &vector) const
         axis[1] = 0;
         axis[2] = 0;
     }
-    vector = c_vector(3,axis);
     return angle;
+}
+
+/*f c_quaternion::as_rotation
+ */
+void c_quaternion::as_rotation(c_vector &vector, double *cos, double *sin) const
+{
+    double *axis = vector.coords_to_set();
+    double m=this->modulus();
+    double cos_half = quat.r/m;
+    double sin_half = sqrt(1-cos_half*cos_half);
+    *cos = cos_half*cos_half - sin_half*sin_half;
+    *sin = 2*sin_half*cos_half;
+
+    double sm = m*sin_half;
+    if (fabs(sm)>EPSILON) {
+        axis[0] = quat.i/sm;
+        axis[1] = quat.j/sm;
+        axis[2] = quat.k/sm;
+    } else {
+        axis[0] = 0;
+        axis[1] = 0;
+        axis[2] = 0;
+    }
 }
 
 /*f c_quaternion::conjugate
@@ -558,6 +595,18 @@ c_quaternion *c_quaternion::rotate_vector(const c_vector &vector) const
     c_quaternion *r = new c_quaternion();
     *r = (*this) * c_quaternion(vector) * this->copy()->conjugate();
     return r;
+}
+
+/*f c_quaternion::rotate_vector
+ */
+void c_quaternion::rotate_vector(c_vector *vector) const
+{
+    c_quaternion r = c_quaternion(*vector);
+    c_quaternion c = c_quaternion(*this);
+    r = (*this) * r * c.conjugate();
+    vector->set(0,r.quat.i);
+    vector->set(1,r.quat.j);
+    vector->set(2,r.quat.k);
 }
 
 /*f c_quaternion::angle_axis

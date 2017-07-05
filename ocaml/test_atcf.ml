@@ -32,6 +32,18 @@
 open Atcflib
 open OUnit
 
+(*a Test stuff *)
+let ncv = Atcflib.no_class_v
+let v  = ncv(v_create 3)
+let v2 = (ncv (v_create 3)) #assign v
+(*
+let ncm = Atcflib.no_class_m
+let m  = ncm(m_create 3 3)
+let v3 = (v#assign_m_v m v2)
+let m2 = m #copy #assign_m_m m m
+let v4 = m2 #apply v2
+ *)
+
 (*a Helper functions *)
 (*f sfmt <string format> <arg> * -> string
  *    formats a string with arguments
@@ -563,14 +575,141 @@ let test_suite_quaternion_create =
            let q = mkquaternion_rijk 1.0 2.0 3.0 4.0 in
            assert_equal_quat "1234" q [|1.0; 2.0; 3.0; 4.0|]
         ) ;
+        ("1234r" >::
+           fun ctxt ->
+           let q = (mkquaternion_rijk 1.0 2.0 3.0 4.0)#reciprocal in
+           let m = q#modulus_squared in
+            Printf.printf "Modulus %f\n" m ;
+           assert_equal_quat "1234r" q [|1.0*.m; (-. 2.0)*.m; (-. 3.0)*.m; (-. 4.0)*.m|]
+        ) ;
+        ("1234c" >::
+           fun ctxt ->
+           let q = (mkquaternion_rijk 1.0 2.0 3.0 4.0)#conjugate in
+           assert_equal_quat "1234c" q [|1.0; -.2.0; -.3.0; -.4.0;|]
+        ) ;
+        ("1234c2" >::
+           fun ctxt ->
+           let q =  (mkquaternion_rijk 1.0 2.0 3.0 4.0)#conjugate in
+           let q2 = mkquaternion in
+           assert_equal_quat "1234c" q2 [|0.0; 0.0; 0.0; 0.0|] ;
+           q2#assign q ;
+           assert_equal_quat "1234c" q2 [|1.0; -.2.0; -.3.0; -.4.0;|] 
+        ) ;
+        ("rotation" >::
+           fun ctxt ->
+           let q =  mkquaternion in
+           let q2 = mkquaternion in
+           let v = x3#copy in
+           let (c,s) = v#assign_q_as_rotation (q#repr#assign_lookat z3 y3) in
+           Printf.printf "\nQ" ;
+           q#repr ;
+           let (c,s) = v#assign_q_as_rotation (q#repr#assign_lookat z3 x3)#repr in
+           Printf.printf "\nQ of X";
+           ((mkvector3 1.0 0.0 0.0) #apply_q q)#repr ;
+           Printf.printf "\nQ of Y" ;
+           ((mkvector3 0.0 1.0 0.0) #apply_q q)#repr ;
+           Printf.printf "\nQ of Z" ;
+           ((mkvector3 0.0 0.0 1.0) #apply_q q)#repr ;
+           Printf.printf "\nV" ;
+           v#repr ;
+           Printf.printf "\nCos/sin %f %f\n" c s
+        ) ;
+    ]
+(*b Quaternion modulus tests *)
+let test_suite_quaternion_modulus = 
+    "modulus" >::: [
+        ("test0" >::
+           fun ctxt -> let q = mkquaternion_rijk 1.0 0.0 0.0 0.0 in
+           let qc = q #copy #conjugate in
+           let qcq = q #copy #postmultiply qc in
+           let r = qcq #get_rijk .(0) in
+           assert_equal_float "m=r" q#modulus_squared r ;
+           assert_equal_float "m"   q#modulus 1.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+        ("test1" >::
+           fun ctxt -> let q = mkquaternion_rijk 0.0 1.0 0.0 0.0 in
+           assert_equal_float "m"   q#modulus 1.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+        ("test2" >::
+           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 1.0 0.0 in
+           assert_equal_float "m"   q#modulus 1.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+        ("test3" >::
+           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 0.0 1.0 in
+           assert_equal_float "m"   q#modulus 1.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+        ("test0" >::
+           fun ctxt -> let q = mkquaternion_rijk 2.0 0.0 0.0 0.0 in
+           let qc = q#copy#conjugate in
+           let qcq = q #copy #postmultiply qc in
+           let r = qcq #get_rijk .(0) in
+           assert_equal_float "m=r" q#modulus_squared r ;
+           assert_equal_float "m"   q#modulus 2.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+           
+        ) ;
+        ("test1" >::
+           fun ctxt -> let q = mkquaternion_rijk 0.0 2.0 0.0 0.0 in
+           assert_equal_float "m"   q#modulus 2.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+        ("test2" >::
+           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 2.0 0.0 in
+           assert_equal_float "m"   q#modulus 2.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+        ("test3" >::
+           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 0.0 2.0 in
+           assert_equal_float "m"   q#modulus 2.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+        ("test4" >::
+           fun ctxt -> let q = mkquaternion_rijk 3.0 4.0 12.0 84.0 in
+           assert_equal_float "m"   q#modulus 85.0 ;
+           assert_equal_float "msq" q#modulus_squared (q#modulus ** 2.)
+        ) ;
+    ]
+(*b Quaternion operation tests *)
+let test_suite_quaternion_operation = 
+    "operation" >::: [
+        ("add_scaled" >::
+           fun ctxt ->
+           let q1 = mkquaternion_rijk 1.0 2.0 3.0 4.0 in
+           let q2 = mkquaternion_rijk 4.0 3.0 2.0 1.0 in
+           assert_equal_quat "q2+1*q1" (q2 #add_scaled q1 2.0) [|6.0; 7.0; 8.0; 9.0|] ;
+           assert_equal_quat "zero" (q1 #add_scaled q1 (-.1.0)) [|0.0; 0.0; 0.0; 0.0|] ;
+           assert_equal_quat "q2+1*q1" (q2 #add_scaled q1 2.0) [|6.0; 7.0; 8.0; 9.0|]
+        ) ;
+        ("multiply" >::
+           fun ctxt ->
+           let q = mkquaternion in
+           let q1 = mkquaternion_rijk 1.0 2.0 3.0 4.0 in
+           let q2 = mkquaternion_rijk 4.0 3.0 2.0 1.0 in
+           assert_equal_quat "q2*q1" (q2#copy #premultiply q1) [|-.12.0; 6.0; 24.0; 12.0|] ;
+           assert_equal_quat "q2*q1" (q2#copy #premultiply q1) (q1#copy #postmultiply q2)#get_rijk ;
+           assert_equal_quat "q2*q1" (q1#copy #premultiply q2) (q2#copy #postmultiply q1)#get_rijk ;
+           assert_equal_quat "q1*q2" (q1#copy #premultiply q2) [|-.12.0; 16.0; 4.0; 22.0|] ;
+           assert_equal_quat "q1*q2" (q#copy #assign_q_q q1 q2) (q1#copy #postmultiply q2)#get_rijk ;
+        ) ;
     ]
 (*b Quaternion test suite - combine individual suites *)
 (* to do 
+of rotation
+lookat (direction, up)
+to rotation (vector, sin, cos)
+
+Vector-to-vector rotation as quaternion
  *)
 let test_suite_quaternion =
   "Test quaternions" >:::
     [
       test_suite_quaternion_create ;
+      test_suite_quaternion_operation ;
+      test_suite_quaternion_modulus ;
     ]
 
 (*a All test suites, toplevel *)
@@ -579,5 +718,8 @@ let test_suites = "All tests" >::: [
      test_suite_matrix ;
      test_suite_quaternion ;
     ]
+
+
 let _ = 
-  run_test_tt_main  test_suites
+    at_exit Gc.full_major ;
+    run_test_tt_main  test_suites ;

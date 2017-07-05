@@ -94,6 +94,7 @@ public:
     c_quaternion &from_rotation(double cos_angle, double sin_angle, const double *axis);
     double as_rotation(double axis[3]) const;
     double as_rotation(class c_vector &vector) const;
+    void as_rotation(c_vector &vector, double *cos, double *sin) const;
     void as_euler(double rpy[3]) const;
     void get_rijk(double rijk[4]) const;
     // axis_angle gives the quaternion for a great-circle (minimum rotation angle)
@@ -102,6 +103,7 @@ public:
     // The axis will be perpendicular to the axes of rotation represented by 'this'
     // and 'other'
     c_quaternion *rotate_vector(const class c_vector &vector) const;
+    void          rotate_vector(c_vector *vector) const;
     c_quaternion *angle_axis(const c_quaternion &other, class c_vector &vector) const;
     double distance_to(const c_quaternion &other) const;
     char *__str__(char *buffer, int buf_size) const;

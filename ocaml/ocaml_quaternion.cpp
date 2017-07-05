@@ -46,7 +46,7 @@
  */
 // Use -D__OCAML_QUATERNION_VERBOSE on compilation to be verbose,
 // or uncomment the following
-// #define __OCAML_QUATERNION_VERBOSE
+//#define __OCAML_QUATERNION_VERBOSE
 #ifdef __OCAML_QUATERNION_VERBOSE
 #define VERBOSE fprintf
 #else
@@ -82,9 +82,9 @@ caml_atcf_alloc_quaternion(c_quaternion *cm)
     return v;
 }
 
-/*f atcf_quaternion_create : r:int -> c:int -> NEW c_quaternion
+/*f atcf_quaternion_create : r:unit -> NEW c_quaternion
  *
- * Creates a quaternion of length n
+ * Creates a quaternion zero
  *
  */
 extern "C"
@@ -96,9 +96,9 @@ atcf_quaternion_create(void)
     CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion()));
 }
 
-/*f atcf_quaternion_create : r:int -> c:int -> NEW c_quaternion
+/*f atcf_quaternion_create_rijk : r:float -> i:float ...  -> NEW c_quaternion
  *
- * Creates a quaternion of length n
+ * Creates a quaternion with r, i, j, k
  *
  */
 extern "C"
@@ -107,10 +107,10 @@ atcf_quaternion_create_rijk(value r, value i, value j, value k)
 {
     CAMLparam4(r,i,j,k);
     VERBOSE(stderr,"Create quaternion\n");
-    c_quaternion *q=new c_quaternion(Long_val(r),
-                                     Long_val(i),
-                                     Long_val(j),
-                                     Long_val(k));
+    c_quaternion *q=new c_quaternion(Double_val(r),
+                                     Double_val(i),
+                                     Double_val(j),
+                                     Double_val(k));
     CAMLreturn(caml_atcf_alloc_quaternion(q));
 }
 
@@ -144,6 +144,75 @@ atcf_quaternion_clone(value v)
     CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion(*quaternion_of_val(v))));
 }
 
+/*a Assignment functions
+ */
+/*f atcf_quaternion_assign_q : c_quaternion -> c_quaternion -> unit
+ *
+ * Assign to value of other quaternion
+ *
+ */
+extern "C"
+CAMLprim void
+atcf_quaternion_assign_q(value q, value q2)
+{
+    CAMLparam2(q, q2);
+    *(quaternion_of_val(q)) = *quaternion_of_val(q2);
+    CAMLreturn0;
+}
+
+/*f atcf_quaternion_assign_lookat : c_quaternion -> c_vector -> c_vector -> unit
+ *
+ * Assign a quaternion rotation that looks at 'at' with 'up' as up
+ *
+ */
+extern "C"
+CAMLprim void
+atcf_quaternion_assign_lookat(value q, value at, value up)
+{
+    CAMLparam3(q, at, up);
+    quaternion_of_val(q)->lookat(vector_of_val(at)->coords(),
+                                 vector_of_val(up)->coords());
+                                 
+    CAMLreturn0;
+}
+
+/*f atcf_quaternion_assign_of_rotation : c_quaternion -> c_vector -> float -> float -> unit
+ *
+ * Assign a quaternion rotation with axis and cos/sin
+ *
+ */
+extern "C"
+CAMLprim void
+atcf_quaternion_assign_of_rotation(value q, value axis, value c, value s)
+{
+    CAMLparam4(q, axis, c, s);
+    quaternion_of_val(q)->from_rotation(Double_val(c),
+                                        Double_val(s),
+                                        vector_of_val(axis)->coords());
+    CAMLreturn0;
+}
+
+/*a Interrogation functions
+ */
+/*f atcf_quaternion_rijk : c_quaternion -> float array
+ *
+ * Return an array containing the coordinates of the vector
+ *
+ */
+extern "C"
+CAMLprim value
+atcf_quaternion_rpy(value q)
+{
+    double rpy[3];
+    CAMLparam1(q);
+    c_quaternion *cq = quaternion_of_val(q);
+    value v = caml_alloc_float_array(3);
+    cq->as_euler(rpy);
+    for (int i=0; i<3; i++) 
+        Store_double_field(v,i,rpy[i]);
+    CAMLreturn(v);
+}
+
 /*f atcf_quaternion_rijk : c_quaternion -> float array
  *
  * Return an array containing the coordinates of the vector
@@ -163,11 +232,60 @@ atcf_quaternion_rijk(value q)
     CAMLreturn(v);
 }
 
+/*f atcf_quaternion_modulus : c_quaternion -> float 
+ *
+ * Return the modulus of a quaternion
+ *
+ */
+FN_C_TO_FLOAT(quaternion, modulus);
+
+/*f atcf_quaternion_modulus_squared : c_quaternion -> float 
+ *
+ * Return the square of the modulus of a quaternion
+ *
+ */
+FN_C_TO_FLOAT(quaternion, modulus_squared);
+
+/*f atcf_quaternion_add_scaled : c_quaternion -> float -> unit 
+ *
+ *
+ *
+ */
+FN_C_CR_FLOAT_TO_UNIT(quaternion,add_scaled)
+FN_C_CR_TO_FLOAT(quaternion, distance_to);
+
+/*a Operation functions
+ */
 FN_C_TO_UNIT(quaternion, conjugate);
 FN_C_TO_UNIT(quaternion, reciprocal);
 FN_C_TO_UNIT(quaternion, normalize);
 FN_C_FLOAT_TO_UNIT(quaternion, scale);
-FN_C_TO_FLOAT(quaternion, modulus);
-FN_C_TO_FLOAT(quaternion, modulus_squared);
-FN_C_CR_FLOAT_TO_UNIT(quaternion,add_scaled)
-FN_C_CR_TO_FLOAT(quaternion, distance_to);
+
+/*f atcf_quaternion_postmultiply : c_quaternion -> c_quaternion -> unit
+ *
+ * Post-multiply by another quaternion
+ *
+ */
+extern "C"
+CAMLprim void
+atcf_quaternion_postmultiply(value q, value q2)
+{
+    CAMLparam2(q, q2);
+    quaternion_of_val(q)->multiply(*quaternion_of_val(q2), 0);
+    CAMLreturn0;
+}
+
+/*f atcf_quaternion_premultiply : c_quaternion -> c_quaternion -> unit
+ *
+ * Pre-multiply by another quaternion
+ *
+ */
+extern "C"
+CAMLprim void
+atcf_quaternion_premultiply(value q, value q2)
+{
+    CAMLparam2(q, q2);
+    quaternion_of_val(q)->multiply(*quaternion_of_val(q2), 1);
+    CAMLreturn0;
+}
+

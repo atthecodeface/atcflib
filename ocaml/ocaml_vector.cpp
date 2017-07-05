@@ -36,6 +36,7 @@
 #include <caml/intext.h>
 #include <caml/threads.h>
 
+#include <atcf/quaternion.h>
 #include <atcf/vector.h>
 #include <atcf/matrix.h>
 
@@ -195,6 +196,38 @@ atcf_vector_assign_m_v(value v, value m, value v2)
     CAMLparam3(v, m, v2);
     matrix_of_val(m)->apply(*vector_of_val(v2),
                             vector_of_val(v)->coords_to_set());
+    CAMLreturn0;
+}
+
+/*f atcf_vector_assign_q : vector -> quaternion -> float * float
+ * Assign value to be the axis of quaternion,
+ * and return (cos, sin) as a float tuple
+ */
+extern "C"
+CAMLprim value
+atcf_vector_assign_q(value v, value q)
+{
+    double cos, sin;
+    CAMLparam2(v, q);
+    CAMLlocal3 (vr, cr, sr);
+    quaternion_of_val(q)->as_rotation(*vector_of_val(v), &cos, &sin);
+    cr = caml_copy_double(cos);
+    sr = caml_copy_double(sin);
+    vr = caml_alloc_tuple(2);
+    Field(vr, 0) = cr;
+    Field(vr, 1) = sr;
+    CAMLreturn(vr);
+}
+
+/*f atcf_vector_apply_q : vector -> quaternion -> unit
+ * Apply quaternion q to the vector (rotate it, most likely...)
+ */
+extern "C"
+CAMLprim void
+atcf_vector_apply_q(value v, value q)
+{
+    CAMLparam2(v, q);
+    quaternion_of_val(q)->rotate_vector(vector_of_val(v));
     CAMLreturn0;
 }
 

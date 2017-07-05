@@ -1,14 +1,52 @@
-(** ATCFLIB  module
+(** ATCFLIB module - Ocaml wrapper for the prototyping atcflib C++ library
+
+ The C++ library provides objects such as vector, quaternion,
+ etc. This ocaml library wraps those objects.
+
+ This library aims to provide a near one-to-one mapping to the C++
+ library. A consequence of this is that an ocaml thing has to map
+ cleanly to a C++ object, in a manner that supports allocation and
+ destruction of the C objects (which are created using new/delete in
+ the library C++ wrapper).
+
+ It seems that the ocaml world is split amongst those who believe
+ objects and classes should be removed from ocaml, and those who think
+ they are useful. As implementation choices for this library there is
+ a need to map from an ocaml thing onto a C++ object. The ocaml thing
+ has to map neatly to the C++ constructor/destructor, i.e. when the
+ ocaml thing is deallocated (is garbage collected) the C++ object is
+ or has been deallocated.
+
+ One choice is to use an object for the ocaml thing. It would be nice to use:
+
+ let rec no_class_v (cv:c_vector) = object (self)
+         val v = cv
+         initializer          Gc.finalise (fun self -> self#destroy ()) self ;
+         method destroy () = v_destroy v
+         method get_cv     = v
+         method assign v2  = v_assign v v2#get_cv ; self
+    end
+
+ but this cannot be invoked, as 'v2' in the assign method produces the error
+
+ Error: The type of this expression,
+       < assign : < get_cv : Atcflib.c_vector; _.. > -> unit;
+         destroy : unit -> unit; get_cv : Atcflib.c_vector >,
+       contains type variables that cannot be generalized
+
+ We would like to restrict v2 to be an object of the same type, but
+ this is not possible as the object does not have an explicit type
+
  *)
 
 (**/**)
 
-(*a Types *)
+(*a Types - private *)
 type c_vector
 type c_matrix
 type c_quaternion
 
-(*a Atcflib ocaml wrapper C functions *)
+(*a Atcflib ocaml wrapper C functions - private *)
 (*b vector functions *)
 external v_create  : int -> c_vector   = "atcf_vector_create"
 external v_clone   : c_vector -> c_vector   = "atcf_vector_clone"
@@ -17,6 +55,8 @@ external v_modulus : c_vector -> float = "atcf_vector_modulus"
 external v_modulus_squared : c_vector -> float = "atcf_vector_modulus_squared"
 external v_assign  : c_vector -> c_vector -> unit = "atcf_vector_assign"
 external v_assign_m_v  : c_vector -> c_matrix -> c_vector -> unit = "atcf_vector_assign_m_v"
+external v_assign_q    : c_vector -> c_quaternion -> float * float = "atcf_vector_assign_q"
+external v_apply_q     : c_vector -> c_quaternion -> unit = "atcf_vector_apply_q"
 external v_normalize : c_vector -> unit = "atcf_vector_normalize"
 external v_length  : c_vector -> int = "atcf_vector_length"
 external v_coords  : c_vector -> float array  = "atcf_vector_coords"
@@ -52,28 +92,75 @@ external m_lup_inverse   : c_matrix -> c_matrix  = "atcf_matrix_lup_inverse"
 external q_create  : unit -> c_quaternion   = "atcf_quaternion_create"
 external q_create_rijk  : float -> float -> float -> float -> c_quaternion   = "atcf_quaternion_create_rijk"
 external q_clone   : c_quaternion -> c_quaternion   = "atcf_quaternion_clone"
+external q_assign_q     : c_quaternion -> c_quaternion -> unit   = "atcf_quaternion_assign_q"
+external q_assign_lookat : c_quaternion -> c_vector -> c_vector -> unit   = "atcf_quaternion_assign_lookat"
+external q_assign_of_rotation : c_quaternion -> c_vector -> float -> float -> unit   = "atcf_quaternion_assign_of_rotation"
 external q_destroy : c_quaternion -> unit  = "atcf_quaternion_destroy"
 external q_get_rijk  : c_quaternion -> float array  = "atcf_quaternion_rijk"
 external q_modulus : c_quaternion -> float = "atcf_quaternion_modulus"
 external q_modulus_squared : c_quaternion -> float = "atcf_quaternion_modulus_squared"
 external q_normalize : c_quaternion -> unit  = "atcf_quaternion_normalize"
+external q_reciprocal : c_quaternion -> unit  = "atcf_quaternion_reciprocal"
 external q_conjugate : c_quaternion -> unit  = "atcf_quaternion_conjugate"
 external q_scale         : c_quaternion -> float -> unit  = "atcf_quaternion_scale"
+external q_premultiply   : c_quaternion -> c_quaternion -> unit  = "atcf_quaternion_premultiply"
+external q_postmultiply   : c_quaternion -> c_quaternion -> unit  = "atcf_quaternion_postmultiply"
 external q_add_scaled    : c_quaternion -> c_quaternion -> float -> unit  = "atcf_quaternion_add_scaled"
-(**/**)
 
-let log = Printf.printf
+(*a Logging functions - private *)
+let qlog format = Printf.ifprintf () format
+let vlog format = Printf.printf format
+let log = qlog
+let verbose_log = true
+(*let log = if verbose_log then vlog else qlog*)
+(* This should work, except the type of ifprintf is incompatible with printf... *sigh*
+let verbose_log = true
+let log = if verbose_log then
+     fun format -> (Printf.ifprintf () format)
+     else
+     fun format -> (Printf.printf format)
+ *)
+(**/**)
 
 (*a Vector, matrix and quaternion classes - mutually recursive *)
 (*b vector *)
+ (** A vector is an object representing a set of N 'float' coordinates.
+   *
+  *)
+let rec no_class_v (cv:c_vector) = object (self:'vecobj)
+         val v = cv
+         initializer          Gc.finalise (fun self -> self#destroy ()) self ;
+         method destroy () = v_destroy v
+         method get_cv     = v
+         method assign (v2:'vecobj)  = (v_assign v v2#get_cv) ; self
+    end
+let rec no_class_m (cm:c_matrix) = object (self)
+         val m = cm
+         initializer          Gc.finalise (fun self -> self#destroy ()) self ;
+         method destroy ()    = m_destroy m
+         method get_cm        = m
+         method copy          = no_class_m (m_clone m)
+         method apply v       = no_class_v (m_apply m v#get_cv)
+         method row_vector n  = no_class_v (m_row_vector m n)
+         method assign_m_m m1 m2 = m_assign_m_m m m1#get_cm m2#get_cm ; self
+    end
+
+let ncv = no_class_v
+(*let v  = no_class_v(v_create 3)
+let v2 = no_class_v(v_create 3)*)
+(*let ncm = no_class_m
+let m  = no_class_m(m_create 3 3)
+ *)
 class vector (cv:c_vector) =
-  object (self)
+  object (self:'vector)
          val v = cv
          initializer
-           Gc.finalise (fun self -> self#destroy ()) self
+           Gc.finalise (fun self -> self#destroy ()) self ;
+           log "creating vector %d\n" (Oo.id self)
          method destroy () =
            log "destroying vector %d\n" (Oo.id self) ;
            v_destroy v
+         (** Can we document a method ? *)
          method get_cv      = v
          method copy       = new vector(v_clone v)
          method coords     = v_coords v
@@ -81,6 +168,8 @@ class vector (cv:c_vector) =
          method set n f    = v_set v n f ; self
          method assign (v2:vector)  = v_assign v v2#get_cv ; self
          method assign_m_v (m:matrix) (v2:vector)  = v_assign_m_v v m#get_cm v2#get_cv ; self
+         method assign_q_as_rotation (q:quaternion) = (v_assign_q v q#get_cq)
+         method apply_q (q:quaternion) = (v_apply_q v q#get_cq) ; self
          method scale f    = v_scale v f ; self
          method modulus    = v_modulus v
          method modulus_squared   = v_modulus_squared v
@@ -95,10 +184,11 @@ class vector (cv:c_vector) =
 and
 (*b matrix *)
  matrix (cm:c_matrix) =
-  object (self)
+  object (self:'matrix)
          val m = cm
          initializer
-           Gc.finalise (fun self -> self#destroy ()) self
+           Gc.finalise (fun self -> self#destroy ()) self ;
+           log "creating matrix %d\n" (Oo.id self)
          method destroy () =
            log "destroying matrix %d\n" (Oo.id self) ;
            m_destroy m
@@ -133,22 +223,32 @@ and
   end
 (*b quaternion *)
 and
+ (** This is supposed to be the comment for class quaternion **)
  quaternion (cq:c_quaternion) =
-  object (self)
+  object (self:'quaternion)
          val q = cq
          initializer
-           Gc.finalise (fun self -> self#destroy ()) self
+           Gc.finalise (fun self -> self#destroy ()) self ;
+           log "creating quaternion %d\n" (Oo.id self)
          method destroy () =
-           log "destroying matrix %d\n" (Oo.id self) ;
+           log "destroying quaternion %d\n" (Oo.id self) ;
            q_destroy q
-         method get_cq      = q
-         method get_rijk    = q_get_rijk q
-         method copy       = new quaternion(q_clone q)
-         method scale f      = (q_scale q f) ; self
-         method add_scaled (q2:quaternion) f = (q_add_scaled q q2#get_cq f) ; self
-         method modulus = q_modulus q
-         method modulus_squared = q_modulus_squared q
-         method repr = Printf.printf "%f,%f,%f,%f " 0. 1. 2. 3. ; self
+         method get_cq       = q
+         method get_rijk     = q_get_rijk q
+         method assign (q1:quaternion)  = q_assign_q q q1#get_cq ; self
+         method assign_q_q (q1:quaternion) (q2:quaternion)  = (q_assign_q q q1#get_cq) ; (q_postmultiply q q2#get_cq) ; self
+         method assign_lookat (at:vector) (up:vector) = (q_assign_lookat q at#get_cv up#get_cv) ; self
+         method assign_of_rotation (axis:vector) c s  = (q_assign_of_rotation q axis#get_cv c s) ; self
+         method copy                                  = new quaternion(q_clone q)
+         method scale f                               = (q_scale q f) ; self
+         method add_scaled (q2:quaternion) f          = (q_add_scaled q q2#get_cq f) ; self
+         method reciprocal                            = q_reciprocal q ; self
+         method conjugate                             = q_conjugate q ; self
+         method modulus                               = q_modulus q
+         method modulus_squared                       = q_modulus_squared q
+         method premultiply (q2:quaternion)           = q_premultiply q q2#get_cq ; self
+         method postmultiply (q2:quaternion)          = q_postmultiply q q2#get_cq ; self
+         method repr = let rijk=self#get_rijk in Printf.printf "%f,%f,%f,%f " rijk.(0) rijk.(1) rijk.(2) rijk.(3); self
   end
 
 (*a Vector constructors *)
@@ -170,7 +270,6 @@ let mkmatrix r c =
 let matrix_x_matrix m1 m2 = (m1#copy)#assign_m_m m1 m2
 
 (*a Quaternion *)
-
 let mkquaternion =
   new quaternion (q_create ())
 

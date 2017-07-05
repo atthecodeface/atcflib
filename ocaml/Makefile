@@ -35,5 +35,11 @@ camltest:
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_atcf.native 
 #	$(OCAMLFIND) ocamlopt -linkpkg -package tgls,tgls.tgl4,tsdl camltest2.ml camltestlib.cmxa -o camltest2.native
 
+.PHONY: doc
+doc:
+	ocamldoc -html -d doc/html atcflib.ml
+
 clean:
-	rm -f *.native *.cmi *.cmx *.cmxa *.o
+	mkdir -p doc/html
+	rm -f *.native *.cmi *.cmx *.cmxa *.o doc/html/*
+

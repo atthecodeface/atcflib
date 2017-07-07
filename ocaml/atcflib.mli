@@ -35,6 +35,10 @@ module rec Vector :
     val dot_product : t -> t -> float
     val cross_product3 : t -> t -> t
     val angle_axis_to3 : t -> t -> t * float * float
+    val make                 : int -> t
+    val make2                : float -> float -> t
+    val make3                : float -> float -> float -> t
+    val make4                : float -> float -> float -> float -> t
     val repr : t -> string
   end
 and Matrix :
@@ -59,6 +63,8 @@ and Matrix :
     val lup_get_u : t -> t
     val lup_invert : t -> t
     val lup_inverse : t -> t
+    val make          : int -> int -> t
+    val matrix_x_matrix : t -> t -> t
     val repr : t -> string
   end
 and Quaternion :
@@ -80,16 +86,7 @@ and Quaternion :
     val modulus_squared : t -> float
     val premultiply : t -> t -> t
     val postmultiply : t -> t -> t
+    val make              : unit -> t
+    val make_rijk         : float -> float -> float -> float -> t
     val repr : t -> string
   end
-
-val mkvector : int -> Vector.t
-val mkvector2 : float -> float -> Vector.t
-val mkvector3 : float -> float -> float -> Vector.t
-val mkvector4 : float -> float -> float -> float -> Vector.t
-
-val mkmatrix : int -> int -> Matrix.t
-val matrix_x_matrix : Matrix.t -> Matrix.t -> Matrix.t
-
-val mkquaternion : Quaternion.t
-val mkquaternion_rijk : float -> float -> float -> float -> Quaternion.t

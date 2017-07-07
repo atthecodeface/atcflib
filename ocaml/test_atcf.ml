@@ -55,22 +55,22 @@ let c30 = (sqrt 3.0) /. 2.0
 let s30 = 0.5
 
 (* Some globally useful unit vectors *)
-let x3 = (mkvector3 1.0 0.0 0.0)
-let y3 = (mkvector3 0.0 1.0 0.0)
-let z3 = (mkvector3 0.0 0.0 1.0)
-let xy3 = Vector.normalize (mkvector3 1.0 1.0 0.0)
-let xz3 = Vector.normalize(mkvector3 1.0 0.0 1.0)
-let yz3 = Vector.normalize(mkvector3 0.0 1.0 1.0)
-let zero3 = (mkvector3 0.0 0.0 0.0)
+let x3 = (Vector.make3 1.0 0.0 0.0)
+let y3 = (Vector.make3 0.0 1.0 0.0)
+let z3 = (Vector.make3 0.0 0.0 1.0)
+let xy3 = Vector.normalize (Vector.make3 1.0 1.0 0.0)
+let xz3 = Vector.normalize(Vector.make3 1.0 0.0 1.0)
+let yz3 = Vector.normalize(Vector.make3 0.0 1.0 1.0)
+let zero3 = (Vector.make3 0.0 0.0 0.0)
 let rot30_z = 
-    let m = Matrix.identity (mkmatrix 3 3) in
+    let m = Matrix.identity (Matrix.make 3 3) in
     Matrix.set m 0 0 c30 ;
     Matrix.set m 0 1 (-. s30) ;
     Matrix.set m 1 0 s30 ;
     Matrix.set m 1 1 c30
 
 let mat_1234 = 
-    let m = Matrix.identity (mkmatrix 2 2) in
+    let m = Matrix.identity (Matrix.make 2 2) in
     Matrix.set m 0 0 1.0 ;
     Matrix.set m 0 1 2.0 ;
     Matrix.set m 1 0 3.0 ;
@@ -138,32 +138,32 @@ let test_suite_vector_create =
     "create" >::: [
         ("module" >::
            fun ctxt ->
-           let v = (mkvector 2) in
+           let v = (Vector.make 2) in
            (Vector.set v ~n:0 ~f:1.0) |>
            Vector.set ~n:1 ~f:2.0 ;
            assert_equal_int "length" (Vector.length v) 2
         ) ;
          ("create2" >::
            fun ctxt ->
-           let v = mkvector2 1.0 2.0 in
+           let v = Vector.make2 1.0 2.0 in
            assert_coords v [| 1.0; 2.0 |] ;
            assert_equal_int "length" (Vector.length v) 2
         ) ;
         ("create3" >::
            fun ctxt ->
-           let v = mkvector3 1.0 2.0 3.0 in
+           let v = Vector.make3 1.0 2.0 3.0 in
            assert_coords v [| 1.0; 2.0; 3.0 |] ;
            assert_equal_int "length" (Vector.length v) 3
         ) ;
         ("create4" >::
            fun ctxt ->
-           let v = mkvector4 1.0 2.0 3.0 4.0 in
+           let v = Vector.make4 1.0 2.0 3.0 4.0 in
            assert_coords v [| 1.0; 2.0; 3.0 ; 4.0 |] ;
            assert_equal_int "length" (Vector.length v) 4
         ) ;
       ("copy_0" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
+         let v1 = Vector.make2 3.0 4.0 in
          let v2 = Vector.copy v1 in
          assert_coords (v2) [| 3.0; 4.0 |];
          assert_coords (Vector.normalize v1) [| 0.6; 0.8 |];
@@ -176,21 +176,21 @@ let test_suite_vector_assign =
     "assign" >::: [
       ("assign_0" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
-         let v2 = mkvector2 1.0 2.0 in
+         let v1 = Vector.make2 3.0 4.0 in
+         let v2 = Vector.make2 1.0 2.0 in
          assert_coords (Vector.assign v1 v2) [| 1.0; 2.0 |];
          assert_coords (v2) [| 1.0; 2.0 |]
       ) ;
       ("assign_1" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
-         let v2 = mkvector2 1.0 2.0 in
+         let v1 = Vector.make2 3.0 4.0 in
+         let v2 = Vector.make2 1.0 2.0 in
          assert_coords (Vector.assign v2 v1) [| 3.0; 4.0 |];
          assert_coords (v1) [| 3.0; 4.0 |]
       ) ;
       ("set_0" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
+         let v1 = Vector.make2 3.0 4.0 in
          assert_coords (Vector.set (Vector.set v1 0 1.0) 1 2.0) [| 1.0; 2.0 |];
       ) ;
 (*       ("matrix_mult" >::
@@ -207,48 +207,48 @@ let test_suite_vector_in_place =
     "in_place" >::: [
       ("normalize2_0" >::
          fun ctxt ->
-         let v1 = mkvector2 0.0 1.0 in
+         let v1 = Vector.make2 0.0 1.0 in
          (* ignore (v1#normalize) ; *)
          assert_coords (Vector.normalize v1) [| 0.0; 1.0 |]
       ) ;
       ("normalize2_1" >::
          fun ctxt ->
-         let v1 = mkvector2 1.0 0.0 in
+         let v1 = Vector.make2 1.0 0.0 in
          (* ignore (v1#normalize) ; *)
          assert_coords (Vector.normalize v1) [| 1.0; 0.0 |]
       ) ;
       ("normalize2_2" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
+         let v1 = Vector.make2 3.0 4.0 in
          (* ignore (v1#normalize) ; *)
          assert_coords (Vector.normalize v1) [| 0.6; 0.8 |]
       ) ;
       ("scale_0" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
+         let v1 = Vector.make2 3.0 4.0 in
          assert_coords (Vector.scale v1 2.0) [| 6.0; 8.0 |];
       ) ;
      ("add2_0" >::
          fun ctxt ->
-         let v1 = mkvector2 1.0 2.0 in
-         let v2 = mkvector2 3.0 1.0 in
+         let v1 = Vector.make2 1.0 2.0 in
+         let v2 = Vector.make2 3.0 1.0 in
          assert_coords (Vector.add v1 v2) [| 4.0; 3.0 |]
       ) ;
       ("add2_1" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 5.0 in
-         let v2 = mkvector2 1.0 0.0 in
+         let v1 = Vector.make2 3.0 5.0 in
+         let v2 = Vector.make2 1.0 0.0 in
          assert_coords (Vector.add v1 v2) [| 4.0; 5.0 |]
       ) ;
       ("add2_scaled_0" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 5.0 in
-         let v2 = mkvector2 1.0 0.0 in
+         let v1 = Vector.make2 3.0 5.0 in
+         let v2 = Vector.make2 1.0 0.0 in
          assert_coords (Vector.add_scaled v1 v2 2.0) [| 5.0; 5.0 |]
       ) ;
       ("add2_scaled_1" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 5.0 in
+         let v1 = Vector.make2 3.0 5.0 in
          assert_coords (Vector.add_scaled v1 v1 (-. 1.0)) [| 0.0; 0.0 |]
       ) ;
     ]
@@ -258,7 +258,7 @@ let test_suite_vector_interrogation =
     "interrogation" >::: [
       ("modulus_0" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
+         let v1 = Vector.make2 3.0 4.0 in
          assert_equal_float "Modulus" (Vector.modulus v1) 5.0;
          assert_equal_float "Modulus" (Vector.modulus (Vector.scale v1 2.0)) 10.0;
          assert_equal_float "Modulus" (Vector.modulus (Vector.scale v1 2.0)) 20.0;
@@ -266,7 +266,7 @@ let test_suite_vector_interrogation =
       ) ;
       ("modulus_1" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
+         let v1 = Vector.make2 3.0 4.0 in
          assert_equal_float "Modulus" (Vector.modulus_squared v1) 25.0;
          assert_equal_float "Modulus" (Vector.modulus_squared (Vector.scale v1 2.0)) 100.0;
          assert_equal_float "Modulus" (Vector.modulus_squared (Vector.scale v1 2.0)) 400.0;
@@ -279,15 +279,15 @@ let test_suite_vector_vector3 =
   "vector3" >::: [
       ("dot_product_0" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
-         let v2 = mkvector2 3.0 4.0 in
+         let v1 = Vector.make2 3.0 4.0 in
+         let v2 = Vector.make2 3.0 4.0 in
          assert_equal_float "Commutative" (Vector.dot_product v1 v2) (Vector.dot_product v2 v1);
          assert_equal_float "Result"      (Vector.dot_product v1 v2) 25.0;
       ) ;
       ("dot_product_1" >::
          fun ctxt ->
-         let v1 = mkvector2 3.0 4.0 in
-         let v2 = mkvector2 4.0 (-. 3.0) in
+         let v1 = Vector.make2 3.0 4.0 in
+         let v2 = Vector.make2 4.0 (-. 3.0) in
          assert_equal_float "Commutative" (Vector.dot_product v1 v2) (Vector.dot_product v2 v1);
          assert_equal_float "Result"      (Vector.dot_product v1 v2) 0.0;
       ) ;
@@ -357,19 +357,19 @@ let test_suite_matrix_create =
     "create" >::: [
         ("2x2" >::
            fun ctxt ->
-           let m = mkmatrix 2 2 in
+           let m = Matrix.make 2 2 in
            assert_equal_int "nrows" (Matrix.nrows m) 2 ;
            assert_equal_int "ncols" (Matrix.ncols m) 2
         ) ;
         ("3x3" >::
            fun ctxt ->
-           let m = mkmatrix 3 3 in
+           let m = Matrix.make 3 3 in
            assert_equal_int "nrows" (Matrix.nrows m) 3 ;
            assert_equal_int "ncols" (Matrix.ncols m) 3
         ) ;
         ("4x2" >::
            fun ctxt ->
-           let m = mkmatrix 4 2 in
+           let m = Matrix.make 4 2 in
            assert_equal_int "nrows" (Matrix.nrows m) 4 ;
            assert_equal_int "ncols" (Matrix.ncols m) 2
         ) ;
@@ -401,7 +401,7 @@ let test_suite_matrix_assign =
     "assign" >::: [
         ("2x2" >::
            fun ctxt ->
-           let m = mkmatrix 2 2 in
+           let m = Matrix.make 2 2 in
            ignore (Matrix.set (Matrix.set m 0 0 3.0) 0 1 2.0) ;
            assert_equal_int "nrows" (Matrix.nrows m) 2 ;
            assert_equal_int "ncols" (Matrix.ncols m) 2 ;
@@ -412,7 +412,7 @@ let test_suite_matrix_assign =
         ) ;
         ("2x2" >::
            fun ctxt ->
-           let m = mkmatrix 2 2 in
+           let m = Matrix.make 2 2 in
            ignore (Matrix.set (Matrix.set m 0 0 1.0) 0 1 2.0) ;
            ignore (Matrix.set (Matrix.set m 1 0 3.0) 1 1 4.0) ;
            assert_equal_int "nrows" (Matrix.nrows m) 2 ;
@@ -424,21 +424,21 @@ let test_suite_matrix_assign =
         ) ;
         ("transpose_2x2" >::
            fun ctxt ->
-           let m = mkmatrix 2 2 in
+           let m = Matrix.make 2 2 in
            ignore (Matrix.set (Matrix.set m 0 0 1.0) 0 1 2.0) ;
            ignore (Matrix.set (Matrix.set m 1 0 3.0) 1 1 4.0) ;
            test_transpose ctxt m
         ) ;
         ("transpose_4x2" >::
            fun ctxt ->
-           let m = mkmatrix 4 2 in
+           let m = Matrix.make 4 2 in
            ignore (Matrix.set (Matrix.set m 0 0 1.0) 0 1 2.0) ;
            ignore (Matrix.set (Matrix.set m 1 0 3.0) 1 1 4.0) ;
            test_transpose ctxt m
         ) ;
         ("transpose_1x2" >::
            fun ctxt ->
-           let m = mkmatrix 1 2 in
+           let m = Matrix.make 1 2 in
            ignore (Matrix.set (Matrix.set m 0 0 1.0) 0 1 2.0) ;
            test_transpose ctxt m
         ) ;
@@ -448,7 +448,7 @@ let test_suite_matrix_interrogation =
     "interrogate" >::: [
         ("3x3" >::
            fun ctxt ->
-           let m = mkmatrix 3 3 in
+           let m = Matrix.make 3 3 in
            assert_equal_int "nrows" (Matrix.nrows m) 3 ;
            assert_equal_int "ncols" (Matrix.ncols m) 3 ;
            assert_vector ((Matrix.row_vector m) 0) zero3 ;
@@ -460,7 +460,7 @@ let test_suite_matrix_interrogation =
         ) ;
         ("2x1" >::
            fun ctxt ->
-           let m = mkmatrix 2 1 in
+           let m = Matrix.make 2 1 in
            ignore (Matrix.set (Matrix.set m 0 0 1.0) 0 1 2.0) ;
            assert_coords ((Matrix.row_vector m) 0) [|1.0; |] ;
            assert_coords ((Matrix.row_vector m) 1) [|2.0; |] ;
@@ -468,7 +468,7 @@ let test_suite_matrix_interrogation =
         ) ;
         ("1x2" >::
            fun ctxt ->
-           let m = mkmatrix 1 2 in
+           let m = Matrix.make 1 2 in
            ignore (Matrix.set (Matrix.set m 0 0 1.0) 0 1 2.0) ;
            assert_coords ((Matrix.col_vector m) 0) [|1.0; |] ;
            assert_coords ((Matrix.col_vector m) 1) [|2.0; |] ;
@@ -476,7 +476,7 @@ let test_suite_matrix_interrogation =
         ) ;
         ("3x3_identity" >::
            fun ctxt ->
-           let m = mkmatrix 3 3 in
+           let m = Matrix.make 3 3 in
            ignore (Matrix.identity m);
            assert_equal_int "nrows" (Matrix.nrows m) 3 ;
            assert_equal_int "ncols" (Matrix.ncols m) 3 ;
@@ -494,7 +494,7 @@ let test_suite_matrix_operation =
     "operation" >::: [
         ("scale2x2" >::
            fun ctxt ->
-           let m = mkmatrix 2 2 in
+           let m = Matrix.make 2 2 in
            ignore (Matrix.scale (Matrix.identity m) 2.0) ;
            assert_coords ((Matrix.row_vector m) 0) [|2.0; 0.0|];
            assert_coords ((Matrix.row_vector m) 1) [|0.0; 2.0|];
@@ -583,38 +583,38 @@ let test_suite_quaternion_create =
     "create" >::: [
         ("zero" >::
            fun ctxt ->
-           let q = mkquaternion in
+           let q = Quaternion.make () in
            assert_equal_quat "zero" q [|0.0; 0.0; 0.0; 0.0|]
         ) ;
         ("1234" >::
            fun ctxt ->
-           let q = mkquaternion_rijk 1.0 2.0 3.0 4.0 in
+           let q = Quaternion.make_rijk 1.0 2.0 3.0 4.0 in
            assert_equal_quat "1234" q [|1.0; 2.0; 3.0; 4.0|]
         ) ;
         ("1234r" >::
            fun ctxt ->
-           let q = Quaternion.reciprocal(mkquaternion_rijk 1.0 2.0 3.0 4.0) in
+           let q = Quaternion.reciprocal(Quaternion.make_rijk 1.0 2.0 3.0 4.0) in
            let m = Quaternion.modulus_squared q in
             Printf.printf "Modulus %f\n" m ;
            assert_equal_quat "1234r" q [|1.0*.m; (-. 2.0)*.m; (-. 3.0)*.m; (-. 4.0)*.m|]
         ) ;
         ("1234c" >::
            fun ctxt ->
-           let q = Quaternion.conjugate(mkquaternion_rijk 1.0 2.0 3.0 4.0) in
+           let q = Quaternion.conjugate(Quaternion.make_rijk 1.0 2.0 3.0 4.0) in
            assert_equal_quat "1234c" q [|1.0; -.2.0; -.3.0; -.4.0;|]
         ) ;
         ("1234c2" >::
            fun ctxt ->
-           let q =  Quaternion.conjugate(mkquaternion_rijk 1.0 2.0 3.0 4.0) in
-           let q2 = mkquaternion in
+           let q =  Quaternion.conjugate(Quaternion.make_rijk 1.0 2.0 3.0 4.0) in
+           let q2 = Quaternion.make () in
            assert_equal_quat "1234c" q2 [|0.0; 0.0; 0.0; 0.0|] ;
            ignore (Quaternion.assign q2 q ); (* q2 <= q *)
            assert_equal_quat "1234c" q2 [|1.0; -.2.0; -.3.0; -.4.0;|] 
         ) ;
         ("rotation" >::
            fun ctxt ->
-           let q =  mkquaternion in
-           let q2 = mkquaternion in
+           let q =  Quaternion.make () in
+           let q2 = Quaternion.make () in
            let v = Vector.copy(x3) in
            let x = Vector.copy(x3) in
            let y = Vector.copy(y3) in
@@ -622,9 +622,9 @@ let test_suite_quaternion_create =
            let (c,s) = Vector.assign_q_as_rotation v (Quaternion.assign_lookat q z y) in
            Printf.printf "\nQ %s" (Quaternion.repr q) ;
            let (c,s) = Vector.assign_q_as_rotation v (Quaternion.assign_lookat q z x) in
-           Printf.printf "\nQ of X %s" (Vector.repr (Vector.apply_q (mkvector3 1.0 0.0 0.0) q));
-           Printf.printf "\nQ of Y %s" (Vector.repr (Vector.apply_q (mkvector3 0.0 1.0 0.0) q));
-           Printf.printf "\nQ of Z %s" (Vector.repr (Vector.apply_q (mkvector3 0.0 0.0 1.0) q));
+           Printf.printf "\nQ of X %s" (Vector.repr (Vector.apply_q (Vector.make3 1.0 0.0 0.0) q));
+           Printf.printf "\nQ of Y %s" (Vector.repr (Vector.apply_q (Vector.make3 0.0 1.0 0.0) q));
+           Printf.printf "\nQ of Z %s" (Vector.repr (Vector.apply_q (Vector.make3 0.0 0.0 1.0) q));
            Printf.printf "\nV %s" (Vector.repr v) ;
            Printf.printf "\nCos/sin %f %f\n" c s
         ) ;
@@ -633,7 +633,7 @@ let test_suite_quaternion_create =
 let test_suite_quaternion_modulus = 
     "modulus" >::: [
         ("test0" >::
-           fun ctxt -> let q = mkquaternion_rijk 1.0 0.0 0.0 0.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 1.0 0.0 0.0 0.0 in
            let qc = Quaternion.conjugate (Quaternion.copy q) in
            let qcq = Quaternion.postmultiply (Quaternion.copy q) qc in
            let r = (Quaternion.get_rijk qcq).(0) in
@@ -642,22 +642,22 @@ let test_suite_quaternion_modulus =
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
         ("test1" >::
-           fun ctxt -> let q = mkquaternion_rijk 0.0 1.0 0.0 0.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 0.0 1.0 0.0 0.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 1.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
         ("test2" >::
-           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 1.0 0.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 0.0 0.0 1.0 0.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 1.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
         ("test3" >::
-           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 0.0 1.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 0.0 0.0 0.0 1.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 1.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
         ("test0" >::
-           fun ctxt -> let q = mkquaternion_rijk 2.0 0.0 0.0 0.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 2.0 0.0 0.0 0.0 in
            let qc = Quaternion.conjugate (Quaternion.copy q) in
            let qcq = Quaternion.postmultiply (Quaternion.copy q) qc in
            let r = (Quaternion.get_rijk qcq).(0) in
@@ -667,22 +667,22 @@ let test_suite_quaternion_modulus =
            
         ) ;
         ("test1" >::
-           fun ctxt -> let q = mkquaternion_rijk 0.0 2.0 0.0 0.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 0.0 2.0 0.0 0.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 2.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
         ("test2" >::
-           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 2.0 0.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 0.0 0.0 2.0 0.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 2.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
         ("test3" >::
-           fun ctxt -> let q = mkquaternion_rijk 0.0 0.0 0.0 2.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 0.0 0.0 0.0 2.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 2.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
         ("test4" >::
-           fun ctxt -> let q = mkquaternion_rijk 3.0 4.0 12.0 84.0 in
+           fun ctxt -> let q = Quaternion.make_rijk 3.0 4.0 12.0 84.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 85.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
@@ -692,17 +692,17 @@ let test_suite_quaternion_operation =
     "operation" >::: [
         ("add_scaled" >::
            fun ctxt ->
-           let q1 = mkquaternion_rijk 1.0 2.0 3.0 4.0 in
-           let q2 = mkquaternion_rijk 4.0 3.0 2.0 1.0 in
+           let q1 = Quaternion.make_rijk 1.0 2.0 3.0 4.0 in
+           let q2 = Quaternion.make_rijk 4.0 3.0 2.0 1.0 in
            assert_equal_quat "q2+1*q1" (Quaternion.add_scaled q2 q1 2.0) [|6.0; 7.0; 8.0; 9.0|] ;
            assert_equal_quat "zero"    (Quaternion.add_scaled q1 q1 (-.1.0)) [|0.0; 0.0; 0.0; 0.0|] ;
            assert_equal_quat "q2+1*q1" (Quaternion.add_scaled q2 q1 2.0) [|6.0; 7.0; 8.0; 9.0|]
         ) ;
         ("multiply" >::
            fun ctxt ->
-           let q = mkquaternion in
-           let q1 = mkquaternion_rijk 1.0 2.0 3.0 4.0 in
-           let q2 = mkquaternion_rijk 4.0 3.0 2.0 1.0 in
+           let q = Quaternion.make () in
+           let q1 = Quaternion.make_rijk 1.0 2.0 3.0 4.0 in
+           let q2 = Quaternion.make_rijk 4.0 3.0 2.0 1.0 in
            assert_equal_quat "q2*q1" (Quaternion.premultiply (Quaternion.copy q2) q1) [|-.12.0; 6.0; 24.0; 12.0|] ;
            assert_equal_quat "q2*q1" (Quaternion.premultiply (Quaternion.copy q2) q1) (Quaternion.get_rijk (Quaternion.postmultiply (Quaternion.copy q1) q2));
            assert_equal_quat "q2*q1" (Quaternion.premultiply (Quaternion.copy q1) q2) (Quaternion.get_rijk (Quaternion.postmultiply (Quaternion.copy q2) q1));

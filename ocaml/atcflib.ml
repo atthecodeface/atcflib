@@ -221,6 +221,10 @@ module rec Vector : sig
     val dot_product          : t -> t -> float
     val cross_product3       : t -> t -> t
     val angle_axis_to3       : t -> t -> t * float * float
+    val make                 : int -> t
+    val make2                : float -> float -> t
+    val make3                : float -> float -> float -> t
+    val make4                : float -> float -> float -> float -> t
     val repr                 : t -> string
 end = struct
     type t = { cv : c_vector }
@@ -244,6 +248,11 @@ end = struct
      let apply_q m q = (v_apply_q m.cv (Quaternion.get_cq q)) ; m
      let cross_product3 m v2 = Vector.create(v_cross_product m.cv v2.cv)
      let angle_axis_to3 m v2 = let (va,c,s) = v_angle_axis_to m.cv v2.cv in (Vector.create(va),c,s)
+     let make n = { cv = v_create n }
+     let make2 c0 c1 = let v = make 2 in set (set v 0 c0) 1 c1
+     let make3 c0 c1 c2 = let v = make 3 in set (set (set v 0 c0) 1 c1) 2 c2
+     let make4 c0 c1 c2 c3 = let v = make 4 in set (set (set (set v 0 c0) 1 c1) 2 c2) 3 c3
+     let matrix_x_vector m v = assign_m_v (copy v) m v
      let repr m = let f c s = (Printf.sprintf "%f%s " c s) in Array.fold_right f (v_coords m.cv) ""
 end
 and Matrix : sig
@@ -268,6 +277,8 @@ and Matrix : sig
     val lup_get_u     : t -> t
     val lup_invert    : t -> t
     val lup_inverse   : t -> t
+    val make          : int -> int -> t
+    val matrix_x_matrix : t -> t -> t
     val repr          : t -> string
 end = struct
      type t = { cm: c_matrix }
@@ -287,10 +298,12 @@ end = struct
      let apply m v         = Vector.create(m_apply m.cm v.Vector.cv)
      let assign_m_m m m1 m2 = m_assign_m_m m.cm m1.cm m2.cm ; m
      let lup_decompose m = Vector.create(m_lup_decompose m.cm)
-     let lup_get_l m    = (m_lup_get_l m.cm)  ; m
-     let lup_get_u m    = (m_lup_get_u m.cm)  ; m
-     let lup_invert m   = (m_lup_invert m.cm) ; m
-     let lup_inverse m  = Matrix.create(m_lup_inverse m.cm)
+     let lup_get_l m     = (m_lup_get_l m.cm)  ; m
+     let lup_get_u m     = (m_lup_get_u m.cm)  ; m
+     let lup_invert m    = (m_lup_invert m.cm) ; m
+     let lup_inverse m   = create(m_lup_inverse m.cm)
+     let make r c        = create (m_create r c)
+     let matrix_x_matrix m1 m2 = assign_m_m (make (nrows m1) (ncols m2)) m1 m2
      let repr m = let f c s = (Printf.sprintf "%f%s " c s) in
                   let rec show_row r l s =
                          if r==l then s
@@ -318,12 +331,14 @@ and Quaternion : sig
     val modulus_squared   : t -> float
     val premultiply       : t -> t -> t
     val postmultiply      : t -> t -> t
+    val make              : unit -> t
+    val make_rijk         : float -> float -> float -> float -> t
     val repr              : t -> string
 end = struct
      type t = { cq: c_quaternion }
      let create (cq_in:c_quaternion) = { cq = cq_in }
      let get_cq q = q.cq
-     let copy   q = Quaternion.create (q_clone q.cq)
+     let copy   q = create (q_clone q.cq)
      let get_rijk q    = q_get_rijk q.cq
      let assign q q1   = q_assign_q q.cq q1.cq ; q
      let assign_q_q q q1 q2 = (q_assign_q q.cq q1.cq) ; (q_postmultiply q.cq q2.cq) ; q
@@ -337,45 +352,8 @@ end = struct
      let modulus_squared q                      = q_modulus_squared q.cq
      let premultiply q q2      = q_premultiply q.cq q2.cq ; q
      let postmultiply q q2     = q_postmultiply q.cq q2.cq ; q
+     let make _ = create (q_create ())
+     let make_rijk r i j k = create (q_create_rijk r i j k)
      let repr q = let rijk=(q_get_rijk q.cq) in (Printf.sprintf "%f,%f,%f,%f " rijk.(0) rijk.(1) rijk.(2) rijk.(3))
 end
-
-    
-(*a Vector constructors *)
-let mkvector n =
-  Vector.create(v_create n)
-
-let mkvector2 c0 c1 =
-  let v = mkvector 2 in
-  Vector.set v 0 c0 ;
-  Vector.set v 1 c1
-
-let mkvector3 c0 c1 c2 =
-  let v = mkvector 3 in
-  Vector.set v 0 c0 ;
-  Vector.set v 1 c1 ;
-  Vector.set v 2 c2
-
-let mkvector4 c0 c1 c2 c3 =
-  let v = mkvector 4 in
-  Vector.set v 0 c0 ;
-  Vector.set v 1 c1 ;
-  Vector.set v 2 c2 ;
-  Vector.set v 3 c3
-
-let matrix_x_vector m v = (Vector.assign_m_v (Vector.copy v) m v)
-
-(*a Matrix *)
-
-let mkmatrix r c =
-  Matrix.create (m_create r c)
-let matrix_x_matrix m1 m2 =
- Matrix.assign_m_m (Matrix.copy m1) m1 m2
-
-(*a Quaternion *)
-let mkquaternion =
-  Quaternion.create (q_create ())
-
-let mkquaternion_rijk r i j k =
-  Quaternion.create (q_create_rijk r i j k)
 

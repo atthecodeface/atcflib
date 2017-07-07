@@ -184,174 +184,6 @@ val quaternion :
      premultiply : 'a -> 'a; reciprocal : 'a; repr : 'a;
      scale : float -> 'a >
    as 'a)
-val mkvector :
-  int ->
-  (< add : 'a -> 'a; add_scaled : 'a -> float -> 'a;
-     angle_axis_to3 : 'a -> 'a * float * float;
-     apply_q : (< add_scaled : 'b -> float -> 'b; assign : 'b -> 'b;
-                  assign_lookat : 'a -> 'a -> 'b;
-                  assign_of_rotation : 'a -> float -> float -> 'b;
-                  assign_q_q : 'b -> 'b -> 'b; conjugate : 'b; copy : 'b;
-                  get_cq : c_quaternion; get_rijk : float array;
-                  modulus : float; modulus_squared : float;
-                  postmultiply : 'b -> 'b; premultiply : 'b -> 'b;
-                  reciprocal : 'b; repr : 'b; scale : float -> 'b >
-                as 'b) ->
-               'a;
-     assign : 'a -> 'a;
-     assign_m_v : (< add_scaled : 'c -> float -> 'c; apply : 'a -> 'a;
-                     assign_m_m : 'c -> 'c -> 'c; col_vector : int -> 'a;
-                     copy : 'c; get_cm : c_matrix; identity : 'c;
-                     lup_decompose : 'a; lup_get_l : 'c; lup_get_u : 'c;
-                     lup_inverse : 'c; lup_invert : 'c; ncols : int;
-                     nrows : int; repr : 'c; row_vector : int -> 'a;
-                     scale : float -> 'c; set : int -> int -> float -> 'c;
-                     transpose : 'c >
-                   as 'c) ->
-                  'a -> 'a;
-     assign_q_as_rotation : 'b -> float * float; coords : float array;
-     copy : 'a; cross_product3 : 'a -> 'a; dot_product : 'a -> float;
-     get_cv : c_vector; length : int; modulus : float;
-     modulus_squared : float; normalize : 'a; repr : 'a; scale : float -> 'a;
-     set : int -> float -> 'a >
-   as 'a)
-val mkvector2 :
-  float ->
-  float ->
-  (< add : 'a -> 'a; add_scaled : 'a -> float -> 'a;
-     angle_axis_to3 : 'a -> 'a * float * float;
-     apply_q : (< add_scaled : 'b -> float -> 'b; assign : 'b -> 'b;
-                  assign_lookat : 'a -> 'a -> 'b;
-                  assign_of_rotation : 'a -> float -> float -> 'b;
-                  assign_q_q : 'b -> 'b -> 'b; conjugate : 'b; copy : 'b;
-                  get_cq : c_quaternion; get_rijk : float array;
-                  modulus : float; modulus_squared : float;
-                  postmultiply : 'b -> 'b; premultiply : 'b -> 'b;
-                  reciprocal : 'b; repr : 'b; scale : float -> 'b >
-                as 'b) ->
-               'a;
-     assign : 'a -> 'a;
-     assign_m_v : (< add_scaled : 'c -> float -> 'c; apply : 'a -> 'a;
-                     assign_m_m : 'c -> 'c -> 'c; col_vector : int -> 'a;
-                     copy : 'c; get_cm : c_matrix; identity : 'c;
-                     lup_decompose : 'a; lup_get_l : 'c; lup_get_u : 'c;
-                     lup_inverse : 'c; lup_invert : 'c; ncols : int;
-                     nrows : int; repr : 'c; row_vector : int -> 'a;
-                     scale : float -> 'c; set : int -> int -> float -> 'c;
-                     transpose : 'c >
-                   as 'c) ->
-                  'a -> 'a;
-     assign_q_as_rotation : 'b -> float * float; coords : float array;
-     copy : 'a; cross_product3 : 'a -> 'a; dot_product : 'a -> float;
-     get_cv : c_vector; length : int; modulus : float;
-     modulus_squared : float; normalize : 'a; repr : 'a; scale : float -> 'a;
-     set : int -> float -> 'a >
-   as 'a)
-val mkvector3 :
-  float ->
-  float ->
-  float ->
-  (< add : 'a -> 'a; add_scaled : 'a -> float -> 'a;
-     angle_axis_to3 : 'a -> 'a * float * float;
-     apply_q : (< add_scaled : 'b -> float -> 'b; assign : 'b -> 'b;
-                  assign_lookat : 'a -> 'a -> 'b;
-                  assign_of_rotation : 'a -> float -> float -> 'b;
-                  assign_q_q : 'b -> 'b -> 'b; conjugate : 'b; copy : 'b;
-                  get_cq : c_quaternion; get_rijk : float array;
-                  modulus : float; modulus_squared : float;
-                  postmultiply : 'b -> 'b; premultiply : 'b -> 'b;
-                  reciprocal : 'b; repr : 'b; scale : float -> 'b >
-                as 'b) ->
-               'a;
-     assign : 'a -> 'a;
-     assign_m_v : (< add_scaled : 'c -> float -> 'c; apply : 'a -> 'a;
-                     assign_m_m : 'c -> 'c -> 'c; col_vector : int -> 'a;
-                     copy : 'c; get_cm : c_matrix; identity : 'c;
-                     lup_decompose : 'a; lup_get_l : 'c; lup_get_u : 'c;
-                     lup_inverse : 'c; lup_invert : 'c; ncols : int;
-                     nrows : int; repr : 'c; row_vector : int -> 'a;
-                     scale : float -> 'c; set : int -> int -> float -> 'c;
-                     transpose : 'c >
-                   as 'c) ->
-                  'a -> 'a;
-     assign_q_as_rotation : 'b -> float * float; coords : float array;
-     copy : 'a; cross_product3 : 'a -> 'a; dot_product : 'a -> float;
-     get_cv : c_vector; length : int; modulus : float;
-     modulus_squared : float; normalize : 'a; repr : 'a; scale : float -> 'a;
-     set : int -> float -> 'a >
-   as 'a)
-val mkvector4 :
-  float ->
-  float ->
-  float ->
-  float ->
-  (< add : 'a -> 'a; add_scaled : 'a -> float -> 'a;
-     angle_axis_to3 : 'a -> 'a * float * float;
-     apply_q : (< add_scaled : 'b -> float -> 'b; assign : 'b -> 'b;
-                  assign_lookat : 'a -> 'a -> 'b;
-                  assign_of_rotation : 'a -> float -> float -> 'b;
-                  assign_q_q : 'b -> 'b -> 'b; conjugate : 'b; copy : 'b;
-                  get_cq : c_quaternion; get_rijk : float array;
-                  modulus : float; modulus_squared : float;
-                  postmultiply : 'b -> 'b; premultiply : 'b -> 'b;
-                  reciprocal : 'b; repr : 'b; scale : float -> 'b >
-                as 'b) ->
-               'a;
-     assign : 'a -> 'a;
-     assign_m_v : (< add_scaled : 'c -> float -> 'c; apply : 'a -> 'a;
-                     assign_m_m : 'c -> 'c -> 'c; col_vector : int -> 'a;
-                     copy : 'c; get_cm : c_matrix; identity : 'c;
-                     lup_decompose : 'a; lup_get_l : 'c; lup_get_u : 'c;
-                     lup_inverse : 'c; lup_invert : 'c; ncols : int;
-                     nrows : int; repr : 'c; row_vector : int -> 'a;
-                     scale : float -> 'c; set : int -> int -> float -> 'c;
-                     transpose : 'c >
-                   as 'c) ->
-                  'a -> 'a;
-     assign_q_as_rotation : 'b -> float * float; coords : float array;
-     copy : 'a; cross_product3 : 'a -> 'a; dot_product : 'a -> float;
-     get_cv : c_vector; length : int; modulus : float;
-     modulus_squared : float; normalize : 'a; repr : 'a; scale : float -> 'a;
-     set : int -> float -> 'a >
-   as 'a)
-val matrix_x_vector :
-  'a -> (< copy : < assign_m_v : 'a -> 'b -> 'c; .. >; .. > as 'b) -> 'c
-val mkmatrix :
-  int ->
-  int ->
-  (< add_scaled : 'a -> float -> 'a;
-     apply : (< add : 'b -> 'b; add_scaled : 'b -> float -> 'b;
-                angle_axis_to3 : 'b -> 'b * float * float;
-                apply_q : (< add_scaled : 'c -> float -> 'c;
-                             assign : 'c -> 'c;
-                             assign_lookat : 'b -> 'b -> 'c;
-                             assign_of_rotation : 'b -> float -> float -> 'c;
-                             assign_q_q : 'c -> 'c -> 'c; conjugate : 'c;
-                             copy : 'c; get_cq : c_quaternion;
-                             get_rijk : float array; modulus : float;
-                             modulus_squared : float;
-                             postmultiply : 'c -> 'c; premultiply : 'c -> 'c;
-                             reciprocal : 'c; repr : 'c;
-                             scale : float -> 'c >
-                           as 'c) ->
-                          'b;
-                assign : 'b -> 'b; assign_m_v : 'a -> 'b -> 'b;
-                assign_q_as_rotation : 'c -> float * float;
-                coords : float array; copy : 'b; cross_product3 : 'b -> 'b;
-                dot_product : 'b -> float; get_cv : c_vector; length :
-                int; modulus : float; modulus_squared : float;
-                normalize : 'b; repr : 'b; scale : float -> 'b;
-                set : int -> float -> 'b >
-              as 'b) ->
-             'b;
-     assign_m_m : 'a -> 'a -> 'a; col_vector : int -> 'b; copy : 'a;
-     get_cm : c_matrix; identity : 'a; lup_decompose : 'b; lup_get_l : 'a;
-     lup_get_u : 'a; lup_inverse : 'a; lup_invert : 'a; ncols : int;
-     nrows : int; repr : 'a; row_vector : int -> 'b; scale : float -> 'a;
-     set : int -> int -> float -> 'a; transpose : 'a >
-   as 'a)
-val matrix_x_matrix :
-  (< copy : < assign_m_m : 'a -> 'b -> 'c; .. >; .. > as 'a) -> 'b -> 'c
 
 module type Timer =
   sig
@@ -432,6 +264,14 @@ and Quaternion :
     val postmultiply : t -> t -> t
     val repr : t -> string
   end
+
+val mkvector : int -> Vector.t
+val mkvector2 : float -> float -> Vector.t
+val mkvector3 : float -> float -> float -> Vector.t
+val mkvector4 : float -> float -> float -> float -> Vector.t
+
+val mkmatrix : int -> int -> Matrix.t
+val matrix_x_matrix : Matrix.t -> Matrix.t -> Matrix.t
 
 val mkquaternion : Quaternion.t
 val mkquaternion_rijk : float -> float -> float -> float -> Quaternion.t

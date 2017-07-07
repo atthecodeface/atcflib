@@ -265,24 +265,6 @@ and
          method repr = let rijk=self#get_rijk in Printf.printf "%f,%f,%f,%f " rijk.(0) rijk.(1) rijk.(2) rijk.(3); self
   end
 
-(*a Vector constructors *)
-let mkvector n =
-  vector (v_create n)
-let mkvector2 c0 c1 =
-  ((vector (v_create 2))#set 0 c0) #set 1 c1
-let mkvector3 c0 c1 c2 =
-  (((vector (v_create 3))#set 0 c0)#set 1 c1)#set 2 c2
-let mkvector4 c0 c1 c2 c3 =
-  ((((vector (v_create 4))#set 0 c0)#set 1 c1)#set 2 c2)#set 3 c3
-
-let matrix_x_vector m v = (v#copy)#assign_m_v m v
-
-(*a Matrix *)
-
-let mkmatrix r c =
-  matrix (m_create r c)
-let matrix_x_matrix m1 m2 = (m1#copy)#assign_m_m m1 m2
-
 (*a Timer module *)
 module type Timer = sig
     type t ={ c : t_timer }
@@ -334,7 +316,7 @@ end = struct
      let length m = v_length m.cv
      let set m ~n ~f   = v_set m.cv n f ; m
      let assign m v2  = v_assign m.cv v2.cv ; m
-     let assign_m_v m m2 v2  = v_assign_m_v m.cv (Matrix.get_cm m2) v2.cv ; m
+     let assign_m_v m m2 v2  = v_assign_m_v m.cv m2.Matrix.cm v2.cv ; m
      let add_scaled m v2 ~f = v_add_scaled m.cv v2.cv f; m
      let add m v2 = v_add_scaled m.cv v2.cv 1.0; m
      let normalize m = v_normalize m.cv ; m
@@ -444,6 +426,37 @@ end = struct
 end
 
     
+(*a Vector constructors *)
+let mkvector n =
+  Vector.create(v_create n)
+
+let mkvector2 c0 c1 =
+  let v = mkvector 2 in
+  Vector.set v 0 c0 ;
+  Vector.set v 1 c1
+
+let mkvector3 c0 c1 c2 =
+  let v = mkvector 3 in
+  Vector.set v 0 c0 ;
+  Vector.set v 1 c1 ;
+  Vector.set v 2 c2
+
+let mkvector4 c0 c1 c2 c3 =
+  let v = mkvector 4 in
+  Vector.set v 0 c0 ;
+  Vector.set v 1 c1 ;
+  Vector.set v 2 c2 ;
+  Vector.set v 3 c3
+
+let matrix_x_vector m v = (Vector.assign_m_v (Vector.copy v) m v)
+
+(*a Matrix *)
+
+let mkmatrix r c =
+  Matrix.create (m_create r c)
+let matrix_x_matrix m1 m2 =
+ Matrix.assign_m_m (Matrix.copy m1) m1 m2
+
 (*a Quaternion *)
 let mkquaternion =
   Quaternion.create (q_create ())

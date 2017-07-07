@@ -28,6 +28,7 @@ atcflib.cmxa: ocaml_timer.cpp ocaml_vector.cpp ocaml_matrix.cpp ocaml_quaternion
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_matrix.cpp
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c ocaml_quaternion.cpp
 	# The next one creates atcflib.cmi, atcflib.cmx, atcflib.o
+	$(OCAMLFIND) ocamlopt  -linkpkg -package core -c atcflib.mli -thread 
 	@echo "Compile atcflib.ml"
 	@$(OCAMLFIND) ocamlopt  -linkpkg -package core -c atcflib.ml -thread 
 	# The next one creates atcflib.cmxa

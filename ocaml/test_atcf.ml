@@ -33,6 +33,7 @@ open Atcflib
 open OUnit
 
 (*a Test stuff *)
+let t = Atcflib.Vector.create (Atcflib.v_create 2)
 
 (*a Helper functions *)
 (*f sfmt <string format> <arg> * -> string

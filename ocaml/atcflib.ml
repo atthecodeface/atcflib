@@ -31,20 +31,20 @@
  It is also possible to use modules. For example:
 
 module type Vector = sig
-    type t ={ cv : c_vector }
+    type t = \{ cv : c_vector \}
     val create : c_vector -> t
     val get_cv : t -> c_vector
     val length : t -> int
     val set    : t -> n:int -> f:float  -> t
     end
 module type Matrix = sig
-    type t ={ cm: c_matrix }
+    type t = \{ cm: c_matrix \}
     val create : c_matrix -> t
     val get_cm : t -> c_matrix
     end
 module rec Vector : Vector = struct
-    type t = {cv:c_vector}
-     let create (cv_in:c_vector) = {cv = cv_in}
+    type t = \{ cv : c_vector \}
+     let create (cv_in:c_vector) = \{ cv = cv_in \}
      let get_cv m = m.cv
      let copy   m = Vector.create (v_clone (get_cv m))
      let coords m = v_coords m.cv
@@ -54,8 +54,8 @@ module rec Vector : Vector = struct
      let assign_m_v m m2 v2  = v_assign_m_v m.cv (Matrix.get_cm m2) v2.cv ; m
 end
 and Matrix : Matrix = struct
-    type t = {cm:c_matrix}
-     let create (cm_in:c_matrix) = {cm = cm_in}
+     type t = \{ cm: c_matrix \}
+     let create (cm_in:c_matrix) = \{ cm = cm_in \}
      let get_cm m = m.cm
      let copy   m = Matrix.create (m_clone (get_cm m))
      let apply  m (v:Vector.t) = Vector.create (m_apply m (Vector.get_cv v))
@@ -81,6 +81,13 @@ end
   methodology, as with any OCaml structure around the C++ library
   requires use of the C++ objects, which have also to be allocated for
   every new OCaml thing.
+
+  There is also a penalty for invoking methods on an object. To
+  evaluate this, the test 'test_time.ml' uses the Atcflib timer module
+  to time the invocation of methods, C calls, and module functions. On
+  a 2015 MacBook Pro (2.7GHz Intel i7) an object method invocation
+  takes 6ns more than a module function, which takes 0.5ns more than a
+  direct C function invocation. So the penalty is about 6ns.
 
  *)
 

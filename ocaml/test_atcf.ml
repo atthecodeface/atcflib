@@ -33,7 +33,6 @@ open Atcflib
 open OUnit
 
 (*a Test stuff *)
-let t = Atcflib.Vector.create (Atcflib.v_create 2)
 
 (*a Helper functions *)
 (*f sfmt <string format> <arg> * -> string
@@ -139,7 +138,7 @@ let test_suite_vector_create =
     "create" >::: [
         ("module" >::
            fun ctxt ->
-           let v = Vector.create(v_create 2) in
+           let v = (mkvector 2) in
            (Vector.set v ~n:0 ~f:1.0) |>
            Vector.set ~n:1 ~f:2.0 ;
            assert_equal_int "length" (Vector.length v) 2

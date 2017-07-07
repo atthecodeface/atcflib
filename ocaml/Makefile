@@ -47,8 +47,9 @@ camltest: atcflib.cmxa
 #	$(OCAMLFIND) ocamlopt -linkpkg -package tgls,tgls.tgl4,tsdl camltest2.ml camltestlib.cmxa -o camltest2.native
 
 camltime: atcflib.cmxa
+	@echo "The time code no longer runs as it depended on modules and class; older git versions have the correct atcflib"
 	@echo "Compile test_time.ml with atcflib.cmxa"
-	@$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_time.ml -o test_time.native
+	#@$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_time.ml -o test_time.native
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_time.native 
 
 .PHONY: doc

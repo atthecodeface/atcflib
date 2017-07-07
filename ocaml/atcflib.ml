@@ -283,13 +283,6 @@ let mkmatrix r c =
   matrix (m_create r c)
 let matrix_x_matrix m1 m2 = (m1#copy)#assign_m_m m1 m2
 
-(*a Quaternion *)
-let mkquaternion =
-  quaternion (q_create ())
-
-let mkquaternion_rijk r i j k =
-  quaternion (q_create_rijk r i j k)
-
 (*a Timer module *)
 module type Timer = sig
     type t ={ c : t_timer }
@@ -451,3 +444,10 @@ end = struct
 end
 
     
+(*a Quaternion *)
+let mkquaternion =
+  Quaternion.create (q_create ())
+
+let mkquaternion_rijk r i j k =
+  Quaternion.create (q_create_rijk r i j k)
+

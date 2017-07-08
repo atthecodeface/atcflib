@@ -181,17 +181,16 @@ let log = if verbose_log then
 (**/**)
 
 (*a Timer module *)
-module type Timer = sig
-    type t ={ c : t_timer }
-    val create   : unit -> t
-    val init     : t -> unit
-    val exit     : t -> unit
-    val entry    : t -> unit
-    val value_us : t -> float
-    end
-module Timer : Timer = struct
-    type t = {c:t_timer}
-    let create ()   = {c = t_create ()}
+module Timer : sig
+    type timer ={ c : t_timer }
+    val make     : unit -> timer
+    val init     : timer -> unit
+    val exit     : timer -> unit
+    val entry    : timer -> unit
+    val value_us : timer -> float
+end = struct
+    type timer = {c:t_timer}
+    let make ()     = {c = t_create ()}
     let init t      = t_init t.c
     let exit t      = t_exit t.c
     let entry t     = t_entry t.c
@@ -200,37 +199,35 @@ end
 
 (* Module version *)
 module rec Vector : sig
-    type t = { cv : c_vector }
-    val create  : c_vector -> t
-    val get_cv  : t -> c_vector
-    val length  : t -> int
-    val copy    : t -> t
-    val coords  : t -> float array
-    val length  : t -> int
-    val set     : t -> n:int -> f:float  -> t
-    val assign  : t -> t -> t
-    val assign_m_v : t -> Matrix.t -> t -> t
-    val assign_q_as_rotation : t -> Quaternion.t -> float * float
-    val apply_q              : t -> Quaternion.t -> t
-    val scale                : t -> f:float  -> t
-    val modulus              : t -> float
-    val modulus_squared      : t -> float
-    val add                  : t -> t -> t
-    val add_scaled           : t -> t -> f:float -> t
-    val normalize            : t -> t
-    val dot_product          : t -> t -> float
-    val cross_product3       : t -> t -> t
-    val angle_axis_to3       : t -> t -> t * float * float
-    val make                 : int -> t
-    val make2                : float -> float -> t
-    val make3                : float -> float -> float -> t
-    val make4                : float -> float -> float -> float -> t
-    val repr                 : t -> string
+    type vector = { cv : c_vector }
+    val create  : c_vector -> vector
+    val length  : vector -> int
+    val copy    : vector -> vector
+    val coords  : vector -> float array
+    val length  : vector -> int
+    val set     : vector -> n:int -> f:float  -> vector
+    val assign  : vector -> vector -> vector
+    val assign_m_v : vector -> Matrix.matrix -> vector -> vector
+    val assign_q_as_rotation : vector -> Quaternion.t -> float * float
+    val apply_q              : vector -> Quaternion.t -> vector
+    val scale                : vector -> f:float  -> vector
+    val modulus              : vector -> float
+    val modulus_squared      : vector -> float
+    val add                  : vector -> vector -> vector
+    val add_scaled           : vector -> vector -> f:float -> vector
+    val normalize            : vector -> vector
+    val dot_product          : vector -> vector -> float
+    val cross_product3       : vector -> vector -> vector
+    val angle_axis_to3       : vector -> vector -> vector * float * float
+    val make                 : int -> vector
+    val make2                : float -> float -> vector
+    val make3                : float -> float -> float -> vector
+    val make4                : float -> float -> float -> float -> vector
+    val repr                 : vector -> string
 end = struct
-    type t = { cv : c_vector }
+    type vector = { cv : c_vector }
      let create (cv_in:c_vector) = { cv = cv_in }
-     let get_cv m = m.cv
-     let copy   m = Vector.create (v_clone (get_cv m))
+     let copy   m = Vector.create (v_clone m.cv)
      let coords m = v_coords m.cv
      let length m = v_length m.cv
      let set m ~n ~f   = v_set m.cv n f ; m
@@ -243,7 +240,7 @@ end = struct
      let modulus_squared m = v_modulus_squared m.cv
      let scale m ~f = v_scale m.cv f ; m
      let dot_product m m2 = v_dot_product m.cv m2.cv
-     let assign_m_v m m2 v2  = v_assign_m_v m.cv (Matrix.get_cm m2) (Vector.get_cv m) ; m
+     let assign_m_v m m2 v2  = v_assign_m_v m.cv m2.Matrix.cm m.cv ; m
      let assign_q_as_rotation m q = (v_assign_q m.cv (Quaternion.get_cq q))
      let apply_q m q = (v_apply_q m.cv (Quaternion.get_cq q)) ; m
      let cross_product3 m v2 = Vector.create(v_cross_product m.cv v2.cv)
@@ -256,35 +253,33 @@ end = struct
      let repr m = let f c s = (Printf.sprintf "%f%s " c s) in Array.fold_right f (v_coords m.cv) ""
 end
 and Matrix : sig
-    type t = { cm: c_matrix }
-    val create : c_matrix -> t
-    val get_cm : t -> c_matrix
-    val copy   : t -> t
-    val apply  : t -> Vector.t -> Vector.t
-    val set          : t -> int -> int -> float -> t
-    val identity     : t -> t
-    val nrows        : t -> int
-    val ncols        : t -> int
-    val row_vector   : t -> int -> Vector.t
-    val col_vector   : t -> int -> Vector.t
-    val scale        : t -> f:float -> t
-    val transpose    : t -> t
-    val add_scaled   : t -> t -> float -> t
-    val apply        : t -> Vector.t -> Vector.t
-    val assign_m_m   : t -> t -> t -> t
-    val lup_decompose : t -> Vector.t
-    val lup_get_l     : t -> t
-    val lup_get_u     : t -> t
-    val lup_invert    : t -> t
-    val lup_inverse   : t -> t
-    val make          : int -> int -> t
-    val matrix_x_matrix : t -> t -> t
-    val repr          : t -> string
+    type matrix = { cm: c_matrix }
+    val create : c_matrix -> matrix
+    val copy   : matrix -> matrix
+    val apply  : matrix -> Vector.vector -> Vector.vector
+    val set          : matrix -> int -> int -> float -> matrix
+    val identity     : matrix -> matrix
+    val nrows        : matrix -> int
+    val ncols        : matrix -> int
+    val row_vector   : matrix -> int -> Vector.vector
+    val col_vector   : matrix -> int -> Vector.vector
+    val scale        : matrix -> f:float -> matrix
+    val transpose    : matrix -> matrix
+    val add_scaled   : matrix -> matrix -> float -> matrix
+    val apply        : matrix -> Vector.vector -> Vector.vector
+    val assign_m_m   : matrix -> matrix -> matrix -> matrix
+    val lup_decompose : matrix -> Vector.vector
+    val lup_get_l     : matrix -> matrix
+    val lup_get_u     : matrix -> matrix
+    val lup_invert    : matrix -> matrix
+    val lup_inverse   : matrix -> matrix
+    val make          : int -> int -> matrix
+    val matrix_x_matrix : matrix -> matrix -> matrix
+    val repr          : matrix -> string
 end = struct
-     type t = { cm: c_matrix }
+     type matrix = { cm: c_matrix }
      let create (cm_in:c_matrix) = { cm = cm_in }
-     let get_cm m = m.cm
-     let copy   m = Matrix.create (m_clone (get_cm m))
+     let copy   m = Matrix.create (m_clone m.cm)
      let apply  m v = Vector.create (m_apply m v.Vector.cv)
      let set m r c f     = m_set m.cm r c f ; m
      let identity m      = m_identity m.cm ; m
@@ -321,8 +316,8 @@ and Quaternion : sig
     val get_rijk           : t -> float array
     val assign             : t -> t -> t
     val assign_q_q         : t -> t -> t -> t
-    val assign_lookat      : t -> Vector.t -> Vector.t -> t 
-    val assign_of_rotation : t -> Vector.t -> float -> float -> t
+    val assign_lookat      : t -> Vector.vector -> Vector.vector -> t 
+    val assign_of_rotation : t -> Vector.vector -> float -> float -> t
     val scale              : t -> float -> t
     val add_scaled        : t -> t -> float -> t
     val reciprocal        : t -> t

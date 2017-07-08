@@ -43,36 +43,15 @@ let time_execution tim (f: unit -> unit) n =
   done ;
   Timer.exit tim
 
-module type Vector = sig
-    type t ={ cv : Atcflib.c_vector }
-    val create : Atcflib.c_vector -> t
-    val get_cv : t -> Atcflib.c_vector
-    val scale  : t -> float  -> unit
-    end
-module Vector : Vector = struct
-    type t = {cv:Atcflib.c_vector}
-    let create (cv_in:Atcflib.c_vector) = {cv = cv_in}
-    let get_cv m = m.cv
-    let scale m f = Atcflib.v_scale m.cv f
-end
-
 let test_suite_vector = 
     "vector" >::: [
       ("timeit" >::
          fun ctxt ->
          let tim = Timer.create () in
-         let v = mkvector2 1.0 2.0 in
-         let cv = v#get_cv in
-         let mv = Vector.create cv in
-         let f  = fun () -> ignore (v#scale 1.0) in
-         let f2 = fun () -> ignore (Vector.scale mv 1.0) in
-         let f3 = fun () -> ignore (Atcflib.v_scale cv 1.0) in
+         let v = Vector.make2 1.0 2.0 in
+         let f = fun () -> ignore (Vector.scale v 1.0) in
          time_execution tim f (1000*1000*10) ;
-         Printf.printf "Time taken per scale as object method in ns:%f\n" ((Timer.value_us tim) /. 10000.) ;
-         time_execution tim f2 (1000*1000*10) ;
-         Printf.printf "Time taken per scale using module call in ns:%f\n" ((Timer.value_us tim) /. 10000.) ;
-         time_execution tim f3 (1000*1000*10) ;
-         Printf.printf "Time taken per scale direct C call in ns:%f\n" ((Timer.value_us tim) /. 10000.) ;
+         Printf.printf "Time taken per scale as module function in ns:%f\n" ((Timer.value_us tim) /. 10000.) ;
          ()
       ) ;
     ]

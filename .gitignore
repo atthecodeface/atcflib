@@ -6,3 +6,10 @@
 batch
 prog
 *_test
+*.cmi
+*.cmo
+*.cmx
+*.native
+*.cmxa
+*.cache
+ocaml/doc

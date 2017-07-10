@@ -220,7 +220,7 @@ c_quaternion &c_quaternion::from_euler(double roll, double pitch, double yaw, in
     return *this;
 }
 
-/*f c_quaternion::lookat
+/*f c_quaternion::lookat_aeronautic
  *
  * Find rotation that makes Z map to xyz axis, with X map to up (as far as possible)
  *
@@ -237,7 +237,7 @@ c_quaternion &c_quaternion::from_euler(double roll, double pitch, double yaw, in
  * Then find the roll that gets the rotated Up to be parallel to the X axis
  *
  */
-c_quaternion &c_quaternion::lookat(const double xyz[3], const double up[3])
+c_quaternion &c_quaternion::lookat_aeronautic(const double xyz[3], const double up[3])
 {
     double len_xyz = sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
     double pitch =  asin(xyz[0] / len_xyz); // +ve as ccw around Y to Z
@@ -250,6 +250,42 @@ c_quaternion &c_quaternion::lookat(const double xyz[3], const double up[3])
     double roll = atan2( up[1]*cy    + up[2]*sy, // CCW around X -> Y coord (unchanged by CCW around Y)
                          up[1]*sy*sp - up[2]*cy*sp + up[0]*cp ); // CCW around X -> CCW around Y -> X coord
     return this->from_euler(-roll, -pitch, -yaw, 0).conjugate();
+}
+
+/*f c_quaternion::lookat_graphics
+ *
+ * Find rotation that makes at map to -Z, with up mapping to Y (as far as possible)
+ *
+ * First map to +Z, up mapping to +X; rotate round Z by 90 degrees to
+ * get up to +Y, rotate around Y by 180 degrees to get at to -Z
+ *
+ * Rotate around Z by 90 degrees is premultiply by quaternion of cos(45), 0, 0, sin(45)
+ * 
+ * Hence (r + rk) * (a + bi + cj + dk) => ra + rbi + rcj + rdk + ark + brj - cri -dr
+ * = r(a-d) + r(b-c)i + r(b+c) + r(a+d)k
+ *
+ * Rotate around Y by 180 degrees is premultiply by quaternion of 0, 0, 1, 0
+ *
+ * Hence j * (a + bi + cj + dk) => aj - bk - c + di
+ * = -c + di + aj - bk
+ *
+ * 0 r r 0 -> 0 0 1 0 -> -1 0 0 0
+ * 
+ */
+c_quaternion &c_quaternion::lookat_graphics(const double at[3], const double up[3])
+{
+    double r, i, j, k, rrt2;
+    this->lookat_aeronautic(at, up);
+    rrt2 = 1/sqrt(2);
+    r = rrt2 * ( quat.r - quat.k );
+    i = rrt2 * ( quat.i - quat.j );
+    j = rrt2 * ( quat.j + quat.i );
+    k = rrt2 * ( quat.k + quat.r );
+
+    quat.r = -j;
+    quat.i = k;
+    quat.j = r;
+    quat.k = -i;
 }
 
 /*f c_quaternion::as_euler
@@ -404,10 +440,10 @@ c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, co
         return *this;
     }
     if (cos_angle<=-1){
-        quat.r = 0; // rotate by 180 degrees around _any_ axis
-        quat.i = 1;
-        quat.j = 0;
-        quat.k = 0;
+        quat.r = 0; // rotate by 180 degrees around an axis
+        quat.i = axis[0];
+        quat.j = axis[1];
+        quat.k = axis[2];
         return *this;
     }
     c = sqrt((1+cos_angle)/2);

@@ -619,9 +619,9 @@ let test_suite_quaternion_create =
            let x = Vector.copy(x3) in
            let y = Vector.copy(y3) in
            let z = Vector.copy(z3) in
-           let (c,s) = Vector.assign_q_as_rotation v (Quaternion.assign_lookat q z y) in
+           let (c,s) = Vector.assign_q_as_rotation v (Quaternion.assign_lookat_graphics q z y) in
            Printf.printf "\nQ %s" (Quaternion.repr q) ;
-           let (c,s) = Vector.assign_q_as_rotation v (Quaternion.assign_lookat q z x) in
+           let (c,s) = Vector.assign_q_as_rotation v (Quaternion.assign_lookat_graphics q z x) in
            Printf.printf "\nQ of X %s" (Vector.repr (Vector.apply_q (Vector.make3 1.0 0.0 0.0) q));
            Printf.printf "\nQ of Y %s" (Vector.repr (Vector.apply_q (Vector.make3 0.0 1.0 0.0) q));
            Printf.printf "\nQ of Z %s" (Vector.repr (Vector.apply_q (Vector.make3 0.0 0.0 1.0) q));
@@ -710,6 +710,47 @@ let test_suite_quaternion_operation =
            assert_equal_quat "q1*q2" (Quaternion.assign_q_q (Quaternion.copy q) q1 q2) (Quaternion.get_rijk (Quaternion.postmultiply (Quaternion.copy q1) q2));
         ) ;
     ]
+(*b Quaternion lookat tests *)
+let test_lookat_graphics at up =
+  let q = Quaternion.make () in
+  ignore (Quaternion.assign_lookat_graphics q at up) ;
+  Printf.printf "\n Check lookat maps at correctly to -Z:" ;
+  assert_coords (Vector.apply_q (Vector.copy at) q) [| 0.0; 0.0  ; (-. 1.0) |] ;
+  Printf.printf "\n Check lookat maps up correctly to +Y:" ;
+  assert_coords (Vector.apply_q (Vector.copy up) q) [| 0.0; 1.0 ; 0.0 |]
+
+let test_lookat_aeronautic at up =
+  let q = Quaternion.make () in
+  ignore (Quaternion.assign_lookat_aeronautic q at up) ;
+  Printf.printf "\n Check lookat maps at correctly to +Z:" ;
+  assert_coords (Vector.apply_q (Vector.copy at) q) [| 0.0; 0.0 ; 1.0 |] ;
+  Printf.printf "\n Check lookat maps up correctly to +X:" ;
+  assert_coords (Vector.apply_q (Vector.copy up) q) [| 1.0; 0.0 ; 0.0 |]
+
+let test_suite_quaternion_lookat = 
+    "lookat" >::: [
+        ("aeronautic_null" >::
+           fun ctxt ->
+           test_lookat_aeronautic z3 x3
+        ) ;
+        ("aeronautic_null" >::
+           fun ctxt ->
+           let zn = Vector.scale (Vector.copy z3) (-. 1.0) in
+           test_lookat_aeronautic zn y3
+        ) ;
+        ("graphics_null" >::
+           fun ctxt ->
+           let zn = Vector.scale (Vector.copy z3) (-. 1.0) in
+           test_lookat_graphics zn y3 ;
+           ()
+        ) ;
+        ("graphics_1" >::
+           fun ctxt ->
+           let zn = Vector.scale (Vector.copy z3) (-. 1.0) in
+           test_lookat_graphics zn x3 ;
+           ()
+        ) ;
+    ]
 (*b Quaternion test suite - combine individual suites *)
 (* to do 
 of rotation
@@ -723,6 +764,7 @@ let test_suite_quaternion =
     [
       test_suite_quaternion_create ;
       test_suite_quaternion_operation ;
+      test_suite_quaternion_lookat ;
       test_suite_quaternion_modulus ;
     ]
 

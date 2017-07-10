@@ -52,8 +52,15 @@ camltime: atcflib.cmxa
 	@$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_time.ml -o test_time.native
 	LD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib ./test_time.native 
 
+.PHONY: release_test
+release_test:
+	(cd ..; make clean; make)
+	make clean
+	make camltime camltest doc
+
 .PHONY: doc
 doc:
+	mkdir -p doc/html
 	ocamldoc -html -d doc/html atcflib.mli
 
 clean:

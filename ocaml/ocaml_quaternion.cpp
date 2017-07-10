@@ -165,18 +165,34 @@ atcf_quaternion_assign_q(value q, value q2)
     CAMLreturn0;
 }
 
-/*f atcf_quaternion_assign_lookat : c_quaternion -> c_vector -> c_vector -> unit
+/*f atcf_quaternion_assign_lookat_graphics : c_quaternion -> c_vector -> c_vector -> unit
  *
  * Assign a quaternion rotation that looks at 'at' with 'up' as up
  *
  */
 extern "C"
 CAMLprim void
-atcf_quaternion_assign_lookat(value q, value at, value up)
+atcf_quaternion_assign_lookat_graphics(value q, value at, value up)
 {
     CAMLparam3(q, at, up);
-    quaternion_of_val(q)->lookat(vector_of_val(at)->coords(),
-                                 vector_of_val(up)->coords());
+    quaternion_of_val(q)->lookat_graphics(vector_of_val(at)->coords(),
+                                          vector_of_val(up)->coords());
+                                 
+    CAMLreturn0;
+}
+
+/*f atcf_quaternion_assign_lookat_aeronautic : c_quaternion -> c_vector -> c_vector -> unit
+ *
+ * Assign a quaternion rotation that looks at 'at' with 'up' as up
+ *
+ */
+extern "C"
+CAMLprim void
+atcf_quaternion_assign_lookat_aeronautic(value q, value at, value up)
+{
+    CAMLparam3(q, at, up);
+    quaternion_of_val(q)->lookat_aeronautic(vector_of_val(at)->coords(),
+                                            vector_of_val(up)->coords());
                                  
     CAMLreturn0;
 }

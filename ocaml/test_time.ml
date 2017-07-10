@@ -47,7 +47,7 @@ let test_suite_vector =
     "vector" >::: [
       ("timeit" >::
          fun ctxt ->
-         let tim = Timer.create () in
+         let tim = Timer.make () in
          let v = Vector.make2 1.0 2.0 in
          let f = fun () -> ignore (Vector.scale v 1.0) in
          time_execution tim f (1000*1000*10) ;

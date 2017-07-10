@@ -89,7 +89,8 @@ public:
     c_quaternion &multiply(const c_quaternion &other, int premultiply=0);
 
     c_quaternion &from_euler(double roll, double pitch, double yaw, int degrees=0);
-    c_quaternion &lookat(const double xyz[3], const double up[3]);
+    c_quaternion &lookat_aeronautic(const double at[3], const double up[3]);
+    c_quaternion &lookat_graphics(const double xyz[3], const double up[3]);
     c_quaternion &from_rotation(double angle, const double axis[3], int degrees=0);
     c_quaternion &from_rotation(double cos_angle, double sin_angle, const double *axis);
     double as_rotation(double axis[3]) const;

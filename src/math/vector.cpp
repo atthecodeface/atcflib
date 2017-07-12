@@ -4,6 +4,7 @@
  */
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "quaternion.h"
 #include "vector.h"
 
@@ -11,6 +12,8 @@
  */
 #define EPSILON (1E-20)
 #define PI (M_PI)
+#define COORD(n) (_coords[(n)*_stride])
+#define OCOORD(o,n) ((o)._coords[(n)*(o)._stride])
 
 /*a Infix operator methods for doubles
  */
@@ -37,8 +40,11 @@ c_vector &c_vector::operator/=(double real)
 c_vector &c_vector::operator=(const c_vector &other)
 {
     _length = other._length;
+    _stride = 1;
+    _coords = _internal_coords;
+    _coords_must_be_freed = 0;
     for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
-        _coords[i] = other._coords[i];
+        COORD(i) = OCOORD(other,i);
     }
     return *this;
 }
@@ -66,9 +72,9 @@ c_vector &c_vector::operator-=(const c_vector &other)
 c_vector::c_vector(void)
 {
     _length = 0;
-    for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
-        _coords[i] = 0;
-    }
+    _stride = 1;
+    _coords_must_be_freed = 0;
+    _coords = _internal_coords;
 }
 
 /*f c_vector::c_vector (length) - null
@@ -76,8 +82,11 @@ c_vector::c_vector(void)
 c_vector::c_vector(int length)
 {
     _length = length;
+    _stride = 1;
+    _coords = _internal_coords;
+    _coords_must_be_freed = 0;
     for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
-        _coords[i] = 0;
+        COORD(i) = 0;
     }
 }
 
@@ -86,8 +95,11 @@ c_vector::c_vector(int length)
 c_vector::c_vector(const c_vector &other)
 {
     _length = other._length;
+    _stride = 1;
+    _coords = _internal_coords;
+    _coords_must_be_freed = 0;
     for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
-        _coords[i] = other._coords[i];
+        COORD(i) = OCOORD(other,i);
     }
 }
 
@@ -96,8 +108,11 @@ c_vector::c_vector(const c_vector &other)
 c_vector::c_vector(int length, const double *coords)
 {
     _length = length;
+    _stride = 1;
+    _coords = _internal_coords;
+    _coords_must_be_freed = 0;
     for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
-        _coords[i] = coords[i];
+        COORD(i) = coords[i];
     }
 }
 
@@ -106,9 +121,23 @@ c_vector::c_vector(int length, const double *coords)
 c_vector::c_vector(const c_quaternion &quat)
 {
     _length = 3;
-    _coords[0] = quat.i();
-    _coords[1] = quat.j();
-    _coords[2] = quat.k();
+    _stride = 1;
+    _coords = _internal_coords;
+    _coords_must_be_freed = 0;
+    COORD(0) = quat.i();
+    COORD(1) = quat.j();
+    COORD(2) = quat.k();
+}
+
+/*f c_vector::~c_vector
+ */
+c_vector::~c_vector(void)
+{
+    if (_coords_must_be_freed) {
+        free(_coords);
+        _coords_must_be_freed = 0;
+        _coords = _internal_coords;
+    }
 }
 
 /*f c_vector::copy
@@ -132,8 +161,8 @@ void c_vector::__str__(char *buffer, int buf_size) const
                                      "(%lf, %lf, %lf, %lf, %lf, %lf, %lf)",
                                      "(%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf)"};
     snprintf(buffer, buf_size, formats[_length],
-             _coords[0], _coords[1], _coords[2], _coords[3],
-             _coords[4], _coords[5], _coords[6], _coords[7] );
+             COORD(0), COORD(1), COORD(2), COORD(3),
+             COORD(4), COORD(5), COORD(6), COORD(7) );
     buffer[buf_size-1] = 0;
 }
 
@@ -142,7 +171,7 @@ void c_vector::__str__(char *buffer, int buf_size) const
 c_vector &c_vector::assign(const c_vector &other)
 {
     for (int i=0; i<_length; i++) {
-        _coords[i] = other._coords[i];
+        COORD(i) = OCOORD(other,i);
     }
     return *this;
 }
@@ -154,7 +183,7 @@ double c_vector::modulus_squared(void) const
 {
     double l=0;
     for (int i=0; i<_length; i++) {
-        l += _coords[i]*_coords[i];
+        l += COORD(i)*COORD(i);
     }
     return l;
 }
@@ -172,7 +201,7 @@ double c_vector::modulus(void) const
 c_vector &c_vector::add_scaled(const c_vector &other, double scale)
 {
     for (int i=0; i<_length; i++) {
-        _coords[i] += other._coords[i]*scale;
+        COORD(i) += OCOORD(other,i)*scale;
     }
     return *this;
 }
@@ -182,7 +211,7 @@ c_vector &c_vector::add_scaled(const c_vector &other, double scale)
 c_vector &c_vector::scale(double scale)
 {
     for (int i=0; i<_length; i++) {
-        _coords[i] *= scale;
+        COORD(i) *= scale;
     }
     return *this;
 }
@@ -204,7 +233,7 @@ double c_vector::dot_product(const c_vector &other) const
 {
     double l=0;
     for (int i=0; i<_length; i++) {
-        l += _coords[i] * other._coords[i];
+        l += COORD(i) * OCOORD(other,i);
     }
     return l;
 }
@@ -214,9 +243,9 @@ double c_vector::dot_product(const c_vector &other) const
 c_vector *c_vector::cross_product3(const c_vector &other) const
 {
     c_vector *r=new c_vector(_length);
-    r->_coords[0] = _coords[1]*other._coords[2] - _coords[2]*other._coords[1];
-    r->_coords[1] = _coords[2]*other._coords[0] - _coords[0]*other._coords[2];
-    r->_coords[2] = _coords[0]*other._coords[1] - _coords[1]*other._coords[0];
+    OCOORD(*r,0) = COORD(1)*OCOORD(other,2) - COORD(2)*OCOORD(other,1);
+    OCOORD(*r,1) = COORD(2)*OCOORD(other,0) - COORD(0)*OCOORD(other,2);
+    OCOORD(*r,2) = COORD(0)*OCOORD(other,1) - COORD(1)*OCOORD(other,0);
     return r;
 }
 
@@ -247,6 +276,7 @@ c_quaternion *c_vector::angle_axis_to_v3(const c_vector &other) const
     c_quaternion *r;
     double cos_angle, sin_angle;
     c_vector *axis = this->angle_axis_to_v3(other, &cos_angle, &sin_angle);
-    r = (new c_quaternion())->from_rotation(cos_angle, sin_angle, axis->coords());
+    r = new c_quaternion();
+    r->from_rotation(cos_angle, sin_angle, axis->coords());
     return r;
 }

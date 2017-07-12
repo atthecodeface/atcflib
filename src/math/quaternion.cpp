@@ -286,6 +286,8 @@ c_quaternion &c_quaternion::lookat_graphics(const double at[3], const double up[
     quat.i = k;
     quat.j = r;
     quat.k = -i;
+
+    return *this;
 }
 
 /*f c_quaternion::as_euler

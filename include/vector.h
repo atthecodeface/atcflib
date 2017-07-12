@@ -31,8 +31,11 @@
  */
 class c_vector
 {
-    double _coords[VECTOR_MAX_LENGTH];
+    double _internal_coords[VECTOR_MAX_LENGTH];
+    double *_coords;
+    int _coords_must_be_freed;
     int _length;
+    int _stride;
 public:
     c_vector &operator*=(double real);
     c_vector &operator/=(double real);
@@ -44,20 +47,21 @@ public:
     c_vector &operator-=(const c_vector &other);
     inline c_vector operator+(const c_vector &rhs) const { c_vector lhs=*this; lhs += rhs; return lhs; }
     inline c_vector operator-(const c_vector &rhs) const { c_vector lhs=*this; lhs -= rhs; return lhs; }
-    inline c_vector operator-(void) const { c_vector lhs=*this; for (int i=0; i<VECTOR_MAX_LENGTH; i++) lhs._coords[i]*=-1; return lhs; }
+    inline c_vector operator-(void) const { c_vector lhs=*this; for (int i=0; i<lhs._length; i++) lhs._coords[i*lhs._stride]*=-1; return lhs; }
 
     c_vector(const c_vector &vector);
     c_vector(int length);
     c_vector(void);
     c_vector(const class c_quaternion &quat);
     c_vector(int length, const double *coords);
+    ~c_vector(void);
     c_vector *copy(void) const;
 
     inline int length(void) const {return _length;}
-    inline const double *coords(void) const {return &(_coords[0]);};
-    inline double *coords_to_set(void) {return &(_coords[0]);};
-    inline void set(int n, double v) {_coords[n]=v;};
-    inline double value(int n) const {return _coords[n];};
+    inline const double *coords(int *stride=NULL) const {if (stride) {*stride=_stride;} return &(_coords[0]);};
+    inline double *coords_to_set(int *stride=NULL) {if (stride) {*stride=_stride;} return &(_coords[0]);};
+    inline void set(int n, double v) {_coords[n*_stride]=v;};
+    inline double value(int n) const {return _coords[n*_stride];};
     c_vector &assign(const c_vector &other);
     c_vector &add_scaled(const c_vector &other, double scale);
     double modulus_squared(void) const;

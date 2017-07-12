@@ -441,5 +441,5 @@ octagon1: batch
 
 
 clean:
-	rm *.o prog
+	rm -f *.o prog libatcf.so
 

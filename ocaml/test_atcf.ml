@@ -656,7 +656,7 @@ let test_suite_quaternion_modulus =
            assert_equal_float "m"   (Quaternion.modulus q) 1.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
-        ("test0" >::
+        ("test4" >::
            fun ctxt -> let q = Quaternion.make_rijk 2.0 0.0 0.0 0.0 in
            let qc = Quaternion.conjugate (Quaternion.copy q) in
            let qcq = Quaternion.postmultiply (Quaternion.copy q) qc in
@@ -666,22 +666,22 @@ let test_suite_quaternion_modulus =
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
            
         ) ;
-        ("test1" >::
+        ("test5" >::
            fun ctxt -> let q = Quaternion.make_rijk 0.0 2.0 0.0 0.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 2.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
-        ("test2" >::
+        ("test6" >::
            fun ctxt -> let q = Quaternion.make_rijk 0.0 0.0 2.0 0.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 2.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
-        ("test3" >::
+        ("test7" >::
            fun ctxt -> let q = Quaternion.make_rijk 0.0 0.0 0.0 2.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 2.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
         ) ;
-        ("test4" >::
+        ("test8" >::
            fun ctxt -> let q = Quaternion.make_rijk 3.0 4.0 12.0 84.0 in
            assert_equal_float "m"   (Quaternion.modulus q) 85.0 ;
            assert_equal_float "msq" (Quaternion.modulus_squared q) ((Quaternion.modulus q) ** 2.)
@@ -771,8 +771,8 @@ let test_suite_quaternion =
 (*a All test suites, toplevel *)
 let test_suites = "All tests" >::: [
      test_suite_vector ;
-     test_suite_matrix ;
      test_suite_quaternion ;
+     test_suite_matrix ;
     ]
 
 

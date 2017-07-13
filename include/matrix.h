@@ -37,6 +37,9 @@ class c_matrix
     double *_values;
     int _nrows;
     int _ncols;
+    int _row_stride;
+    int _col_stride;
+    int _values_must_be_freed;
 public:
     c_matrix &operator*=(double real);
     c_matrix &operator/=(double real);
@@ -51,6 +54,7 @@ public:
     inline c_matrix operator-(void) const { c_matrix lhs=*this; for (int i=0; i<_nrows*_ncols; i++) lhs._values[i]*=-1; return lhs; }
     inline c_matrix operator*(const c_matrix &rhs) const { c_matrix *r=new c_matrix(*this,rhs); return *r; }
 
+    void init(void);
     ~c_matrix(void);
     c_matrix(const c_matrix &matrix);
     c_matrix(int nrows, int ncols);
@@ -69,7 +73,8 @@ public:
     c_vector *get_row(int row);
     c_vector *get_column(int col);
     c_matrix &set_identity(void);
-    c_matrix &transpose(void);
+    c_matrix &transpose_data(void);
+    c_matrix &transpose_stride(void);
     c_matrix &add_scaled(const c_matrix &other, double scale);
     c_matrix &multiply(const c_matrix &a, const c_matrix &b);
     c_matrix &scale(double scale);

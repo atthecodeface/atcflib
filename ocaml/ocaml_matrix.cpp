@@ -210,9 +210,9 @@ FN_C_FLOAT_TO_UNIT(matrix, scale)
 /*f add_scaled : c_matrix -> c_matrix -> float -> unit */
 FN_C_CR_FLOAT_TO_UNIT(matrix, add_scaled)
 
-/*f transpose
+/*f transpose_data
  */
-FN_C_TO_UNIT(matrix, transpose)
+FN_C_TO_UNIT(matrix, transpose_data)
 
 /*f lup_get_l, lup_get_u
  */

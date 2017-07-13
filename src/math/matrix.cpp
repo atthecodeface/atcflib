@@ -12,8 +12,9 @@
  */
 #define EPSILON (1E-20)
 #define PI (M_PI)
-#define MATRIX_VALUE(r,c) _values[(c)+(r)*_ncols]
-#define MATRIX_VALUE_M(M,r,c) (M)._values[(c)+(r)*(M)._ncols]
+#define MATRIX_VALUE(r,c) _values[(c)*_col_stride+(r)*_row_stride]
+#define MATRIX_VALUE_M(M,r,c) (M)._values[(c)*(M)._col_stride+(r)*(M)._row_stride]
+#define SWAP(a,b) { int t; t = (a); (a) = (b); (b) = t; }
 
 /*a Infix operator methods for doubles
  */
@@ -69,17 +70,25 @@ c_matrix &c_matrix::operator-=(const c_matrix &other)
 void c_matrix::set_size(int nrows, int ncols)
 {
     if (_values!=NULL) {
-        free(_values);
+        if (_values_must_be_freed) {
+            free(_values);
+        }
         _values = NULL;
     }
     _values = (double *) malloc(sizeof(double)*nrows*ncols);
     if (_values == NULL) {
         _nrows = 0;
         _ncols = 0;
+        _row_stride = 0;
+        _col_stride = 0;
+        _values_must_be_freed = 0;
         return;
     }
-    _nrows = nrows;
+    _values_must_be_freed = 1;
     _ncols = ncols;
+    _nrows = nrows;
+    _col_stride = 1;
+    _row_stride = _ncols;
     for (int i=0; i<_nrows*_ncols; i++) {
         _values[i] = 0;
     }
@@ -95,20 +104,30 @@ c_matrix::~c_matrix(void)
     }
 }
 
+/*f c_matrix::init (void) - null
+ */
+void c_matrix::init(void)
+{
+    _nrows = 0;
+    _ncols = 0;
+    _row_stride = 0;
+    _col_stride = 0;
+    _values_must_be_freed = 0;
+    _values = NULL;
+}
+
 /*f c_matrix::c_matrix (void) - null
  */
 c_matrix::c_matrix(void)
 {
-    _nrows = 0;
-    _ncols = 0;
-    _values = NULL;
+    init();
 }
 
-/*f c_matrix::c_matrix (length) - null
+/*f c_matrix::c_matrix (nrows, ncols) - null
  */
 c_matrix::c_matrix(int nrows, int ncols)
 {
-    _values = NULL;
+    init();
     set_size(nrows, ncols);
 }
 
@@ -116,10 +135,12 @@ c_matrix::c_matrix(int nrows, int ncols)
  */
 c_matrix::c_matrix(const c_matrix &other)
 {
-    _values = NULL;
+    init();
     set_size(other._nrows, other._ncols);
-    for (int i=0; i<_nrows*_ncols; i++) {
-        _values[i] = other._values[i];
+    for (int r=0; r<_nrows; r++) {
+        for (int c=0; c<_ncols; c++) {
+            MATRIX_VALUE(r,c) = MATRIX_VALUE_M(other,r,c);
+        }
     }
 }
 
@@ -127,10 +148,12 @@ c_matrix::c_matrix(const c_matrix &other)
  */
 c_matrix::c_matrix(int nrows, int ncols, const double *values)
 {
-    _values = NULL;
+    init();
     set_size(nrows, ncols);
-    for (int i=0; i<nrows*ncols; i++) {
-        _values[i] = values[i];
+    for (int r=0; r<_nrows; r++) {
+        for (int c=0; c<_ncols; c++) {
+            MATRIX_VALUE(r,c) = values[r*_ncols+c];
+        }
     }
 }
 
@@ -138,9 +161,8 @@ c_matrix::c_matrix(int nrows, int ncols, const double *values)
  */
 c_matrix::c_matrix(const c_matrix &a, const c_matrix &b)
 {
-    _values = NULL;
+    init();
     if (a._ncols != b._nrows) {
-        set_size(0,0);
         return;
     }
     set_size(a._nrows, b._ncols);
@@ -208,8 +230,10 @@ c_matrix &c_matrix::multiply(const c_matrix &a, const c_matrix &b)
 c_matrix &c_matrix::add_scaled(const c_matrix &other, double scale)
 {
     if ((other._nrows!=_nrows) || (other._ncols!=_ncols)) return *this;
-    for (int i=0; i<_nrows*_ncols; i++) {
-        _values[i] += other._values[i]*scale;
+    for (int r=0; r<_nrows; r++) {
+        for (int c=0; c<_ncols; c++) {
+            MATRIX_VALUE(r,c) += MATRIX_VALUE_M(other,r,c)*scale;
+        }
     }
     return *this;
 }
@@ -218,8 +242,10 @@ c_matrix &c_matrix::add_scaled(const c_matrix &other, double scale)
  */
 c_matrix &c_matrix::scale(double scale)
 {
-    for (int i=0; i<_nrows*_ncols; i++) {
-        _values[i] *= scale;
+    for (int r=0; r<_nrows; r++) {
+        for (int c=0; c<_ncols; c++) {
+            MATRIX_VALUE(r,c) *= scale;
+        }
     }
     return *this;
 }
@@ -228,13 +254,26 @@ c_matrix &c_matrix::scale(double scale)
  */
 c_matrix &c_matrix::set_identity(void)
 {
-    for (int i=0, j=0; i<_nrows*_ncols; i++, j=(j+1)%(_ncols+1)) {
-        _values[i] = (j==0)?1.0:0.0;
+    for (int r=0; r<_nrows; r++) {
+        for (int c=0; c<_ncols; c++) {
+            MATRIX_VALUE(r,c) = (r==c)?1.0 : 0.0;
+        }
     }
     return *this;
 }
 
-/*f c_matrix::transpose
+/*f c_matrix::transpose_stride
+ */
+c_matrix &c_matrix::transpose_stride(void)
+{
+    if (_nrows==_ncols) {
+        SWAP(_nrows, _ncols);
+        SWAP(_row_stride, _col_stride);
+    }
+    return *this;
+}
+
+/*f c_matrix::transpose_data
  *
  * Run through all the entries of the matrix and see where they map from
  * after transposition
@@ -250,8 +289,13 @@ c_matrix &c_matrix::set_identity(void)
  * Finally, swap nrows/ncols
  *
  */
-c_matrix &c_matrix::transpose(void)
+c_matrix &c_matrix::transpose_data(void)
 {
+    if ( (_nrows != _ncols) &&
+         (_row_stride!=(_ncols *_col_stride)) &&
+         (_col_stride!=(_nrows *_row_stride)) )
+        return *this; // cannot transpose the data
+
     for (int i=0; i<_nrows*_ncols; i++) {
         int n=0;
         int start_of_loop=1;
@@ -282,8 +326,7 @@ c_matrix &c_matrix::transpose(void)
         }
         //fprintf(stderr,"\n");
     }
-    int t;
-    t = _nrows; _nrows = _ncols; _ncols = t;
+    SWAP(_nrows, _ncols);
     return *this;
 }
 
@@ -292,8 +335,8 @@ c_matrix &c_matrix::transpose(void)
 c_vector *c_matrix::get_row(int row)
 {
     c_vector *v = new c_vector(_ncols);
-    for (int i=0; i<_ncols; i++) {
-        v->set(i,MATRIX_VALUE(row,i));
+    for (int c=0; c<_ncols; c++) {
+        v->set(c,MATRIX_VALUE(row,c));
     }
     return v;
 }
@@ -303,8 +346,8 @@ c_vector *c_matrix::get_row(int row)
 c_vector *c_matrix::get_column(int col)
 {
     c_vector *v = new c_vector(_nrows);
-    for (int i=0; i<_nrows; i++) {
-        v->set(i,MATRIX_VALUE(i,col));
+    for (int r=0; r<_nrows; r++) {
+        v->set(r,MATRIX_VALUE(r,col));
     }
     return v;
 }

@@ -37,6 +37,7 @@
 #include <caml/threads.h>
 
 #include <atcf/vector.h>
+#include <atcf/matrix.h>
 #include <atcf/quaternion.h>
 #include "ocaml_atcflib.h"
 
@@ -79,9 +80,9 @@ static struct custom_operations custom_ops = {
  *
  */
 extern value
-caml_atcf_alloc_quaternion(c_quaternion *cm)
+caml_atcf_alloc_quaternion(c_quaternion<double> *cm)
 {
-    value v = caml_alloc_custom(&custom_ops, sizeof(c_quaternion *), 0, 1);
+    value v = caml_alloc_custom(&custom_ops, sizeof(c_quaternion<double> *), 0, 1);
     quaternion_of_val(v) = cm;
     VERBOSE(stderr,"Created quaternion %p\n", cm);
     return v;
@@ -98,7 +99,7 @@ atcf_quaternion_create(void)
 {
     CAMLparam0();
     VERBOSE(stderr,"Create quaternion\n");
-    CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion()));
+    CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion<double>()));
 }
 
 /*f atcf_quaternion_create_rijk : r:float -> i:float ...  -> NEW c_quaternion
@@ -112,7 +113,7 @@ atcf_quaternion_create_rijk(value r, value i, value j, value k)
 {
     CAMLparam4(r,i,j,k);
     VERBOSE(stderr,"Create quaternion\n");
-    c_quaternion *q=new c_quaternion(Double_val(r),
+    c_quaternion<double> *q=new c_quaternion<double>(Double_val(r),
                                      Double_val(i),
                                      Double_val(j),
                                      Double_val(k));
@@ -146,7 +147,7 @@ atcf_quaternion_clone(value v)
 {
     CAMLparam1(v);
     VERBOSE(stderr,"Clone quaternion %p\n", quaternion_of_val(v));
-    CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion(*quaternion_of_val(v))));
+    CAMLreturn(caml_atcf_alloc_quaternion(new c_quaternion<double>(*quaternion_of_val(v))));
 }
 
 /*a Assignment functions
@@ -226,7 +227,7 @@ atcf_quaternion_rpy(value q)
 {
     double rpy[3];
     CAMLparam1(q);
-    c_quaternion *cq = quaternion_of_val(q);
+    c_quaternion<double> *cq = quaternion_of_val(q);
     value v = caml_alloc_float_array(3);
     cq->as_euler(rpy);
     for (int i=0; i<3; i++) 
@@ -245,7 +246,7 @@ atcf_quaternion_rijk(value q)
 {
     double rijk[4];
     CAMLparam1(q);
-    c_quaternion *cq = quaternion_of_val(q);
+    c_quaternion<double> *cq = quaternion_of_val(q);
     value v = caml_alloc_float_array(4);
     cq->get_rijk(rijk);
     for (int i=0; i<4; i++) 

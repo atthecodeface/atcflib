@@ -26,6 +26,7 @@
  */
 /*a Includes
  */
+#define MAKING_MATRIX
 #define CAML_NAME_SPACE 
 #include <caml/mlvalues.h>
 #include <caml/alloc.h>
@@ -79,9 +80,9 @@ static struct custom_operations custom_ops = {
  *
  */
 extern value
-caml_atcf_alloc_matrix(c_matrix *cm)
+caml_atcf_alloc_matrix(c_matrix<double> *cm)
 {
-    value v = caml_alloc_custom(&custom_ops, sizeof(c_matrix *), 0, 1);
+    value v = caml_alloc_custom(&custom_ops, sizeof(c_matrix<double> *), 0, 1);
     matrix_of_val(v) = cm;
     VERBOSE(stderr,"Created matrix %p\n", cm);
     return v;
@@ -98,7 +99,7 @@ atcf_matrix_create(value r, value c)
 {
     CAMLparam2(r,c);
     VERBOSE(stderr,"Create matrix %ld x %ld\n",Long_val(r),Long_val(c));
-    CAMLreturn(caml_atcf_alloc_matrix(new c_matrix(Long_val(r),Long_val(c))));
+    CAMLreturn(caml_atcf_alloc_matrix(new c_matrix<double>(Long_val(r),Long_val(c))));
 }
 
 /*f atcf_matrix_destroy : c_matrix -> unit
@@ -128,7 +129,7 @@ atcf_matrix_clone(value v)
 {
     CAMLparam1(v);
     VERBOSE(stderr,"Clone matrix %p\n", matrix_of_val(v));
-    CAMLreturn(caml_atcf_alloc_matrix(new c_matrix(*matrix_of_val(v))));
+    CAMLreturn(caml_atcf_alloc_matrix(new c_matrix<double>(*matrix_of_val(v))));
 }
 
 /*a Interrogation functions - not effecting the c_matrix
@@ -143,7 +144,7 @@ CAMLprim value
 atcf_matrix_row_vector(value v, value r)
 {
     CAMLparam2(v,r);
-    c_matrix *cm = matrix_of_val(v);
+    c_matrix<double> *cm = matrix_of_val(v);
     CAMLreturn(caml_atcf_alloc_vector(cm->get_row(Long_val(r))));
 }
 
@@ -157,7 +158,7 @@ CAMLprim value
 atcf_matrix_col_vector(value v, value r)
 {
     CAMLparam2(v,r);
-    c_matrix *cm = matrix_of_val(v);
+    c_matrix<double> *cm = matrix_of_val(v);
     CAMLreturn(caml_atcf_alloc_vector(cm->get_column(Long_val(r))));
 }
 
@@ -228,7 +229,7 @@ extern "C"
 CAMLprim value
 atcf_matrix_lup_decompose(value m) {
     CAMLparam1(m);
-    c_vector *v;
+    c_vector<double> *v;
     if (matrix_of_val(m)->lup_decompose(&v)) { // raise exception
     }
     CAMLreturn(caml_atcf_alloc_vector(v));
@@ -243,7 +244,7 @@ extern "C"
 CAMLprim void
 atcf_matrix_lup_invert(value m) {
     CAMLparam1(m);
-    c_vector *v;
+    c_vector<double> *v;
     if (matrix_of_val(m)->lup_decompose(&v)) { // raise exception
     }
     matrix_of_val(m)->lup_invert(*v);

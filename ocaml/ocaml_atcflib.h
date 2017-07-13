@@ -1,22 +1,22 @@
-extern value caml_atcf_alloc_vector(class c_vector *cv);
-extern value caml_atcf_alloc_matrix(class c_matrix *cm);
-extern value caml_atcf_alloc_quaternion(class c_quaternion *cq);
+extern value caml_atcf_alloc_vector(class c_vector<double> *cv);
+extern value caml_atcf_alloc_matrix(class c_matrix<double> *cm);
+extern value caml_atcf_alloc_quaternion(class c_quaternion<double> *cq);
 
 /*f matrix_of_val c_matrix from an OCAML value
  */
-#define matrix_of_val(v) (*((c_matrix **) Data_custom_val(v)))
+#define matrix_of_val(v) (*((c_matrix<double> **) Data_custom_val(v)))
 
 /*f vector_of_val c_vector from an OCAML value
  */
-#define vector_of_val(v) (*((c_vector **) Data_custom_val(v)))
+#define vector_of_val(v) (*((c_vector<double> **) Data_custom_val(v)))
 
 /*f quaternion_of_val c_quaternion from an OCAML value
  */
-#define quaternion_of_val(v) (*((c_quaternion **) Data_custom_val(v)))
+#define quaternion_of_val(v) (*((c_quaternion<double> **) Data_custom_val(v)))
 
 /*f 't'_of_val c_t from an OCAML value
  */
-#define cobj_of_val(t, v) (*((c_ ## t **) Data_custom_val(v)))
+#define cobj_of_val(t, v) (*((c_ ## t <double> **) Data_custom_val(v)))
 
 /*a Defines for function wrappers
  */

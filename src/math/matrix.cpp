@@ -20,7 +20,8 @@
  */
 /*f operator*=
  */
-c_matrix &c_matrix::operator*=(double real)
+template <typename T>
+c_matrix<T> &c_matrix<T>::operator*=(T real)
 {
     this->scale(real);
     return *this;
@@ -28,9 +29,10 @@ c_matrix &c_matrix::operator*=(double real)
 
 /*f operator/=
  */
-c_matrix &c_matrix::operator/=(double real)
+template <typename T>
+c_matrix<T> &c_matrix<T>::operator/=(T real)
 {
-    this->scale(1.0/real);
+    this->scale(((T)1)/real);
     return *this;
 }
 
@@ -38,7 +40,8 @@ c_matrix &c_matrix::operator/=(double real)
  */
 /*f operator=
  */
-c_matrix &c_matrix::operator=(const c_matrix &other)
+template <typename T>
+c_matrix<T> &c_matrix<T>::operator=(const c_matrix<T> &other)
 {
     set_size(other._nrows, other._ncols);
     for (int i=0; i<other._nrows*other._ncols; i++) {
@@ -49,25 +52,28 @@ c_matrix &c_matrix::operator=(const c_matrix &other)
 
 /*f operator+=
  */
-c_matrix &c_matrix::operator+=(const c_matrix &other)
+template <typename T>
+c_matrix<T> &c_matrix<T>::operator+=(const c_matrix<T> &other)
 {
-    this->add_scaled(other,1.0);
+    this->add_scaled(other,(T)1);
     return *this;
 }
 
 /*f operator-=
  */
-c_matrix &c_matrix::operator-=(const c_matrix &other)
+template <typename T>
+c_matrix<T> &c_matrix<T>::operator-=(const c_matrix<T> &other)
 {
-    this->add_scaled(other,-1.0);
+    this->add_scaled(other,(T)-1);
     return *this;
 }
 
 /*a Constructors
  */
-/*f c_matrix::set_size (nrows, ncols)
+/*f c_matrix<T>::set_size (nrows, ncols)
  */
-void c_matrix::set_size(int nrows, int ncols)
+template <typename T>
+void c_matrix<T>::set_size(int nrows, int ncols)
 {
     if (_values!=NULL) {
         if (_values_must_be_freed) {
@@ -75,7 +81,7 @@ void c_matrix::set_size(int nrows, int ncols)
         }
         _values = NULL;
     }
-    _values = (double *) malloc(sizeof(double)*nrows*ncols);
+    _values = (T *) malloc(sizeof(T)*nrows*ncols);
     if (_values == NULL) {
         _nrows = 0;
         _ncols = 0;
@@ -94,9 +100,10 @@ void c_matrix::set_size(int nrows, int ncols)
     }
 }
 
-/*f c_matrix::~c_matrix
+/*f c_matrix<T>::~c_matrix<T>
  */
-c_matrix::~c_matrix(void)
+template <typename T>
+c_matrix<T>::~c_matrix(void)
 {
     if (_values!=NULL) {
         free(_values);
@@ -104,9 +111,10 @@ c_matrix::~c_matrix(void)
     }
 }
 
-/*f c_matrix::init (void) - null
+/*f c_matrix<T>::init (void) - null
  */
-void c_matrix::init(void)
+template <typename T>
+void c_matrix<T>::init(void)
 {
     _nrows = 0;
     _ncols = 0;
@@ -116,24 +124,27 @@ void c_matrix::init(void)
     _values = NULL;
 }
 
-/*f c_matrix::c_matrix (void) - null
+/*f c_matrix<T>::c_matrix (void) - null
  */
-c_matrix::c_matrix(void)
+template <typename T>
+c_matrix<T>::c_matrix(void)
 {
     init();
 }
 
-/*f c_matrix::c_matrix (nrows, ncols) - null
+/*f c_matrix<T>::c_matrix (nrows, ncols) - null
  */
-c_matrix::c_matrix(int nrows, int ncols)
+template <typename T>
+c_matrix<T>::c_matrix(int nrows, int ncols)
 {
     init();
     set_size(nrows, ncols);
 }
 
-/*f c_matrix::c_matrix (other) - copy from other
+/*f c_matrix<T>::c_matrix (other) - copy from other
  */
-c_matrix::c_matrix(const c_matrix &other)
+template <typename T>
+c_matrix<T>::c_matrix(const c_matrix<T> &other)
 {
     init();
     set_size(other._nrows, other._ncols);
@@ -144,9 +155,10 @@ c_matrix::c_matrix(const c_matrix &other)
     }
 }
 
-/*f c_matrix::c_matrix (rows, cols, const double *values)
+/*f c_matrix<T>::c_matrix (rows, cols, const double *values)
  */
-c_matrix::c_matrix(int nrows, int ncols, const double *values)
+template <typename T>
+c_matrix<T>::c_matrix(int nrows, int ncols, const T *values)
 {
     init();
     set_size(nrows, ncols);
@@ -157,9 +169,10 @@ c_matrix::c_matrix(int nrows, int ncols, const double *values)
     }
 }
 
-/*f c_matrix::c_matrix (c_matrix &a, c_matrix &b) - a * b
+/*f c_matrix<T>::c_matrix (c_matrix<T> &a, c_matrix<T> &b) - a * b
  */
-c_matrix::c_matrix(const c_matrix &a, const c_matrix &b)
+template <typename T>
+c_matrix<T>::c_matrix(const c_matrix<T> &a, const c_matrix<T> &b)
 {
     init();
     if (a._ncols != b._nrows) {
@@ -169,16 +182,18 @@ c_matrix::c_matrix(const c_matrix &a, const c_matrix &b)
     this->multiply(a,b);
 }
 
-/*f c_matrix::copy
+/*f c_matrix<T>::copy
  */
-c_matrix *c_matrix::copy(void) const
+template <typename T>
+c_matrix<T> *c_matrix<T>::copy(void) const
 {
-    return new c_matrix(*this);
+    return new c_matrix<T>(*this);
 }
 
-/*f c_matrix::__str__
+/*f c_matrix<T>::__str__
  */
-void c_matrix::__str__(char *buffer, int buf_size) const
+template <typename T>
+void c_matrix<T>::__str__(char *buffer, int buf_size) const
 {
     int pr;
     
@@ -205,9 +220,10 @@ void c_matrix::__str__(char *buffer, int buf_size) const
 
 /*a Linear operations
  */
-/*f c_matrix::multiply
+/*f c_matrix<T>::multiply
  */
-c_matrix &c_matrix::multiply(const c_matrix &a, const c_matrix &b)
+template <typename T>
+c_matrix<T> &c_matrix<T>::multiply(const c_matrix<T> &a, const c_matrix<T> &b)
 {
     if (a._ncols != b._nrows) return *this;
     if (_nrows != a._nrows) return *this;
@@ -225,9 +241,10 @@ c_matrix &c_matrix::multiply(const c_matrix &a, const c_matrix &b)
     return *this;
 }
 
-/*f c_matrix::add_scaled
+/*f c_matrix<T>::add_scaled
  */
-c_matrix &c_matrix::add_scaled(const c_matrix &other, double scale)
+template <typename T>
+c_matrix<T> &c_matrix<T>::add_scaled(const c_matrix<T> &other, T scale)
 {
     if ((other._nrows!=_nrows) || (other._ncols!=_ncols)) return *this;
     for (int r=0; r<_nrows; r++) {
@@ -238,9 +255,10 @@ c_matrix &c_matrix::add_scaled(const c_matrix &other, double scale)
     return *this;
 }
 
-/*f c_matrix::scale
+/*f c_matrix<T>::scale
  */
-c_matrix &c_matrix::scale(double scale)
+template <typename T>
+c_matrix<T> &c_matrix<T>::scale(T scale)
 {
     for (int r=0; r<_nrows; r++) {
         for (int c=0; c<_ncols; c++) {
@@ -250,9 +268,10 @@ c_matrix &c_matrix::scale(double scale)
     return *this;
 }
 
-/*f c_matrix::set_identity
+/*f c_matrix<T>::set_identity
  */
-c_matrix &c_matrix::set_identity(void)
+template <typename T>
+c_matrix<T> &c_matrix<T>::set_identity(void)
 {
     for (int r=0; r<_nrows; r++) {
         for (int c=0; c<_ncols; c++) {
@@ -262,9 +281,10 @@ c_matrix &c_matrix::set_identity(void)
     return *this;
 }
 
-/*f c_matrix::transpose_stride
+/*f c_matrix<T>::transpose_stride
  */
-c_matrix &c_matrix::transpose_stride(void)
+template <typename T>
+c_matrix<T> &c_matrix<T>::transpose_stride(void)
 {
     if (_nrows==_ncols) {
         SWAP(_nrows, _ncols);
@@ -273,7 +293,7 @@ c_matrix &c_matrix::transpose_stride(void)
     return *this;
 }
 
-/*f c_matrix::transpose_data
+/*f c_matrix<T>::transpose_data
  *
  * Run through all the entries of the matrix and see where they map from
  * after transposition
@@ -289,12 +309,15 @@ c_matrix &c_matrix::transpose_stride(void)
  * Finally, swap nrows/ncols
  *
  */
-c_matrix &c_matrix::transpose_data(void)
+template <typename T>
+c_matrix<T> &c_matrix<T>::transpose_data(void)
 {
     if ( (_nrows != _ncols) &&
          (_row_stride!=(_ncols *_col_stride)) &&
          (_col_stride!=(_nrows *_row_stride)) )
+    {
         return *this; // cannot transpose the data
+    }
 
     for (int i=0; i<_nrows*_ncols; i++) {
         int n=0;
@@ -327,25 +350,32 @@ c_matrix &c_matrix::transpose_data(void)
         //fprintf(stderr,"\n");
     }
     SWAP(_nrows, _ncols);
+    if (_col_stride<_row_stride) { // i.e. elements are _col_stride apart throughout
+        _row_stride = _ncols * _col_stride;
+    } else {
+        _col_stride = _nrows * _row_stride;
+    }
     return *this;
 }
 
-/*f c_matrix::get_row
+/*f c_matrix<T>::get_row
  */
-c_vector *c_matrix::get_row(int row)
+template <typename T>
+c_vector<T> *c_matrix<T>::get_row(int row)
 {
-    c_vector *v = new c_vector(_ncols);
+    c_vector<T> *v = new c_vector<T>(_ncols);
     for (int c=0; c<_ncols; c++) {
         v->set(c,MATRIX_VALUE(row,c));
     }
     return v;
 }
 
-/*f c_matrix::get_column
+/*f c_matrix<T>::get_column
  */
-c_vector *c_matrix::get_column(int col)
+template <typename T>
+c_vector<T> *c_matrix<T>::get_column(int col)
 {
-    c_vector *v = new c_vector(_nrows);
+    c_vector<T> *v = new c_vector<T>(_nrows);
     for (int r=0; r<_nrows; r++) {
         v->set(r,MATRIX_VALUE(r,col));
     }
@@ -354,12 +384,13 @@ c_vector *c_matrix::get_column(int col)
 
 /*a Vector operations
  */
-/*f c_matrix::apply(const vector)
+/*f c_matrix<T>::apply(const vector)
  */
-c_vector *c_matrix::apply(const c_vector &v)
+template <typename T>
+c_vector<T> *c_matrix<T>::apply(const c_vector<T> &v)
 {
     if (v.length() != _ncols) return NULL;
-    c_vector *rv = new c_vector(_nrows);
+    c_vector<T> *rv = new c_vector<T>(_nrows);
     for (int r=0; r<_nrows; r++) {
         double d=0.0;
         for (int c=0; c<_ncols; c++) {
@@ -370,9 +401,10 @@ c_vector *c_matrix::apply(const c_vector &v)
     return rv;
 }
 
-/*f c_matrix::apply(const vector, double *, int)
+/*f c_matrix<T>::apply(const vector, double *, int)
  */
-double *c_matrix::apply(const c_vector &v, double *rv, int stride)
+template <typename T>
+T *c_matrix<T>::apply(const c_vector<T> &v, T *rv, int stride)
 {
     if (v.length() != _ncols) return NULL;
     for (int r=0; r<_nrows; r++) {
@@ -385,23 +417,25 @@ double *c_matrix::apply(const c_vector &v, double *rv, int stride)
     return rv;
 }
 
-/*f c_matrix::apply(const vector, vector)
+/*f c_matrix<T>::apply(const vector, vector)
  */
-c_vector &c_matrix::apply(const c_vector &v, c_vector &rv)
+template <typename T>
+c_vector<T> &c_matrix<T>::apply(const c_vector<T> &v, c_vector<T> &rv)
 {
     apply(v, rv.coords_to_set(NULL), rv.stride() );
     return rv;
 }
 
 /*a LU methods */
-/*f c_matrix::lup_decompose
+/*f c_matrix<T>::lup_decompose
  */
-int c_matrix::lup_decompose(c_vector **P)
+template <typename T>
+int c_matrix<T>::lup_decompose(c_vector<T> **P)
 {
     if (_nrows != _ncols) return -1;
     
     if (P!=NULL) {
-        *P = new c_vector(_nrows);
+        *P = new c_vector<T>(_nrows);
         for (int i=0; i<_nrows; i++) {
             (*P)->set(i,i);
         }
@@ -450,12 +484,13 @@ int c_matrix::lup_decompose(c_vector **P)
     return 0;
 }
 
-/*f c_matrix::lup_get_l
+/*f c_matrix<T>::lup_get_l
  *
  * The LUP has L in the lower, with U in the upper
  * The actual L has 1 on the diagonals, 0 on the upper
  */
-c_matrix &c_matrix::lup_get_l(void)
+template <typename T>
+c_matrix<T> &c_matrix<T>::lup_get_l(void)
 {
     for (int r=0; r<_nrows; r++) {
         for (int c=r; c<_ncols; c++) {
@@ -469,12 +504,13 @@ c_matrix &c_matrix::lup_get_l(void)
     return *this;
 }
 
-/*f c_matrix::lup_get_u
+/*f c_matrix<T>::lup_get_u
  *
  * The LUP has L in the lower, with U in the upper
  * The actual U has 0 on the lower
  */
-c_matrix &c_matrix::lup_get_u(void)
+template <typename T>
+c_matrix<T> &c_matrix<T>::lup_get_u(void)
 {
     for (int r=1; r<_nrows; r++) {
         for (int c=0; (c<r) && (c<_ncols); c++) {
@@ -484,7 +520,7 @@ c_matrix &c_matrix::lup_get_u(void)
     return *this;
 }
 
-/*f c_matrix::lup_unpivot
+/*f c_matrix<T>::lup_unpivot
  *
  * P is a vector of row numbers
  * P[0] is the row of the matrix that must be returned in row 0 after unpivot
@@ -492,9 +528,10 @@ c_matrix &c_matrix::lup_get_u(void)
  * 
  * Since this is messy (and unpivot is not common), a new matrix is returned
  */
-c_matrix *c_matrix::lup_unpivot(const c_vector &P)
+template <typename T>
+c_matrix<T> *c_matrix<T>::lup_unpivot(const c_vector<T> &P)
 {
-    c_matrix *UP = new c_matrix(_nrows, _ncols);
+    c_matrix<T> *UP = new c_matrix<T>(_nrows, _ncols);
     for (int r=0; r<_nrows; r++) {
         int Pr = (int) P.value(r);
         if (Pr<0) Pr=0;
@@ -506,7 +543,7 @@ c_matrix *c_matrix::lup_unpivot(const c_vector &P)
     return UP;
 }
 
-/*f c_matrix::lup_inverse
+/*f c_matrix<T>::lup_inverse
  *
  * this should be an LU matrix
  * Note that LUP decomposition of M has M = P.L.U
@@ -536,10 +573,11 @@ c_matrix *c_matrix::lup_unpivot(const c_vector &P)
  * Hence again x(c)(r) = (y(c)(r)-sum(U(l,r)*x(c)(l))/U(c,r),
  * for l=r+1..n
  */
-int c_matrix::lup_inverse(double *data) const
+template <typename T>
+int c_matrix<T>::lup_inverse(T *data) const
 {
     for (int c=0; c<_ncols; c++) {
-        double *y, *x;
+        T *y, *x;
         y = data;
         x = y;
         // Find y(c) such that L.y = c'th column of I
@@ -572,21 +610,22 @@ int c_matrix::lup_inverse(double *data) const
     return 0;
 }
 
-/*f c_matrix::lup_inverse
+/*f c_matrix<T>::lup_inverse
  *
  */
-c_matrix *c_matrix::lup_inverse(void) const
+template <typename T>
+c_matrix<T> *c_matrix<T>::lup_inverse(void) const
 {
     if (_nrows != _ncols) return NULL;
 
-    c_matrix *R = this->copy();
-    c_vector *P = new c_vector(_ncols);
+    c_matrix<T> *R = this->copy();
+    c_vector<T> *P = new c_vector<T>(_ncols);
 
-    double stack_data[16];
-    double *data = stack_data;
-    double *free_me = NULL;
+    T stack_data[16];
+    T *data = stack_data;
+    T *free_me = NULL;
     if (_nrows>4) {
-        data = (double *)malloc(sizeof(double)*_nrows*_ncols);
+        data = (T *)malloc(sizeof(T)*_nrows*_ncols);
         free_me = data;
     }
 
@@ -609,17 +648,18 @@ c_matrix *c_matrix::lup_inverse(void) const
 }
 
 
-/*f c_matrix::lup_invert
+/*f c_matrix<T>::lup_invert
  *
  */
-int c_matrix::lup_invert(const c_vector &P)
+template <typename T>
+int c_matrix<T>::lup_invert(const c_vector<T> &P)
 {
     if (_nrows != _ncols) return 0;
-    double stack_data[16];
-    double *data = stack_data;
-    double *free_me = NULL;
+    T stack_data[16];
+    T *data = stack_data;
+    T *free_me = NULL;
     if (_nrows>4) {
-        data = (double *)malloc(sizeof(double)*_nrows*_ncols);
+        data = (T *)malloc(sizeof(T)*_nrows*_ncols);
         free_me = data;
     }
     if (lup_inverse(data)!=0) {
@@ -638,3 +678,7 @@ int c_matrix::lup_invert(const c_vector &P)
     return 0;
 }
 
+/*a Explicit instantiations of the template
+ */
+template class c_matrix<double>;
+template class c_matrix<float>;

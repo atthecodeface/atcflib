@@ -29,19 +29,20 @@
 
 /*a Types
  */
-class c_vector
+template <typename T> class c_quaternion;
+template <typename T> class c_vector
 {
-    double _internal_coords[VECTOR_MAX_LENGTH];
-    double *_coords;
+    T _internal_coords[VECTOR_MAX_LENGTH];
+    T *_coords;
     int _coords_must_be_freed;
     int _length;
     int _max_length;
     int _stride;
 public:
-    c_vector &operator*=(double real);
-    c_vector &operator/=(double real);
-    inline c_vector operator*(double rhs) { c_vector lhs=*this; lhs *= rhs; return lhs; }
-    inline c_vector operator/(double rhs) { c_vector lhs=*this; lhs /= rhs; return lhs; }
+    c_vector &operator*=(T real);
+    c_vector &operator/=(T real);
+    inline c_vector operator*(T rhs) { c_vector lhs=*this; lhs *= rhs; return lhs; }
+    inline c_vector operator/(T rhs) { c_vector lhs=*this; lhs /= rhs; return lhs; }
 
     inline c_vector &operator=(const c_vector &other)  {return assign(other);}
     inline c_vector &operator+=(const c_vector &other) {return add_scaled(other, 1.0); }
@@ -55,33 +56,33 @@ public:
     c_vector(const c_vector &vector);
     c_vector(int length);
     c_vector(void);
-    c_vector(const class c_quaternion &quat);
-    c_vector(int length, int stride, double *coords); // refer to data
+    c_vector(const class c_quaternion<T> &quat);
+    c_vector(int length, int stride, T *coords); // refer to data
     ~c_vector(void);
     c_vector *copy(void) const;
 
     inline int length(void) const {return _length;}
     inline int stride(void) const {return _stride;}
-    inline const double *coords(int *stride) const {if (stride) {*stride=_stride;} return &(_coords[0]);};
-    inline double *coords_to_set(int *stride) {if (stride) {*stride=_stride;} return &(_coords[0]);};
-    inline void set(int n, double v) {_coords[n*_stride]=v;};
-    inline double value(int n) const {return _coords[n*_stride];};
-    c_vector &assign(const c_vector &other);
-    c_vector &assign(int length, int stride, const double *coords); // copy data
-    c_vector &add_scaled(const c_vector &other, double scale);
-    double modulus_squared(void) const;
-    double modulus(void) const;
-    c_vector &scale(double scale);
-    c_vector &normalize(void);
-    double dot_product(const c_vector &other) const;
-    c_vector *cross_product3(const c_vector &other) const;
+    inline const T *coords(int *stride) const {if (stride) {*stride=_stride;} return &(_coords[0]);};
+    inline T *coords_to_set(int *stride) {if (stride) {*stride=_stride;} return &(_coords[0]);};
+    inline void set(int n, T v) {_coords[n*_stride]=v;};
+    inline T value(int n) const {return _coords[n*_stride];};
+    c_vector<T> &assign(const c_vector<T> &other);
+    c_vector<T> &assign(int length, int stride, const T *coords); // copy data
+    c_vector<T> &add_scaled(const c_vector<T> &other, T scale);
+    T modulus_squared(void) const;
+    T modulus(void) const;
+    c_vector<T> &scale(T scale);
+    c_vector<T> &normalize(void);
+    T dot_product(const c_vector<T> &other) const;
+    c_vector<T> *cross_product3(const c_vector<T> &other) const;
 
     // axis_angle_to_v works for 3-vectors.
     // It creates a new vector to be the axis of rotation required to
     // get from 'this' to 'other' (i.e. this <= unit(this x other))
     // and sets the angle; it returns 'this'
-    c_vector *angle_axis_to_v3(const c_vector &other, double *cos_angle, double *sin_angle) const;
-    class c_quaternion *angle_axis_to_v3(const c_vector &other) const;
+    c_vector<T> *angle_axis_to_v3(const c_vector<T> &other, T *cos_angle, T *sin_angle) const;
+    class c_quaternion<T> *angle_axis_to_v3(const c_vector<T> &other) const;
     void __str__(char *buffer, int buf_size) const;
 };
 

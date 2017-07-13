@@ -82,9 +82,9 @@ static struct custom_operations custom_ops = {
  *
  */
 extern value
-caml_atcf_alloc_vector(c_vector *cv)
+caml_atcf_alloc_vector(c_vector<double> *cv)
 {
-    value v = caml_alloc_custom(&custom_ops, sizeof(c_vector *), 0, 1);
+    value v = caml_alloc_custom(&custom_ops, sizeof(c_vector<double> *), 0, 1);
     vector_of_val(v) = cv;
     VERBOSE(stderr,"Allocked caml vector %p\n", cv);
     return v;
@@ -101,7 +101,7 @@ atcf_vector_create(value n)
 {
     CAMLparam1(n);
     VERBOSE(stderr,"Create vector %ld\n",Long_val(n));
-    CAMLreturn(caml_atcf_alloc_vector(new c_vector(Long_val(n))));
+    CAMLreturn(caml_atcf_alloc_vector(new c_vector<double>(Long_val(n))));
 }
 
 
@@ -122,7 +122,7 @@ atcf_vector_create_bigarray_slice(value b, value l, value o, value s)
     VERBOSE(stderr,"Create vector from bigarray data %p (%p:%d:%d) %d %d %d\n",
             vb, Caml_ba_array_val(b)->data,Caml_ba_array_val(b)->num_dims, Caml_ba_array_val(b)->dim[0],
             vl,vs,vo);
-    CAMLreturn(caml_atcf_alloc_vector(new c_vector(vl,vs,vb+vo)));
+    CAMLreturn(caml_atcf_alloc_vector(new c_vector<double>(vl,vs,vb+vo)));
 }
 
 
@@ -153,7 +153,7 @@ atcf_vector_clone(value v)
 {
     CAMLparam1(v);
     VERBOSE(stderr,"Clone vector %p\n", vector_of_val(v));
-    CAMLreturn(caml_atcf_alloc_vector(new c_vector(*vector_of_val(v))));
+    CAMLreturn(caml_atcf_alloc_vector(new c_vector<double>(*vector_of_val(v))));
 }
 
 /*a Interrogation functions - not effecting the c_vector
@@ -168,7 +168,7 @@ CAMLprim value
 atcf_vector_coords(value v)
 {
     CAMLparam1(v);
-    c_vector *cv = vector_of_val(v);
+    c_vector<double> *cv = vector_of_val(v);
     int n = cv->length();
     v = caml_alloc_float_array(n);
     for (int i=0; i<n; i++) {
@@ -313,10 +313,10 @@ atcf_vector_angle_axis_to3(value v, value v2)
 {
     CAMLparam2(v,v2);
     value vr = caml_alloc_tuple(3);
-    value vrv = caml_alloc_custom(&custom_ops, sizeof(c_vector *), 0, 1);
+    value vrv = caml_alloc_custom(&custom_ops, sizeof(c_vector<double> *), 0, 1);
     Store_field(vr,0,vrv);
     double cos, sin;
-    c_vector *cv = vector_of_val(v)->angle_axis_to_v3(*vector_of_val(v2), &cos, &sin);
+    c_vector<double> *cv = vector_of_val(v)->angle_axis_to_v3(*vector_of_val(v2), &cos, &sin);
     vector_of_val(vrv) = cv;
     Store_field(vr,1,caml_copy_double(cos));
     Store_field(vr,2,caml_copy_double(sin));

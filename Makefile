@@ -24,7 +24,8 @@ PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks
 
 ATCF_INCLUDE := include
-LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o build/polynomial.o
+LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o
+# build/polynomial.o
 
 libatcf: libatcf.so
 
@@ -441,5 +442,5 @@ octagon1: batch
 
 
 clean:
-	rm -f *.o prog libatcf.so
+	rm -f build/*.o prog libatcf.so
 

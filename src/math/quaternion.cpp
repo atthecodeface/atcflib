@@ -58,66 +58,76 @@ pass
 #define EPSILON (1E-20)
 #define PI (M_PI)
 
-/*a Infix operator methods for doubles
+/*a Infix operator methods for Ts
  */
-c_quaternion &c_quaternion::operator=(double real)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator=(T real)
 {
     quat.r = real;
     quat.i = quat.j = quat.k = 0.0;
     return *this;
 }
 
-c_quaternion &c_quaternion::operator+=(double real)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator+=(T real)
 {
     quat.r += real;
     return *this;
 }
 
-c_quaternion &c_quaternion::operator-=(double real)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator-=(T real)
 {
     quat.r -= real;
     return *this;
 }
 
-c_quaternion &c_quaternion::operator*=(double real)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator*=(T real)
 {
     this->scale(real);
     return *this;
 }
 
-c_quaternion &c_quaternion::operator/=(double real)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator/=(T real)
 {
     this->scale(1.0/real);
     return *this;
 }
 
-/*a Infix operator methods for c_quaternion's
+/*a Infix operator methods for c_quaternion<T>'s
  */
-c_quaternion &c_quaternion::operator=(const c_quaternion &other)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator=(const c_quaternion<T> &other)
 {
     quat = other.quat;
     return *this;
 }
 
-c_quaternion &c_quaternion::operator+=(const c_quaternion &other)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator+=(const c_quaternion<T> &other)
 {
     return this->add_scaled(other,1.0);
 }
 
-c_quaternion &c_quaternion::operator-=(const c_quaternion &other)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator-=(const c_quaternion<T> &other)
 {
     return this->add_scaled(other,-1.0);
 }
 
-c_quaternion &c_quaternion::operator*=(const c_quaternion &other)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator*=(const c_quaternion<T> &other)
 {
     this->multiply(other);
     return *this;
 }
 
-c_quaternion &c_quaternion::operator/=(const c_quaternion &other)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::operator/=(const c_quaternion<T> &other)
 {
-    c_quaternion r;
+    c_quaternion<T> r;
     r = other;
     this->multiply(r.reciprocal());
     return *this;
@@ -125,9 +135,10 @@ c_quaternion &c_quaternion::operator/=(const c_quaternion &other)
 
 /*a Constructors
  */
-/*f c_quaternion::c_quaternion (void) - null
+/*f c_quaternion<T>::c_quaternion (void) - null
  */
-c_quaternion::c_quaternion(void)
+template <typename T>
+c_quaternion<T>::c_quaternion(void)
 {
     quat.r = 0.0;
     quat.i = 0.0;
@@ -135,16 +146,18 @@ c_quaternion::c_quaternion(void)
     quat.k = 0.0;
 }
 
-/*f c_quaternion::c_quaternion(other) - copy from other
+/*f c_quaternion<T>::c_quaternion(other) - copy from other
  */
-c_quaternion::c_quaternion(const c_quaternion &other)
+template <typename T>
+c_quaternion<T>::c_quaternion(const c_quaternion<T> &other)
 {
     quat = other.quat;
 }
 
-/*f c_quaternion::c_quaternion(r,j,k,k)
+/*f c_quaternion<T>::c_quaternion(r,j,k,k)
  */
-c_quaternion::c_quaternion(double r, double i, double j, double k)
+template <typename T>
+c_quaternion<T>::c_quaternion(T r, T i, T j, T k)
 {
     quat.r = r;
     quat.i = i;
@@ -152,9 +165,10 @@ c_quaternion::c_quaternion(double r, double i, double j, double k)
     quat.k = k;
 }
 
-/*f c_quaternion::c_quaternion(vector)
+/*f c_quaternion<T>::c_quaternion(vector)
  */
-c_quaternion::c_quaternion(const c_vector &vector)
+template <typename T>
+c_quaternion<T>::c_quaternion(const c_vector<T> &vector)
 {
     quat.r = 0;
     quat.i = vector.value(0);
@@ -162,17 +176,19 @@ c_quaternion::c_quaternion(const c_vector &vector)
     quat.k = vector.value(2);
 }
 
-/*f c_quaternion::copy
+/*f c_quaternion<T>::copy
  */
-c_quaternion *c_quaternion::copy(void) const
+template <typename T>
+c_quaternion<T> *c_quaternion<T>::copy(void) const
 {
-    return new c_quaternion(*this);
+    return new c_quaternion<T>(*this);
 }
 
-/*f c_quaternion::__str__
+/*f c_quaternion<T>::__str__
  */
+template <typename T>
 char *
-c_quaternion::__str__(char *buffer, int buf_size) const
+c_quaternion<T>::__str__(char *buffer, int buf_size) const
 {
     snprintf(buffer, buf_size, "(%lf, %lf, %lf, %lf)",
              quat.r, quat.i, quat.j, quat.k );
@@ -180,9 +196,10 @@ c_quaternion::__str__(char *buffer, int buf_size) const
     return buffer;
 }
 
-/*f c_quaternion::get_rijk
+/*f c_quaternion<T>::get_rijk
  */
-void c_quaternion::get_rijk(double rijk[4]) const
+template <typename T>
+void c_quaternion<T>::get_rijk(T rijk[4]) const
 {
     rijk[0] = quat.r;
     rijk[1] = quat.i;
@@ -190,13 +207,14 @@ void c_quaternion::get_rijk(double rijk[4]) const
     rijk[3] = quat.k;
 }
 
-/*f c_quaternion::from_euler
+/*f c_quaternion<T>::from_euler
  */
-c_quaternion &c_quaternion::from_euler(double roll, double pitch, double yaw, int degrees)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::from_euler(T roll, T pitch, T yaw, int degrees)
 {
-    double cr, cp, cy;
-    double sr, sp, sy;
-    double crcp, srsp;
+    T cr, cp, cy;
+    T sr, sp, sy;
+    T crcp, srsp;
 
     if (degrees) {
         roll  *= PI/180;
@@ -220,7 +238,7 @@ c_quaternion &c_quaternion::from_euler(double roll, double pitch, double yaw, in
     return *this;
 }
 
-/*f c_quaternion::lookat_aeronautic
+/*f c_quaternion<T>::lookat_aeronautic
  *
  * Find rotation that makes Z map to xyz axis, with X map to up (as far as possible)
  *
@@ -237,26 +255,28 @@ c_quaternion &c_quaternion::from_euler(double roll, double pitch, double yaw, in
  * Then find the roll that gets the rotated Up to be parallel to the X axis
  *
  */
-c_quaternion &c_quaternion::lookat_aeronautic(const double xyz[3], const double up[3])
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::lookat_aeronautic(const T xyz[3], const T up[3])
 {
-    double len_xyz = sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
-    double pitch =  asin(xyz[0] / len_xyz); // +ve as ccw around Y to Z
-    double yaw   = -atan2(xyz[1], xyz[2]); // -ve as ccw around X to Z
+    T len_xyz = sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
+    T pitch =  asin(xyz[0] / len_xyz); // +ve as ccw around Y to Z
+    T yaw   = -atan2(xyz[1], xyz[2]); // -ve as ccw around X to Z
 
-    double cy = cos(yaw);
-    double sy = sin(yaw);
-    double cp = cos(pitch);
-    double sp = sin(pitch);
-    double roll = atan2( up[1]*cy    + up[2]*sy, // CCW around X -> Y coord (unchanged by CCW around Y)
+    T cy = cos(yaw);
+    T sy = sin(yaw);
+    T cp = cos(pitch);
+    T sp = sin(pitch);
+    T roll = atan2( up[1]*cy    + up[2]*sy, // CCW around X -> Y coord (unchanged by CCW around Y)
                          up[1]*sy*sp - up[2]*cy*sp + up[0]*cp ); // CCW around X -> CCW around Y -> X coord
     return this->from_euler(-roll, -pitch, -yaw, 0).conjugate();
 }
 
-/*f c_quaternion::lookat_aeronautic
+/*f c_quaternion<T>::lookat_aeronautic
  */
-c_quaternion &c_quaternion::lookat_aeronautic(const c_vector &at, const c_vector &up)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::lookat_aeronautic(const c_vector<T> &at, const c_vector<T> &up)
 {
-    double at_xyz[3], up_xyz[3];
+    T at_xyz[3], up_xyz[3];
     for (int i=0; i<3; i++) {
         at_xyz[i] = at.value(i);
         up_xyz[i] = up.value(i);
@@ -264,7 +284,7 @@ c_quaternion &c_quaternion::lookat_aeronautic(const c_vector &at, const c_vector
     return lookat_aeronautic(at_xyz, up_xyz);
 }
 
-/*f c_quaternion::lookat_graphics
+/*f c_quaternion<T>::lookat_graphics
  *
  * Find rotation that makes at map to -Z, with up mapping to Y (as far as possible)
  *
@@ -284,9 +304,10 @@ c_quaternion &c_quaternion::lookat_aeronautic(const c_vector &at, const c_vector
  * 0 r r 0 -> 0 0 1 0 -> -1 0 0 0
  * 
  */
-c_quaternion &c_quaternion::lookat_graphics(const double at[3], const double up[3])
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::lookat_graphics(const T at[3], const T up[3])
 {
-    double r, i, j, k, rrt2;
+    T r, i, j, k, rrt2;
     this->lookat_aeronautic(at, up);
     rrt2 = 1/sqrt(2);
     r = rrt2 * ( quat.r - quat.k );
@@ -302,11 +323,12 @@ c_quaternion &c_quaternion::lookat_graphics(const double at[3], const double up[
     return *this;
 }
 
-/*f c_quaternion::lookat_graphics
+/*f c_quaternion<T>::lookat_graphics
  */
-c_quaternion &c_quaternion::lookat_graphics(const c_vector &at, const c_vector &up)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::lookat_graphics(const c_vector<T> &at, const c_vector<T> &up)
 {
-    double at_xyz[3], up_xyz[3];
+    T at_xyz[3], up_xyz[3];
     for (int i=0; i<3; i++) {
         at_xyz[i] = at.value(i);
         up_xyz[i] = up.value(i);
@@ -314,16 +336,17 @@ c_quaternion &c_quaternion::lookat_graphics(const c_vector &at, const c_vector &
     return lookat_graphics(at_xyz, up_xyz);
 }
 
-/*f c_quaternion::as_euler
+/*f c_quaternion<T>::as_euler
  */
-void c_quaternion::as_euler(double rpy[3]) const
+template <typename T>
+void c_quaternion<T>::as_euler(T rpy[3]) const
 {
-    double l=modulus();
-    double r=quat.r;
-    double i=quat.i;
-    double j=quat.j;
-    double k=quat.k;
-    double roll, pitch, yaw;
+    T l=modulus();
+    T r=quat.r;
+    T i=quat.i;
+    T j=quat.j;
+    T k=quat.k;
+    T roll, pitch, yaw;
     if (l>1E-9) {
         r/=l; i/=l; j/=l; k/=l;
     }
@@ -432,15 +455,16 @@ void c_quaternion::as_euler(double rpy[3]) const
         return self
 */
 
-/*f c_quaternion::from_rotation
+/*f c_quaternion<T>::from_rotation
  */
-c_quaternion &c_quaternion::from_rotation(double angle, const double axis[3], int degrees)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::from_rotation(T angle, const T axis[3], int degrees)
 {
     if (degrees) {
         angle *= PI/180;
     }
-    double s = sin(angle/2);
-    double c = cos(angle/2);
+    T s = sin(angle/2);
+    T c = cos(angle/2);
     quat.r = c;
     quat.i = s*axis[0];
     quat.j = s*axis[1];
@@ -448,11 +472,12 @@ c_quaternion &c_quaternion::from_rotation(double angle, const double axis[3], in
     return *this;
 }
 
-/*f c_quaternion::from_rotation
+/*f c_quaternion<T>::from_rotation
  */
-c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, const double *axis, int axis_stride)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::from_rotation(T cos_angle, T sin_angle, const T *axis, int axis_stride)
 {
-    double c, s;
+    T c, s;
     // cos(2x) = 2(cos(x)^2)-1 = cos(x)^2 - sin(x)^2
     // sin(2x) = 2sin(x)cos(x)
     // cos(x) = +-sqrt(1+cos(2x))/sqrt(2)
@@ -484,21 +509,23 @@ c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, co
     return *this;
 }
 
-/*f c_quaternion::from_rotation
+/*f c_quaternion<T>::from_rotation
  */
-c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, const c_vector &axis)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::from_rotation(T cos_angle, T sin_angle, const c_vector<T> &axis)
 {
     return from_rotation(cos_angle, sin_angle, axis.coords(NULL), axis.stride());
 }
 
-/*f c_quaternion::as_rotation
+/*f c_quaternion<T>::as_rotation
  */
-double c_quaternion::as_rotation(double axis[3]) const
+template <typename T>
+T c_quaternion<T>::as_rotation(T axis[3]) const
 {
-    double m=this->modulus();
-    double angle = 2*acos(quat.r/m);
+    T m=this->modulus();
+    T angle = 2*acos(quat.r/m);
 
-    double sm = m*sin(angle/2);
+    T sm = m*sin(angle/2);
     if (fabs(sm)>EPSILON) {
         axis[0] = quat.i/sm;
         axis[1] = quat.j/sm;
@@ -511,14 +538,15 @@ double c_quaternion::as_rotation(double axis[3]) const
     return angle;
 }
 
-/*f c_quaternion::as_rotation
+/*f c_quaternion<T>::as_rotation
  */
-double c_quaternion::as_rotation(c_vector &vector) const
+template <typename T>
+T c_quaternion<T>::as_rotation(c_vector<T> &vector) const
 {
-    double m=this->modulus();
-    double angle = 2*acos(quat.r/m);
+    T m=this->modulus();
+    T angle = 2*acos(quat.r/m);
 
-    double sm = m*sin(angle/2);
+    T sm = m*sin(angle/2);
     if (fabs(sm)>EPSILON) {
         vector.set(0, quat.i/sm);
         vector.set(1, quat.j/sm);
@@ -531,17 +559,18 @@ double c_quaternion::as_rotation(c_vector &vector) const
     return angle;
 }
 
-/*f c_quaternion::as_rotation
+/*f c_quaternion<T>::as_rotation
  */
-void c_quaternion::as_rotation(c_vector &vector, double *cos, double *sin) const
+template <typename T>
+void c_quaternion<T>::as_rotation(c_vector<T> &vector, T *cos, T *sin) const
 {
-    double m=this->modulus();
-    double cos_half = quat.r/m;
-    double sin_half = sqrt(1-cos_half*cos_half);
+    T m=this->modulus();
+    T cos_half = quat.r/m;
+    T sin_half = sqrt(1-cos_half*cos_half);
     *cos = cos_half*cos_half - sin_half*sin_half;
     *sin = 2*sin_half*cos_half;
 
-    double sm = m*sin_half;
+    T sm = m*sin_half;
     if (fabs(sm)>EPSILON) {
         vector.set(0, quat.i/sm);
         vector.set(1, quat.j/sm);
@@ -553,9 +582,10 @@ void c_quaternion::as_rotation(c_vector &vector, double *cos, double *sin) const
     }
 }
 
-/*f c_quaternion::conjugate
+/*f c_quaternion<T>::conjugate
  */
-c_quaternion &c_quaternion::conjugate(void)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::conjugate(void)
 {
     quat.r = quat.r;
     quat.i = -quat.i;
@@ -564,9 +594,10 @@ c_quaternion &c_quaternion::conjugate(void)
     return *this;
 }
 
-/*f c_quaternion::reciprocal
+/*f c_quaternion<T>::reciprocal
  */
-c_quaternion &c_quaternion::reciprocal(void)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::reciprocal(void)
 {
     this->conjugate();
     this->scale(1.0/this->modulus_squared());
@@ -574,9 +605,10 @@ c_quaternion &c_quaternion::reciprocal(void)
 }
 
 
-/*f c_quaternion::add_scaled
+/*f c_quaternion<T>::add_scaled
  */
-c_quaternion &c_quaternion::add_scaled(const c_quaternion &other, double scale)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::add_scaled(const c_quaternion<T> &other, T scale)
 {
     quat.r += other.quat.r*scale;
     quat.i += other.quat.i*scale;
@@ -585,9 +617,10 @@ c_quaternion &c_quaternion::add_scaled(const c_quaternion &other, double scale)
     return *this;
 }
 
-/*f c_quaternion::modulus_squared
+/*f c_quaternion<T>::modulus_squared
  */
-double c_quaternion::modulus_squared(void) const
+template <typename T>
+T c_quaternion<T>::modulus_squared(void) const
 {
     return (quat.r*quat.r + 
             quat.i*quat.i + 
@@ -595,9 +628,10 @@ double c_quaternion::modulus_squared(void) const
             quat.k*quat.k);
 }
 
-/*f c_quaternion::modulus
+/*f c_quaternion<T>::modulus
  */
-double c_quaternion::modulus(void) const
+template <typename T>
+T c_quaternion<T>::modulus(void) const
 {
     return sqrt( quat.r*quat.r + 
                  quat.i*quat.i + 
@@ -605,9 +639,10 @@ double c_quaternion::modulus(void) const
                  quat.k*quat.k);
 }
 
-/*f c_quaternion::scale
+/*f c_quaternion<T>::scale
  */
-c_quaternion &c_quaternion::scale(double scale)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::scale(T scale)
 {
     quat.r *= scale;
     quat.i *= scale;
@@ -616,23 +651,25 @@ c_quaternion &c_quaternion::scale(double scale)
     return *this;
 }
 
-/*f c_quaternion::normalize
+/*f c_quaternion<T>::normalize
  */
-c_quaternion &c_quaternion::normalize(void)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::normalize(void)
 {
-    double l = this->modulus();
+    T l = this->modulus();
     if ((l>-EPSILON) && (l<EPSILON))
         return *this;
     return this->scale(1.0/l);
 }
 
-/*f c_quaternion::multiply
+/*f c_quaternion<T>::multiply
  */
-c_quaternion &c_quaternion::multiply(const c_quaternion &other, int premultiply)
+template <typename T>
+c_quaternion<T> &c_quaternion<T>::multiply(const c_quaternion<T> &other, int premultiply)
 {
-    double r1, i1, j1, k1;
-    double r2, i2, j2, k2;
-    const c_quaternion *a, *b;
+    T r1, i1, j1, k1;
+    T r2, i2, j2, k2;
+    const c_quaternion<T> *a, *b;
     a=this; b=&other;
     if (premultiply) {
         a=&other; b=this;
@@ -655,40 +692,43 @@ c_quaternion &c_quaternion::multiply(const c_quaternion &other, int premultiply)
     return *this;
 }
 
-/*f c_quaternion::rotate_vector
+/*f c_quaternion<T>::rotate_vector
  */
-c_quaternion *c_quaternion::rotate_vector(const c_vector &vector) const
+template <typename T>
+c_quaternion<T> *c_quaternion<T>::rotate_vector(const c_vector<T> &vector) const
 {
-    c_quaternion *r = new c_quaternion();
-    *r = (*this) * c_quaternion(vector) * this->copy()->conjugate();
+    c_quaternion<T> *r = new c_quaternion<T>();
+    *r = (*this) * c_quaternion<T>(vector) * this->copy()->conjugate();
     return r;
 }
 
-/*f c_quaternion::rotate_vector
+/*f c_quaternion<T>::rotate_vector
  */
-void c_quaternion::rotate_vector(c_vector *vector) const
+template <typename T>
+void c_quaternion<T>::rotate_vector(c_vector<T> *vector) const
 {
-    c_quaternion r = c_quaternion(*vector);
-    c_quaternion c = c_quaternion(*this);
+    c_quaternion<T> r = c_quaternion<T>(*vector);
+    c_quaternion<T> c = c_quaternion<T>(*this);
     r = (*this) * r * c.conjugate();
     vector->set(0,r.quat.i);
     vector->set(1,r.quat.j);
     vector->set(2,r.quat.k);
 }
 
-/*f c_quaternion::angle_axis
+/*f c_quaternion<T>::angle_axis
  */
-c_quaternion *c_quaternion::angle_axis(const c_quaternion &other, c_vector &vector) const
+template <typename T>
+c_quaternion<T> *c_quaternion<T>::angle_axis(const c_quaternion<T> &other, c_vector<T> &vector) const
 {
-    c_quaternion *a, *b;
-    c_quaternion *r = new c_quaternion();
-    double cos_angle, sin_angle;
+    c_quaternion<T> *a, *b;
+    c_quaternion<T> *r = new c_quaternion<T>();
+    T cos_angle, sin_angle;
     //fprintf(stderr,"vector:%lf,%lf,%lf\n",vector.coords()[0],vector.coords()[1],vector.coords()[2]);
     a = this->rotate_vector(vector);
     //fprintf(stderr,"a:%lf,%lf,%lf,%lf\n",a.r(),a.i(),a.j(),a.k());
     b = other.rotate_vector(vector);
     //fprintf(stderr,"b:%lf,%lf,%lf,%lf\n",b.r(),b.i(),b.j(),b.k());
-    c_vector *axis = c_vector(*a).angle_axis_to_v3(c_vector(*b), &cos_angle, &sin_angle);
+    c_vector<T> *axis = c_vector<T>(*a).angle_axis_to_v3(c_vector<T>(*b), &cos_angle, &sin_angle);
     //fprintf(stderr,"axis:%lf,%lf,%lf - %lf,%lf\n",axis.coords()[0],axis.coords()[1],axis.coords()[2],cos_angle,sin_angle);
     r->from_rotation(cos_angle, sin_angle, *axis);
     delete a;
@@ -697,11 +737,12 @@ c_quaternion *c_quaternion::angle_axis(const c_quaternion &other, c_vector &vect
     return r;
 }
 
-/*f c_quaternion::distance_to
+/*f c_quaternion<T>::distance_to
  */
-double c_quaternion::distance_to(const c_quaternion &other) const
+template <typename T>
+T c_quaternion<T>::distance_to(const c_quaternion<T> &other) const
 {
-    c_quaternion q;
+    c_quaternion<T> q;
     q = (*this / other);
     return 1-((q*q).r());
 }
@@ -764,3 +805,8 @@ double c_quaternion::distance_to(const c_quaternion &other) const
 }
 */
 
+
+/*a Explicit instantiations of the template
+ */
+template class c_quaternion<double>;
+template class c_quaternion<float>;

@@ -15,11 +15,12 @@
 #define COORD(n) (_coords[(n)*_stride])
 #define OCOORD(o,n) ((o)._coords[(n)*(o)._stride])
 
-/*a Infix operator methods for doubles
+/*a Infix operator methods for Ts
  */
 /*f operator*=
  */
-c_vector &c_vector::operator*=(double real)
+template <typename T>
+c_vector<T> &c_vector<T>::operator*=(T real)
 {
     this->scale(real);
     return *this;
@@ -27,7 +28,8 @@ c_vector &c_vector::operator*=(double real)
 
 /*f operator/=
  */
-c_vector &c_vector::operator/=(double real)
+template <typename T>
+c_vector<T> &c_vector<T>::operator/=(T real)
 {
     this->scale(1.0/real);
     return *this;
@@ -35,9 +37,10 @@ c_vector &c_vector::operator/=(double real)
 
 /*a Constructors
  */
-/*f c_vector::init
+/*f c_vector<T>::init
  */
-void c_vector::init(void)
+template <typename T>
+void c_vector<T>::init(void)
 {
     _length = 0;
     _max_length = VECTOR_MAX_LENGTH;
@@ -46,9 +49,10 @@ void c_vector::init(void)
     _coords_must_be_freed = 0;
 }
 
-/*f c_vector::set_length
+/*f c_vector<T>::set_length
  */
-int c_vector::set_length(int length, int allow_reallocate)
+template <typename T>
+int c_vector<T>::set_length(int length, int allow_reallocate)
 {
     if (length<=_max_length) {
         _length = length;
@@ -71,7 +75,7 @@ int c_vector::set_length(int length, int allow_reallocate)
     if (_coords_must_be_freed) {
         free(_coords);
     }
-    _coords = (double *)malloc(sizeof(double)*length);
+    _coords = (T *)malloc(sizeof(T)*length);
     if (_coords==NULL) {
         _coords_must_be_freed = 0;
         _length = 0;
@@ -86,9 +90,10 @@ int c_vector::set_length(int length, int allow_reallocate)
     return 0;
 }
 
-/*f c_vector::c_vector (void) - null
+/*f c_vector<T>::c_vector (void) - null
  */
-c_vector::c_vector(void)
+template <typename T>
+c_vector<T>::c_vector(void)
 {
     _length = 0;
     _stride = 1;
@@ -96,9 +101,10 @@ c_vector::c_vector(void)
     _coords = _internal_coords;
 }
 
-/*f c_vector::c_vector (length) - null
+/*f c_vector<T>::c_vector (length) - null
  */
-c_vector::c_vector(int length)
+template <typename T>
+c_vector<T>::c_vector(int length)
 {
     init();
     set_length(length, 1);
@@ -107,9 +113,10 @@ c_vector::c_vector(int length)
     }
 }
 
-/*f c_vector::c_vector(other) - copy from other
+/*f c_vector<T>::c_vector(other) - copy from other
  */
-c_vector::c_vector(const c_vector &other)
+template <typename T>
+c_vector<T>::c_vector(const c_vector<T> &other)
 {
     init();
     set_length(other._length, 1);
@@ -118,9 +125,10 @@ c_vector::c_vector(const c_vector &other)
     }
 }
 
-/*f c_vector::c_vector (length, int stride, double *coords)
+/*f c_vector<T>::c_vector (length, int stride, T *coords)
  */
-c_vector::c_vector(int length, int stride, double *coords)
+template <typename T>
+c_vector<T>::c_vector(int length, int stride, T *coords)
 {
     init();
     _length = length;
@@ -130,9 +138,10 @@ c_vector::c_vector(int length, int stride, double *coords)
     _coords_must_be_freed = 0;
 }
 
-/*f c_vector::c_vector (quaternion)
+/*f c_vector<T>::c_vector (quaternion<T>)
  */
-c_vector::c_vector(const c_quaternion &quat)
+template <typename T>
+c_vector<T>::c_vector(const c_quaternion<T> &quat)
 {
     init();
     set_length(3,1);
@@ -141,9 +150,10 @@ c_vector::c_vector(const c_quaternion &quat)
     COORD(2) = quat.k();
 }
 
-/*f c_vector::~c_vector
+/*f c_vector<T>::~c_vector<T>
  */
-c_vector::~c_vector(void)
+template <typename T>
+c_vector<T>::~c_vector<T>(void)
 {
     if (_coords_must_be_freed) {
         free(_coords);
@@ -152,16 +162,18 @@ c_vector::~c_vector(void)
     }
 }
 
-/*f c_vector::copy
+/*f c_vector<T>::copy
  */
-c_vector *c_vector::copy(void) const
+template <typename T>
+c_vector<T> *c_vector<T>::copy(void) const
 {
-    return new c_vector(*this);
+    return new c_vector<T>(*this);
 }
 
-/*f c_vector::__str__
+/*f c_vector<T>::__str__
  */
-void c_vector::__str__(char *buffer, int buf_size) const
+template <typename T>
+void c_vector<T>::__str__(char *buffer, int buf_size) const
 {
     static const char *formats[9] = {"",
                                      "(%lf,)",
@@ -178,9 +190,10 @@ void c_vector::__str__(char *buffer, int buf_size) const
     buffer[buf_size-1] = 0;
 }
 
-/*f c_vector::assign( vector )
+/*f c_vector<T>::assign( vector )
  */
-c_vector &c_vector::assign(const c_vector &other)
+template <typename T>
+c_vector<T> &c_vector<T>::assign(const c_vector<T> &other)
 {
     set_length(other._length, 0); // Don't reallocate vector data
     for (int i=0; i<_length; i++) {
@@ -189,9 +202,10 @@ c_vector &c_vector::assign(const c_vector &other)
     return *this;
 }
 
-/*f c_vector::assign (length, const double *coords)
+/*f c_vector<T>::assign (length, const T *coords)
  */
-c_vector &c_vector::assign(int length, int stride, const double *coords)
+template <typename T>
+c_vector<T> &c_vector<T>::assign(int length, int stride, const T *coords)
 {
     set_length(length, 0); // Don't reallocate vector data
     for (int i=0; i<length; i++) {
@@ -201,28 +215,31 @@ c_vector &c_vector::assign(int length, int stride, const double *coords)
 }
 
 /*a Interrogation methods */
-/*f c_vector::modulus_squared
+/*f c_vector<T>::modulus_squared
  */
-double c_vector::modulus_squared(void) const
+template <typename T>
+T c_vector<T>::modulus_squared(void) const
 {
-    double l=0;
+    T l=0;
     for (int i=0; i<_length; i++) {
         l += COORD(i)*COORD(i);
     }
     return l;
 }
 
-/*f c_vector::modulus
+/*f c_vector<T>::modulus
  */
-double c_vector::modulus(void) const
+template <typename T>
+T c_vector<T>::modulus(void) const
 {
     return sqrt(modulus_squared());
 }
 
 /*a In-place vector operations */
-/*f c_vector::add_scaled
+/*f c_vector<T>::add_scaled
  */
-c_vector &c_vector::add_scaled(const c_vector &other, double scale)
+template <typename T>
+c_vector<T> &c_vector<T>::add_scaled(const c_vector<T> &other, T scale)
 {
     for (int i=0; i<_length; i++) {
         COORD(i) += OCOORD(other,i)*scale;
@@ -230,9 +247,10 @@ c_vector &c_vector::add_scaled(const c_vector &other, double scale)
     return *this;
 }
 
-/*f c_vector::scale
+/*f c_vector<T>::scale
  */
-c_vector &c_vector::scale(double scale)
+template <typename T>
+c_vector<T> &c_vector<T>::scale(T scale)
 {
     for (int i=0; i<_length; i++) {
         COORD(i) *= scale;
@@ -240,49 +258,53 @@ c_vector &c_vector::scale(double scale)
     return *this;
 }
 
-/*f c_vector::normalize
+/*f c_vector<T>::normalize
  */
-c_vector &c_vector::normalize(void)
+template <typename T>
+c_vector<T> &c_vector<T>::normalize(void)
 {
-    double l = this->modulus();
+    T l = this->modulus();
     if ((l>-EPSILON) && (l<EPSILON))
         return this->scale(0.0);
     return this->scale(1.0/l);
 }
 
 /*a Vector operations */
-/*f c_vector::dot_product
+/*f c_vector<T>::dot_product
  */
-double c_vector::dot_product(const c_vector &other) const
+template <typename T>
+T c_vector<T>::dot_product(const c_vector<T> &other) const
 {
-    double l=0;
+    T l=0;
     for (int i=0; i<_length; i++) {
         l += COORD(i) * OCOORD(other,i);
     }
     return l;
 }
 
-/*f c_vector::cross_product3
+/*f c_vector<T>::cross_product3
  */
-c_vector *c_vector::cross_product3(const c_vector &other) const
+template <typename T>
+c_vector<T> *c_vector<T>::cross_product3(const c_vector<T> &other) const
 {
-    c_vector *r=new c_vector(_length);
+    c_vector<T> *r=new c_vector<T>(_length);
     OCOORD(*r,0) = COORD(1)*OCOORD(other,2) - COORD(2)*OCOORD(other,1);
     OCOORD(*r,1) = COORD(2)*OCOORD(other,0) - COORD(0)*OCOORD(other,2);
     OCOORD(*r,2) = COORD(0)*OCOORD(other,1) - COORD(1)*OCOORD(other,0);
     return r;
 }
 
-/*f c_vector::angle_axis_to_v3
+/*f c_vector<T>::angle_axis_to_v3
  */
-c_vector *c_vector::angle_axis_to_v3(const c_vector &other, double *cos_angle, double *sin_angle) const
+template <typename T>
+c_vector<T> *c_vector<T>::angle_axis_to_v3(const c_vector<T> &other, T *cos_angle, T *sin_angle) const
 {
-    double tl, ol;
+    T tl, ol;
     tl = this->modulus();
     ol = other.modulus();
 
     //fprintf(stderr,"tl,ol: %lf, %lf\n",tl, ol);
-    c_vector *axis = cross_product3(other);
+    c_vector<T> *axis = cross_product3(other);
     *axis /= (tl*ol);
     //fprintf(stderr,"axb:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
     *cos_angle = dot_product(other) / (tl*ol);
@@ -293,14 +315,20 @@ c_vector *c_vector::angle_axis_to_v3(const c_vector &other, double *cos_angle, d
     return axis;
 }
 
-/*f c_vector::angle_axis_to_v3 (to quaternion)
+/*f c_vector<T>::angle_axis_to_v3 (to quaternion)
  */
-c_quaternion *c_vector::angle_axis_to_v3(const c_vector &other) const
+template <typename T>
+c_quaternion<T> *c_vector<T>::angle_axis_to_v3(const c_vector<T> &other) const
 {
-    c_quaternion *r;
-    double cos_angle, sin_angle;
-    c_vector *axis = this->angle_axis_to_v3(other, &cos_angle, &sin_angle);
-    r = new c_quaternion();
+    c_quaternion<T> *r;
+    T cos_angle, sin_angle;
+    c_vector<T> *axis = this->angle_axis_to_v3(other, &cos_angle, &sin_angle);
+    r = new c_quaternion<T>();
     r->from_rotation(cos_angle, sin_angle, *axis);
     return r;
 }
+
+/*a Explicit instantiations of the template
+ */
+template class c_vector<double>;
+template class c_vector<float>;

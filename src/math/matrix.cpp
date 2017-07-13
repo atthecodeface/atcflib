@@ -181,6 +181,8 @@ void c_matrix::__str__(char *buffer, int buf_size) const
     return;
 }
 
+/*a Linear operations
+ */
 /*f c_matrix::multiply
  */
 c_matrix &c_matrix::multiply(const c_matrix &a, const c_matrix &b)
@@ -307,6 +309,8 @@ c_vector *c_matrix::get_column(int col)
     return v;
 }
 
+/*a Vector operations
+ */
 /*f c_matrix::apply(const vector)
  */
 c_vector *c_matrix::apply(const c_vector &v)
@@ -315,28 +319,34 @@ c_vector *c_matrix::apply(const c_vector &v)
     c_vector *rv = new c_vector(_nrows);
     for (int r=0; r<_nrows; r++) {
         double d=0.0;
-        const double *vc = v.coords();
         for (int c=0; c<_ncols; c++) {
-            d += MATRIX_VALUE(r,c) * vc[c];
+            d += MATRIX_VALUE(r,c) * v.value(c);
         }
         rv->set(r,d);
     }
     return rv;
 }
 
-/*f c_matrix::apply(const vector, double *)
+/*f c_matrix::apply(const vector, double *, int)
  */
-double *c_matrix::apply(const c_vector &v, double *rv)
+double *c_matrix::apply(const c_vector &v, double *rv, int stride)
 {
-    const double *vc = v.coords();
     if (v.length() != _ncols) return NULL;
     for (int r=0; r<_nrows; r++) {
         double d=0.0;
         for (int c=0; c<_ncols; c++) {
-            d += MATRIX_VALUE(r,c) * vc[c];
+            d += MATRIX_VALUE(r,c) * v.value(c);
         }
-        rv[r] = d;
+        rv[r*stride] = d;
     }
+    return rv;
+}
+
+/*f c_matrix::apply(const vector, vector)
+ */
+c_vector &c_matrix::apply(const c_vector &v, c_vector &rv)
+{
+    apply(v, rv.coords_to_set(NULL), rv.stride() );
     return rv;
 }
 

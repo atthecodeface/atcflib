@@ -74,7 +74,8 @@ public:
     c_matrix &multiply(const c_matrix &a, const c_matrix &b);
     c_matrix &scale(double scale);
     c_vector *apply(const c_vector &v); // new vector = this * v
-    double *apply(const c_vector &v, double *rv); // rv = this * v, return rv
+    double *apply(const c_vector &v, double *rv, int stride); // rv = this * v, return rv
+    c_vector &apply(const c_vector &v, c_vector &rv); // rv = this * v, return rv
     int lup_decompose(c_vector **P); // Decompose this to LU setting pivot *P
     c_matrix &lup_get_l(void); // Update this to be just L of LU decomposition
     c_matrix &lup_get_u(void); // Update this to be just U of LU decomposition

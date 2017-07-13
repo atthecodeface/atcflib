@@ -45,7 +45,7 @@ public:
     static inline c_quaternion yaw(  double angle, int degrees) { c_quaternion q; q.from_euler(0,0,angle,degrees); return q; }
     static inline c_quaternion of_euler(double r, double p, double y, int degrees) { c_quaternion q; q.from_euler(r,p,y,degrees); return q; }
     static inline c_quaternion of_rotation(double angle, const double axis[3], int degrees) { c_quaternion q; q.from_rotation(angle, axis, degrees); return q; }
-    static inline c_quaternion of_rotation(double cos_angle, double sin_angle, const double *axis) { c_quaternion q; q.from_rotation(cos_angle, sin_angle, axis); return q; }
+    static inline c_quaternion of_rotation(double cos_angle, double sin_angle, const double *axis, int axis_stride=1) { c_quaternion q; q.from_rotation(cos_angle, sin_angle, axis, axis_stride); return q; }
 
     c_quaternion &operator=(double real);
     c_quaternion &operator+=(double real);
@@ -89,10 +89,13 @@ public:
     c_quaternion &multiply(const c_quaternion &other, int premultiply=0);
 
     c_quaternion &from_euler(double roll, double pitch, double yaw, int degrees=0);
+    c_quaternion &lookat_aeronautic(const c_vector &at, const c_vector &up);
     c_quaternion &lookat_aeronautic(const double at[3], const double up[3]);
+    c_quaternion &lookat_graphics(const c_vector &at, const c_vector &up);
     c_quaternion &lookat_graphics(const double xyz[3], const double up[3]);
     c_quaternion &from_rotation(double angle, const double axis[3], int degrees=0);
-    c_quaternion &from_rotation(double cos_angle, double sin_angle, const double *axis);
+    c_quaternion &from_rotation(double cos_angle, double sin_angle, const double *axis, int axis_stride);
+    c_quaternion &from_rotation(double cos_angle, double sin_angle, const c_vector &vector);
     double as_rotation(double axis[3]) const;
     double as_rotation(class c_vector &vector) const;
     void as_rotation(c_vector &vector, double *cos, double *sin) const;

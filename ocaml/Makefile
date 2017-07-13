@@ -44,11 +44,11 @@ atfcml: atcflib.cmxa
 
 ./test_atcf.native: atcflib.cmxa test_atcf.ml
 	# The next one creates test_atcf.o, test_atcf.native, test_atcf.cmx, test_atcf.cmi
-	$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_atcf.ml -o test_atcf.native
+	$(OCAMLFIND) ocamlopt -linkpkg -package ounit,bigarray atcflib.cmxa test_atcf.ml -o test_atcf.native
 
 ./test_time.native: atcflib.cmxa test_time.ml
 	@echo "Compile test_time.ml with atcflib.cmxa"
-	@$(OCAMLFIND) ocamlopt -linkpkg -package ounit atcflib.cmxa test_time.ml -o test_time.native
+	@$(OCAMLFIND) ocamlopt -linkpkg -package ounit,bigarray atcflib.cmxa test_time.ml -o test_time.native
 
 camltest: ./test_atcf.native
 	# Run it...

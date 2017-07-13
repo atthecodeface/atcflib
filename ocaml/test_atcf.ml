@@ -31,6 +31,7 @@
  *)
 open Atcflib
 open OUnit
+open Bigarray
 
 (*a Test stuff *)
 
@@ -75,6 +76,10 @@ let mat_1234 =
     Matrix.set m 0 1 2.0 ;
     Matrix.set m 1 0 3.0 ;
     Matrix.set m 1 1 4.0
+
+let biggie = Bigarray.Genarray.create float64 c_layout [|1000;|]
+let b_v0_3_0_1 = (Vector.make_slice_array biggie 3 0 1)
+let b_v1_3_1_1 = (Vector.make_slice_array biggie 3 1 1)
 
 (*a Useful functions *)
 let rec fori (i:int) l f r =
@@ -340,6 +345,23 @@ let test_suite_vector_vector3 =
       ) ;
     ]
 
+(*b Vector bigaray slice tests *)
+let test_suite_vector_bigarray_slice = 
+    "bigarray" >::: [
+      ("slice" >::
+         fun ctxt ->
+         let v1 = Vector.make2 3.0 4.0 in
+         Vector.(assign b_v0_3_0_1 x3) ;
+         Vector.(assign b_v1_3_1_1 x3) ;
+         assert_equal_float "Biggie contains slice vector 0" (Genarray.get biggie [|0;|]) 1.0 ;
+         assert_equal_float "Biggie contains slice vector 1" (Genarray.get biggie [|1;|]) 1.0 ;
+         assert_equal_float "Biggie contains slice vector 2" (Genarray.get biggie [|2;|]) 0.0 ;
+         assert_equal_float "Biggie contains slice vector 3" (Genarray.get biggie [|3;|]) 0.0 ;
+         assert_vector b_v1_3_1_1 x3 ;
+         ()
+      ) ;
+  ]
+    
 (*b Vector test suite - combine individual suites *)
 let test_suite_vector =
   "Test vectors" >:::
@@ -349,6 +371,7 @@ let test_suite_vector =
       test_suite_vector_in_place ;
       test_suite_vector_interrogation ;
       test_suite_vector_vector3;
+      test_suite_vector_bigarray_slice;
     ]
 
 (*a Matrix test suite *)

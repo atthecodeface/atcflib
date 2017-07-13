@@ -1,3 +1,6 @@
+(** Libraries  *)
+open Bigarray
+
 (** Atcflib wrapper  *)
 type c_vector
 type c_matrix
@@ -89,7 +92,9 @@ module rec
       sig
         (** The vector type is an instance of the C++ c_vector class
         *)
-        type vector = { cv : c_vector; (** *) }  (** *)
+    type vector = { cv : c_vector ;
+                    ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
+        (*type vector = { cv : c_vector; (. .) }  (.. .)*)
 
         val create : c_vector -> vector
         (** Vector.create is a private method to create a
@@ -111,6 +116,10 @@ module rec
         val make4            : float -> float -> float -> float -> vector
         (** Vector.make4 w x y z is a convenience function to create a
         vector of length 4 with value (w, x, y, z) *)
+
+        val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> vector
+        (** Vector.make_slice_array b n o s makes a new vector using a
+        slice of the big array *)
 
         val copy             : vector -> vector
         (** Vector.copy creates a copy of a vector, using a new

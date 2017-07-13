@@ -35,6 +35,7 @@
 #include <caml/custom.h>
 #include <caml/intext.h>
 #include <caml/threads.h>
+#include <caml/bigarray.h>
 
 #include <atcf/quaternion.h>
 #include <atcf/vector.h>
@@ -85,7 +86,7 @@ caml_atcf_alloc_vector(c_vector *cv)
 {
     value v = caml_alloc_custom(&custom_ops, sizeof(c_vector *), 0, 1);
     vector_of_val(v) = cv;
-    VERBOSE(stderr,"Created vector %p\n", cv);
+    VERBOSE(stderr,"Allocked caml vector %p\n", cv);
     return v;
 }
 
@@ -102,6 +103,28 @@ atcf_vector_create(value n)
     VERBOSE(stderr,"Create vector %ld\n",Long_val(n));
     CAMLreturn(caml_atcf_alloc_vector(new c_vector(Long_val(n))));
 }
+
+
+/*f atcf_vector_create : n:int -> NEW c_vector
+ *
+ * Creates a vector of length n
+ *
+ */
+extern "C"
+CAMLprim value
+atcf_vector_create_bigarray_slice(value b, value l, value o, value s)
+{
+    CAMLparam4(b, l, o, s);
+    int vl = Long_val(l);
+    int vs = Long_val(s);
+    int vo = Long_val(o);
+    double *vb = (double *) Caml_ba_data_val(b);
+    VERBOSE(stderr,"Create vector from bigarray data %p (%p:%d:%d) %d %d %d\n",
+            vb, Caml_ba_array_val(b)->data,Caml_ba_array_val(b)->num_dims, Caml_ba_array_val(b)->dim[0],
+            vl,vs,vo);
+    CAMLreturn(caml_atcf_alloc_vector(new c_vector(vl,vs,vb+vo)));
+}
+
 
 /*f atcf_vector_destroy : c_vector -> unit
  *
@@ -200,7 +223,7 @@ atcf_vector_assign_m_v(value v, value m, value v2)
 {
     CAMLparam3(v, m, v2);
     matrix_of_val(m)->apply(*vector_of_val(v2),
-                            vector_of_val(v)->coords_to_set());
+                            *vector_of_val(v));
     CAMLreturn0;
 }
 
@@ -297,7 +320,7 @@ atcf_vector_angle_axis_to3(value v, value v2)
     vector_of_val(vrv) = cv;
     Store_field(vr,1,caml_copy_double(cos));
     Store_field(vr,2,caml_copy_double(sin));
-    VERBOSE(stderr,"Created vector %p\n", vector_of_val(vr));
+    VERBOSE(stderr,"Created vector from angle_axis_to3 %p\n", vector_of_val(vr));
     CAMLreturn(vr);
 }
 

@@ -157,9 +157,9 @@ c_quaternion::c_quaternion(double r, double i, double j, double k)
 c_quaternion::c_quaternion(const c_vector &vector)
 {
     quat.r = 0;
-    quat.i = vector.coords()[0];
-    quat.j = vector.coords()[1];
-    quat.k = vector.coords()[2];
+    quat.i = vector.value(0);
+    quat.j = vector.value(1);
+    quat.k = vector.value(2);
 }
 
 /*f c_quaternion::copy
@@ -252,6 +252,18 @@ c_quaternion &c_quaternion::lookat_aeronautic(const double xyz[3], const double 
     return this->from_euler(-roll, -pitch, -yaw, 0).conjugate();
 }
 
+/*f c_quaternion::lookat_aeronautic
+ */
+c_quaternion &c_quaternion::lookat_aeronautic(const c_vector &at, const c_vector &up)
+{
+    double at_xyz[3], up_xyz[3];
+    for (int i=0; i<3; i++) {
+        at_xyz[i] = at.value(i);
+        up_xyz[i] = up.value(i);
+    }
+    return lookat_aeronautic(at_xyz, up_xyz);
+}
+
 /*f c_quaternion::lookat_graphics
  *
  * Find rotation that makes at map to -Z, with up mapping to Y (as far as possible)
@@ -288,6 +300,18 @@ c_quaternion &c_quaternion::lookat_graphics(const double at[3], const double up[
     quat.k = -i;
 
     return *this;
+}
+
+/*f c_quaternion::lookat_graphics
+ */
+c_quaternion &c_quaternion::lookat_graphics(const c_vector &at, const c_vector &up)
+{
+    double at_xyz[3], up_xyz[3];
+    for (int i=0; i<3; i++) {
+        at_xyz[i] = at.value(i);
+        up_xyz[i] = up.value(i);
+    }
+    return lookat_graphics(at_xyz, up_xyz);
 }
 
 /*f c_quaternion::as_euler
@@ -426,7 +450,7 @@ c_quaternion &c_quaternion::from_rotation(double angle, const double axis[3], in
 
 /*f c_quaternion::from_rotation
  */
-c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, const double *axis)
+c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, const double *axis, int axis_stride)
 {
     double c, s;
     // cos(2x) = 2(cos(x)^2)-1 = cos(x)^2 - sin(x)^2
@@ -443,9 +467,9 @@ c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, co
     }
     if (cos_angle<=-1){
         quat.r = 0; // rotate by 180 degrees around an axis
-        quat.i = axis[0];
-        quat.j = axis[1];
-        quat.k = axis[2];
+        quat.i = axis[0*axis_stride];
+        quat.j = axis[1*axis_stride];
+        quat.k = axis[2*axis_stride];
         return *this;
     }
     c = sqrt((1+cos_angle)/2);
@@ -454,10 +478,17 @@ c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, co
         s = -s;
     }
     quat.r = c;
-    quat.i = s*axis[0];
-    quat.j = s*axis[1];
-    quat.k = s*axis[2];
+    quat.i = s*axis[0*axis_stride];
+    quat.j = s*axis[1*axis_stride];
+    quat.k = s*axis[2*axis_stride];
     return *this;
+}
+
+/*f c_quaternion::from_rotation
+ */
+c_quaternion &c_quaternion::from_rotation(double cos_angle, double sin_angle, const c_vector &axis)
+{
+    return from_rotation(cos_angle, sin_angle, axis.coords(NULL), axis.stride());
 }
 
 /*f c_quaternion::as_rotation
@@ -484,19 +515,18 @@ double c_quaternion::as_rotation(double axis[3]) const
  */
 double c_quaternion::as_rotation(c_vector &vector) const
 {
-    double *axis = vector.coords_to_set();
     double m=this->modulus();
     double angle = 2*acos(quat.r/m);
 
     double sm = m*sin(angle/2);
     if (fabs(sm)>EPSILON) {
-        axis[0] = quat.i/sm;
-        axis[1] = quat.j/sm;
-        axis[2] = quat.k/sm;
+        vector.set(0, quat.i/sm);
+        vector.set(1, quat.j/sm);
+        vector.set(2, quat.k/sm);
     } else {
-        axis[0] = 0;
-        axis[1] = 0;
-        axis[2] = 0;
+        vector.set(0, 0);
+        vector.set(1, 0);
+        vector.set(2, 0);
     }
     return angle;
 }
@@ -505,7 +535,6 @@ double c_quaternion::as_rotation(c_vector &vector) const
  */
 void c_quaternion::as_rotation(c_vector &vector, double *cos, double *sin) const
 {
-    double *axis = vector.coords_to_set();
     double m=this->modulus();
     double cos_half = quat.r/m;
     double sin_half = sqrt(1-cos_half*cos_half);
@@ -514,13 +543,13 @@ void c_quaternion::as_rotation(c_vector &vector, double *cos, double *sin) const
 
     double sm = m*sin_half;
     if (fabs(sm)>EPSILON) {
-        axis[0] = quat.i/sm;
-        axis[1] = quat.j/sm;
-        axis[2] = quat.k/sm;
+        vector.set(0, quat.i/sm);
+        vector.set(1, quat.j/sm);
+        vector.set(2, quat.k/sm);
     } else {
-        axis[0] = 0;
-        axis[1] = 0;
-        axis[2] = 0;
+        vector.set(0, 0);
+        vector.set(1, 0);
+        vector.set(2, 0);
     }
 }
 
@@ -661,7 +690,7 @@ c_quaternion *c_quaternion::angle_axis(const c_quaternion &other, c_vector &vect
     //fprintf(stderr,"b:%lf,%lf,%lf,%lf\n",b.r(),b.i(),b.j(),b.k());
     c_vector *axis = c_vector(*a).angle_axis_to_v3(c_vector(*b), &cos_angle, &sin_angle);
     //fprintf(stderr,"axis:%lf,%lf,%lf - %lf,%lf\n",axis.coords()[0],axis.coords()[1],axis.coords()[2],cos_angle,sin_angle);
-    r->from_rotation(cos_angle, sin_angle, axis->coords());
+    r->from_rotation(cos_angle, sin_angle, *axis);
     delete a;
     delete b;
     delete axis;

@@ -33,40 +33,59 @@ c_vector &c_vector::operator/=(double real)
     return *this;
 }
 
-/*a Infix operator methods for c_vector's
+/*a Constructors
  */
-/*f operator=
+/*f c_vector::init
  */
-c_vector &c_vector::operator=(const c_vector &other)
+void c_vector::init(void)
 {
-    _length = other._length;
+    _length = 0;
+    _max_length = VECTOR_MAX_LENGTH;
     _stride = 1;
     _coords = _internal_coords;
     _coords_must_be_freed = 0;
-    for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
-        COORD(i) = OCOORD(other,i);
+}
+
+/*f c_vector::set_length
+ */
+int c_vector::set_length(int length, int allow_reallocate)
+{
+    if (length<=_max_length) {
+        _length = length;
+        return 0;
     }
-    return *this;
+    if (!allow_reallocate) {
+        return -1;
+    }
+    if (length<=VECTOR_MAX_LENGTH) {
+        if (_coords_must_be_freed) {
+            free(_coords);
+            _coords_must_be_freed = 0;
+        }
+        _coords = _internal_coords;
+        _length = length;
+        _max_length = VECTOR_MAX_LENGTH;
+        _stride = 1;
+        return 0;
+    }
+    if (_coords_must_be_freed) {
+        free(_coords);
+    }
+    _coords = (double *)malloc(sizeof(double)*length);
+    if (_coords==NULL) {
+        _coords_must_be_freed = 0;
+        _length = 0;
+        _max_length = 0;
+        _stride = 1;
+        return -1;
+    }
+    _coords_must_be_freed = 1;
+    _length = length;
+    _max_length = length;
+    _stride = 1;
+    return 0;
 }
 
-/*f operator+=
- */
-c_vector &c_vector::operator+=(const c_vector &other)
-{
-    this->add_scaled(other,1.0);
-    return *this;
-}
-
-/*f operator-=
- */
-c_vector &c_vector::operator-=(const c_vector &other)
-{
-    this->add_scaled(other,-1.0);
-    return *this;
-}
-
-/*a Constructors
- */
 /*f c_vector::c_vector (void) - null
  */
 c_vector::c_vector(void)
@@ -81,11 +100,9 @@ c_vector::c_vector(void)
  */
 c_vector::c_vector(int length)
 {
-    _length = length;
-    _stride = 1;
-    _coords = _internal_coords;
-    _coords_must_be_freed = 0;
-    for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
+    init();
+    set_length(length, 1);
+    for (int i=0; i<_length; i++) {
         COORD(i) = 0;
     }
 }
@@ -94,36 +111,31 @@ c_vector::c_vector(int length)
  */
 c_vector::c_vector(const c_vector &other)
 {
-    _length = other._length;
-    _stride = 1;
-    _coords = _internal_coords;
-    _coords_must_be_freed = 0;
-    for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
+    init();
+    set_length(other._length, 1);
+    for (int i=0; i<_length; i++) {
         COORD(i) = OCOORD(other,i);
     }
 }
 
-/*f c_vector::c_vector (length, const double *coords)
+/*f c_vector::c_vector (length, int stride, double *coords)
  */
-c_vector::c_vector(int length, const double *coords)
+c_vector::c_vector(int length, int stride, double *coords)
 {
+    init();
     _length = length;
-    _stride = 1;
-    _coords = _internal_coords;
+    _max_length = length;
+    _stride = stride;
+    _coords = coords;
     _coords_must_be_freed = 0;
-    for (int i=0; i<VECTOR_MAX_LENGTH; i++) {
-        COORD(i) = coords[i];
-    }
 }
 
 /*f c_vector::c_vector (quaternion)
  */
 c_vector::c_vector(const c_quaternion &quat)
 {
-    _length = 3;
-    _stride = 1;
-    _coords = _internal_coords;
-    _coords_must_be_freed = 0;
+    init();
+    set_length(3,1);
     COORD(0) = quat.i();
     COORD(1) = quat.j();
     COORD(2) = quat.k();
@@ -166,12 +178,24 @@ void c_vector::__str__(char *buffer, int buf_size) const
     buffer[buf_size-1] = 0;
 }
 
-/*f c_vector::assign
+/*f c_vector::assign( vector )
  */
 c_vector &c_vector::assign(const c_vector &other)
 {
+    set_length(other._length, 0); // Don't reallocate vector data
     for (int i=0; i<_length; i++) {
         COORD(i) = OCOORD(other,i);
+    }
+    return *this;
+}
+
+/*f c_vector::assign (length, const double *coords)
+ */
+c_vector &c_vector::assign(int length, int stride, const double *coords)
+{
+    set_length(length, 0); // Don't reallocate vector data
+    for (int i=0; i<length; i++) {
+        COORD(i) = coords[i*stride];
     }
     return *this;
 }
@@ -277,6 +301,6 @@ c_quaternion *c_vector::angle_axis_to_v3(const c_vector &other) const
     double cos_angle, sin_angle;
     c_vector *axis = this->angle_axis_to_v3(other, &cos_angle, &sin_angle);
     r = new c_quaternion();
-    r->from_rotation(cos_angle, sin_angle, axis->coords());
+    r->from_rotation(cos_angle, sin_angle, *axis);
     return r;
 }

@@ -93,6 +93,9 @@ end
 
 (**/**)
 
+(*a Libraries *)
+open Bigarray
+
 (*a Types - private *)
 type c_vector
 type c_matrix
@@ -110,6 +113,7 @@ external t_value_us : t_timer -> float  = "atcf_timer_value_us"
 
 (*b vector functions *)
 external v_create  : int -> c_vector   = "atcf_vector_create"
+external v_create_bigarray_slice  : (float, float64_elt, c_layout) Bigarray.Genarray.t -> l:int -> o:int -> s:int -> c_vector   = "atcf_vector_create_bigarray_slice"
 external v_clone   : c_vector -> c_vector   = "atcf_vector_clone"
 external v_modulus : c_vector -> float = "atcf_vector_modulus"
 external v_modulus_squared : c_vector -> float = "atcf_vector_modulus_squared"
@@ -200,7 +204,8 @@ end
 
 (* Module version *)
 module rec Vector : sig
-    type vector = { cv : c_vector }
+    type vector = { cv : c_vector ;
+                    ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
     val create  : c_vector -> vector
     val length  : vector -> int
     val copy    : vector -> vector
@@ -224,10 +229,13 @@ module rec Vector : sig
     val make2                : float -> float -> vector
     val make3                : float -> float -> float -> vector
     val make4                : float -> float -> float -> float -> vector
+    val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> vector
     val repr                 : vector -> string
 end = struct
-    type vector = { cv : c_vector }
-     let create cv_in = { cv = cv_in }
+    type vector = { cv : c_vector ;
+                    ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
+
+     let create cv_in = { cv = cv_in; ba = None }
      let copy        v = Vector.create (v_clone v.cv)
      let coords      v        = v_coords v.cv
      let length      v        = v_length v.cv
@@ -246,11 +254,13 @@ end = struct
      let apply_q     v q      = (v_apply_q v.cv q.Quaternion.cq) ; v
      let cross_product3  v v2 = Vector.create(v_cross_product v.cv v2.cv)
      let angle_axis_to3  v v2 = let (va,c,s) = v_angle_axis_to v.cv v2.cv in (Vector.create(va),c,s)
-     let make        n            = { cv = v_create n }
+     let make        n            = { cv = v_create n ; ba = None }
      let make2       c0 c1        = let v = make 2 in set (set v 0 c0) 1 c1
      let make3       c0 c1 c2     = let v = make 3 in set (set (set v 0 c0) 1 c1) 2 c2
      let make4       c0 c1 c2 c3  = let v = make 4 in set (set (set (set v 0 c0) 1 c1) 2 c2) 3 c3
      let matrix_x_vector      m v = assign_m_v (copy v) m v
+     let make_slice_array b n o s   = { cv = v_create_bigarray_slice b n o s ;
+                                        ba = Some b}
      let repr        v         =
        let f c s = (Printf.sprintf "%f%s " c s) in
        Array.fold_right f (v_coords v.cv) ""

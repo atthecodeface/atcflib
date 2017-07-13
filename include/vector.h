@@ -35,6 +35,7 @@ class c_vector
     double *_coords;
     int _coords_must_be_freed;
     int _length;
+    int _max_length;
     int _stride;
 public:
     c_vector &operator*=(double real);
@@ -42,27 +43,31 @@ public:
     inline c_vector operator*(double rhs) { c_vector lhs=*this; lhs *= rhs; return lhs; }
     inline c_vector operator/(double rhs) { c_vector lhs=*this; lhs /= rhs; return lhs; }
 
-    c_vector &operator=(const c_vector &other);
-    c_vector &operator+=(const c_vector &other);
-    c_vector &operator-=(const c_vector &other);
+    inline c_vector &operator=(const c_vector &other)  {return assign(other);}
+    inline c_vector &operator+=(const c_vector &other) {return add_scaled(other, 1.0); }
+    inline c_vector &operator-=(const c_vector &other) {return add_scaled(other, -1.0); }
     inline c_vector operator+(const c_vector &rhs) const { c_vector lhs=*this; lhs += rhs; return lhs; }
     inline c_vector operator-(const c_vector &rhs) const { c_vector lhs=*this; lhs -= rhs; return lhs; }
     inline c_vector operator-(void) const { c_vector lhs=*this; for (int i=0; i<lhs._length; i++) lhs._coords[i*lhs._stride]*=-1; return lhs; }
 
+    void init(void);
+    int set_length(int length, int allow_reallocate);
     c_vector(const c_vector &vector);
     c_vector(int length);
     c_vector(void);
     c_vector(const class c_quaternion &quat);
-    c_vector(int length, const double *coords);
+    c_vector(int length, int stride, double *coords); // refer to data
     ~c_vector(void);
     c_vector *copy(void) const;
 
     inline int length(void) const {return _length;}
-    inline const double *coords(int *stride=NULL) const {if (stride) {*stride=_stride;} return &(_coords[0]);};
-    inline double *coords_to_set(int *stride=NULL) {if (stride) {*stride=_stride;} return &(_coords[0]);};
+    inline int stride(void) const {return _stride;}
+    inline const double *coords(int *stride) const {if (stride) {*stride=_stride;} return &(_coords[0]);};
+    inline double *coords_to_set(int *stride) {if (stride) {*stride=_stride;} return &(_coords[0]);};
     inline void set(int n, double v) {_coords[n*_stride]=v;};
     inline double value(int n) const {return _coords[n*_stride];};
     c_vector &assign(const c_vector &other);
+    c_vector &assign(int length, int stride, const double *coords); // copy data
     c_vector &add_scaled(const c_vector &other, double scale);
     double modulus_squared(void) const;
     double modulus(void) const;

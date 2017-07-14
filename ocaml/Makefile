@@ -38,9 +38,9 @@ atcflib.cmxa: ${OCAML_WRAPPER_OBJS} ../libatcf.so atcflib.ml atcflib.mli
 	@echo "Build atcflib.cmxa"
 	@$(OCAMLFIND) ocamlopt -a -o atcflib.cmxa atcflib.cmx ${OCAML_WRAPPER_OBJS} -cclib -L$(LIBDIR) -cclib -latcf -cclib -lc++
 
-atfcml: atcflib.cmxa
+atcfml: atcflib.cmxa
 	# Make toplevel ML
-	ocamlmktop -custom -o atcfml atcflib.ml  ${OCAML_WRAPPER_OBJS} -cclib -L$(LIBDIR) -cclib -L. -cclib -latcf  -cclib -lc++
+	$(OCAMLFIND) ocamlmktop -custom -linkpkg -package ounit,result,bigarray,tgls,tgls.tgl4,tsdl -o atcfml atcflib.ml  ${OCAML_WRAPPER_OBJS} -cclib -L$(LIBDIR) -cclib -L. -cclib -latcf  -cclib -lc++
 
 ./test_atcf.native: atcflib.cmxa test_atcf.ml
 	# The next one creates test_atcf.o, test_atcf.native, test_atcf.cmx, test_atcf.cmi
@@ -60,6 +60,13 @@ camltest: ./test_atcf.native
 camltime: ./test_time.native
 	@echo "The time code no longer compares different methods of invocation as the atcflib is cleaned up"
 	${LIBPATH} ./test_time.native 
+
+quaternion_play_int: quaternion_play.ml atcfml
+	DYLD_LIBRARY_PATH=`pwd`/.. ./atcfml -I ~/Git/brew/lib/ocaml -I ~/.opam/system/lib/tgls -I ~/.opam/system/lib/tsdl/ -I ~/Git/brew/lib/ocaml -I ~/.opam/system/lib/result ./quaternion_play.ml
+
+quaternion_play: quaternion_play.ml 
+	$(OCAMLFIND) ocamlopt -linkpkg -package ounit,bigarray,tgls,tgls.tgl4,tsdl atcflib.cmxa quaternion_play.ml -o quaternion_play.native
+	${LIBPATH} ./quaternion_play.native
 
 .PHONY: release_test
 release_test:

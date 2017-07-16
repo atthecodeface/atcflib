@@ -1,3 +1,6 @@
+template <typename T> class c_vector;
+template <typename T> class c_quaternion;
+template <typename T> class c_matrix;
 extern value caml_atcf_alloc_vector(class c_vector<double> *cv);
 extern value caml_atcf_alloc_matrix(class c_matrix<double> *cm);
 extern value caml_atcf_alloc_quaternion(class c_quaternion<double> *cq);
@@ -13,6 +16,10 @@ extern value caml_atcf_alloc_quaternion(class c_quaternion<double> *cq);
 /*f quaternion_of_val c_quaternion from an OCAML value
  */
 #define quaternion_of_val(v) (*((c_quaternion<double> **) Data_custom_val(v)))
+
+/*f bunzip_of_val c_bunzip from an OCAML value
+ */
+#define bunzip_of_val(v) (*((c_bunzip **) Data_custom_val(v)))
 
 /*f 't'_of_val c_t from an OCAML value
  */

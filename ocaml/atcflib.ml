@@ -101,6 +101,7 @@ type c_vector
 type c_matrix
 type c_quaternion
 type t_timer
+type c_bunzip
 
 (*a Atcflib OCaml wrapper C functions - private *)
 (*b timer functions *)
@@ -110,6 +111,13 @@ external t_entry    : t_timer -> unit   = "atcf_timer_entry"
 external t_exit     : t_timer -> unit   = "atcf_timer_exit"
 external t_value    : t_timer -> int64  = "atcf_timer_value"
 external t_value_us : t_timer -> float  = "atcf_timer_value_us"
+
+(*b compression functions *)
+external bz_create    : unit -> c_bunzip   = "atcf_bunzip_create"
+external bz_destroy   : c_bunzip -> unit   = "atcf_bunzip_destroy"
+external bz_set_size  : c_bunzip -> int -> unit   = "atcf_bunzip_set_size"
+external bz_block_data         : c_bunzip -> int -> int -> unit   = "atcf_bunzip_block_data"
+external bz_block_read_header  : c_bunzip -> unit                 = "atcf_bunzip_block_read_header"
 
 (*b vector functions *)
 external v_create  : int -> c_vector   = "atcf_vector_create"

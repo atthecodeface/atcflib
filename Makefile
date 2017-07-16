@@ -24,7 +24,7 @@ PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks
 
 ATCF_INCLUDE := include
-LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o
+LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o build/bunzip.o
 # build/polynomial.o
 
 libatcf: libatcf.so
@@ -36,8 +36,12 @@ build/quaternion.o: src/math/quaternion.cpp
 build/vector.o:     src/math/vector.cpp
 build/matrix.o:     src/math/matrix.cpp
 build/polynomial.o: src/math/polynomial.cpp
+build/bunzip.o:     src/compression/bunzip.cpp
 
 build/%.o: src/math/%.cpp
+	c++ -I${ATCF_INCLUDE} ${CPPFLAGS} -c $< -o $@
+
+build/%.o: src/compression/%.cpp
 	c++ -I${ATCF_INCLUDE} ${CPPFLAGS} -c $< -o $@
 
 #CC := ${GCC} -dynamic -fno-strict-aliasing  -fno-common -fwrapv

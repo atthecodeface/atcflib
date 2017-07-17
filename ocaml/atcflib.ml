@@ -395,19 +395,19 @@ end
 
 (*a Bunzip module *)
 module Bunzip = struct
-    (*b Indexentry submodule *)
-    module Indexentry = struct
+  (*b Indexentry submodule *)
+  module Indexentry = struct
     type t = {
-    mutable no_rle_start   : int64 ;
-    mutable rle_start      : int64 ;
-    mutable bz_start_bit   : int64 ;
-    mutable bz_num_bits    : int32 ;
-    mutable no_rle_length  : int32 ;
-    mutable rle_length     : int32 ;
-    mutable block_crc      : int32 ;
-    mutable decomp_data    : int32 ;
-    mutable user_data      : (int32 * int32 * int32 * int32 * int32)
-    }
+        mutable no_rle_start   : int64 ;
+        mutable rle_start      : int64 ;
+        mutable bz_start_bit   : int64 ;
+        mutable bz_num_bits    : int32 ;
+        mutable no_rle_length  : int32 ;
+        mutable rle_length     : int32 ;
+        mutable block_crc      : int32 ;
+        mutable decomp_data    : int32 ;
+        mutable user_data      : (int32 * int32 * int32 * int32 * int32)
+      }
     let create _ = { no_rle_start = 0L ;
                      rle_start = 0L ;
                      bz_start_bit = 0L ;
@@ -419,13 +419,13 @@ module Bunzip = struct
                      user_data = (0l, 0l, 0l, 0l, 0l);
                    }
     let bz_bit_pos i bz_sb bz_eb = 
-        i.bz_start_bit <- bz_sb; 
-        i.bz_num_bits  <- Int64.to_int32 (Int64.sub bz_eb bz_sb) ;
-        ()
+      i.bz_start_bit <- bz_sb; 
+      i.bz_num_bits  <- Int64.to_int32 (Int64.sub bz_eb bz_sb) ;
+      ()
     let no_rle i pi l = 
-        i.no_rle_start <- Int64.add pi.no_rle_start (Int64.of_int32 pi.no_rle_length) ;
-        i.no_rle_length <- Int32.of_int l ;
-        ()
+      i.no_rle_start <- Int64.add pi.no_rle_start (Int64.of_int32 pi.no_rle_length) ;
+      i.no_rle_length <- Int32.of_int l ;
+      ()
     let ( >>= ) x f =
       match x with
         Ok v         -> f v
@@ -438,70 +438,71 @@ module Bunzip = struct
       Ok ((bz_block_start_bit bz),(bz_block_end_bit bz),(bz_block_no_rle_size bz))
 
     let index_entry bz prev =
-        let i = create () in
-        bz_bit_pos i (bz_block_start_bit bz) (bz_block_end_bit bz) ;
-        no_rle i prev (bz_block_no_rle_size bz) ;
-        (i,(bz_block_end_bit bz))
+      let i = create () in
+      bz_bit_pos i (bz_block_start_bit bz) (bz_block_end_bit bz) ;
+      no_rle i prev (bz_block_no_rle_size bz) ;
+      (i,(bz_block_end_bit bz))
 
     let rec build_index_r bz ba start_bit verbose n prev max_n =
       if (n>max_n) then [] else begin
-      verbose n prev ;
-      let r = get_bzip_block_data bz ba start_bit in
-      match r with
-        Error e -> Printf.printf "Error %s\n" e ; []
-      | Ok d    -> let (i,e) = index_entry bz prev in (i::(build_index_r bz ba e verbose (n+1) i max_n))
-     end
+          verbose n prev ;
+          let r = get_bzip_block_data bz ba start_bit in
+          match r with
+            Error e -> Printf.printf "Error %s\n" e ; []
+          | Ok d    -> let (i,e) = index_entry bz prev in (i::(build_index_r bz ba e verbose (n+1) i max_n))
+        end
 
     let rec write_int_n i max_i f n =
-        let b i = (Int64.to_int (Int64.shift_right n i)) land 255 in
-        output_byte f (b i) ;
-        if (i<max_i-8) then write_int_n (8+i) max_i f n 
+      let b i = (Int64.to_int (Int64.shift_right n i)) land 255 in
+      output_byte f (b i) ;
+      if (i<max_i-8) then write_int_n (8+i) max_i f n 
     let write_int64 f n = write_int_n 0 64 f n
     let write_int32 f n = write_int_n 0 32 f (Int64.of_int32 n) 
     let write i f = 
-        let ua,ub,uc,ud,ue = i.user_data in
-        write_int64 f i.no_rle_start ;
-        write_int64 f i.rle_start  ;
-        write_int64 f i.bz_start_bit  ;
-        write_int32 f i.bz_num_bits  ;
-        write_int32 f i.no_rle_length  ;
-        write_int32 f i.rle_length  ;
-        write_int32 f i.block_crc  ;
-        write_int32 f i.decomp_data ;
-        write_int32 f ua ;
-        write_int32 f ub ;
-        write_int32 f uc ;
-        write_int32 f ud ;
-        write_int32 f ue 
+      let ua,ub,uc,ud,ue = i.user_data in
+      write_int64 f i.no_rle_start ;
+      write_int64 f i.rle_start  ;
+      write_int64 f i.bz_start_bit  ;
+      write_int32 f i.bz_num_bits  ;
+      write_int32 f i.no_rle_length  ;
+      write_int32 f i.rle_length  ;
+      write_int32 f i.block_crc  ;
+      write_int32 f i.decomp_data ;
+      write_int32 f ua ;
+      write_int32 f ub ;
+      write_int32 f uc ;
+      write_int32 f ud ;
+      write_int32 f ue 
     let rec read_int_n i max_i b n v =
-        let vb = Int64.of_int(Char.code(Bytes.get b n)) in
-        let nv = Int64.logor v (Int64.shift_left vb i) in
-        if (i>=max_i-8) then nv else read_int_n (8+i) max_i b (n+1) nv
+      let vb = Int64.of_int(Char.code(Bytes.get b n)) in
+      let nv = Int64.logor v (Int64.shift_left vb i) in
+      if (i>=max_i-8) then nv else read_int_n (8+i) max_i b (n+1) nv
     let read_int64 b n = read_int_n 0 64 b n 0L
     let read_int32 b n = Int64.to_int32(read_int_n 0 32 b n 0L)
     let read f =
-        let b = Bytes.create 64 in
-        if ((input f b 0 64)<64) then
-          None
-        else
-          Some { no_rle_start  = read_int64 b 0 ;
-            rle_start     = read_int64 b 8 ;
-            bz_start_bit  = read_int64 b 16 ;
-            bz_num_bits   = read_int32 b 24 ;
-            no_rle_length = read_int32 b 28 ;
-            rle_length    = read_int32 b 32 ;
-            block_crc     = read_int32 b 36 ;
-            decomp_data   = read_int32 b 40 ;
-            user_data     = (0l, 0l, 0l, 0l, 0l);
-          }
+      let b = Bytes.create 64 in
+      if ((input f b 0 64)<64) then
+        None
+      else
+        Some { no_rle_start  = read_int64 b 0 ;
+               rle_start     = read_int64 b 8 ;
+               bz_start_bit  = read_int64 b 16 ;
+               bz_num_bits   = read_int32 b 24 ;
+               no_rle_length = read_int32 b 28 ;
+               rle_length    = read_int32 b 32 ;
+               block_crc     = read_int32 b 36 ;
+               decomp_data   = read_int32 b 40 ;
+               user_data     = (0l, 0l, 0l, 0l, 0l);
+             }
     let str i =
       Printf.sprintf "%20Ld +%8ld : %20Ld +%8ld" i.bz_start_bit i.bz_num_bits i.no_rle_start i.no_rle_length
-end
-module Index = struct
+  end
+  (*b Index submodule *)
+  module Index = struct
     type t = {
-    block_size : int ;
-    entries    : Indexentry.t list ;
-    }
+        block_size : int ;
+        entries    : Indexentry.t list ;
+      }
     let verbose_progress n i = Printf.printf "%d:Bz at bit %Ld : %ld : %Ld\r%!" n i.Indexentry.bz_start_bit i.Indexentry.bz_num_bits i.Indexentry.no_rle_start
     let quiet_progress n i = ()
     let build_index bz ba verbose = { 
@@ -511,47 +512,50 @@ module Index = struct
           Indexentry.build_index_r bz ba 32L (progress_fn verbose) 0 (Indexentry.create ()) 100000
       }
     let show f i = 
-       f (Printf.sprintf "Block size %d" i.block_size) ;
-       let df n ie = f (Printf.sprintf "%8d: %s" n (Indexentry.str ie)) in
-       List.iteri df i.entries
+      f (Printf.sprintf "Block size %d" i.block_size) ;
+      let df n ie = f (Printf.sprintf "%8d: %s" n (Indexentry.str ie)) in
+      List.iteri df i.entries
     let write f i =
-       let wf n ie = Indexentry.write ie f in
-       List.iteri wf i.entries
+      let wf n ie = Indexentry.write ie f in
+      List.iteri wf i.entries
     let read filename verbose =
       let f = open_in_bin "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" in
       let rec read_entries f entries =
         match (Indexentry.read f) with
-        Some e -> read_entries f (entries@[e])
+          Some e -> read_entries f (entries@[e])
         | None   -> entries
       in
       { block_size=9 ;
         entries = (read_entries f []) ;
       }
-end
-    type t = {
+  end
+  (*b Structure type for module *)
+  type t = {
       fd : Unix.file_descr ;
       ba : bz_uint8_array ;
       bz : c_bunzip;
-      }
-    let open_bunzip filename =
-        let open_read filename = Unix.openfile filename [Unix.O_RDONLY ;] 0 in
-        let fd = open_read filename in
-        let ba = Bigarray.Genarray.map_file fd (*pos:(int64 0)*) Bigarray.Int8_unsigned c_layout false [|-1;|] in
-        let bz = bz_create () in
-        let ba0 = Bigarray.Genarray.get ba [|0;|] in
-        let ba1 = Bigarray.Genarray.get ba [|1;|] in
-        let ba2 = Bigarray.Genarray.get ba [|2;|] in
-        let ba3 = Bigarray.Genarray.get ba [|3;|] in
-        if ((ba0==0x42) &&
-            (ba1==0x5a) &&
+    }
+  (*f open_bunzip *)
+  let open_bunzip filename =
+    let open_read filename = Unix.openfile filename [Unix.O_RDONLY ;] 0 in
+    let fd = open_read filename in
+    let ba = Bigarray.Genarray.map_file fd (*pos:(int64 0)*) Bigarray.Int8_unsigned c_layout false [|-1|] in
+    let bz = bz_create () in
+    let ba0 = Bigarray.Genarray.get ba [|0;|] in
+    let ba1 = Bigarray.Genarray.get ba [|1;|] in
+    let ba2 = Bigarray.Genarray.get ba [|2;|] in
+    let ba3 = Bigarray.Genarray.get ba [|3;|] in
+    if ((ba0==0x42) &&
+          (ba1==0x5a) &&
             (ba2==0x68) &&
-            true
-           ) then begin
-              bz_set_size bz (ba3-48) ;
-              Some { fd ; bz; ba }
-    end else begin
-    None
-    end
-    let create_index bz verbose = Index.build_index bz.bz bz.ba verbose
+              true
+       ) then begin
+        bz_set_size bz (ba3-48) ;
+        Some { fd ; bz; ba }
+      end else begin
+        None
+      end
+  (*f create_index *)
+  let create_index bz verbose = Index.build_index bz.bz bz.ba verbose
 
 end

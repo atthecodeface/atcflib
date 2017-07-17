@@ -29,6 +29,10 @@ atcflib: atcflib.cmxa
 build/%.o: %.cpp
 	c++ -I ${OCAML_INCLUDE} -I ~/Git/atcflib -c $< -o $@
 
+.PHONY:show_mli
+show_mli:
+	ocamlc -i atcflib.ml
+
 atcflib.cmxa: ${OCAML_WRAPPER_OBJS} ../libatcf.so atcflib.ml atcflib.mli
 	# The next one creates atcflib.cmi, atcflib.cmx, atcflib.o
 	$(OCAMLFIND) ocamlopt  -linkpkg -package core -c atcflib.mli -thread 

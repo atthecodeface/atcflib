@@ -7,7 +7,7 @@ type c_matrix
 type c_quaternion
 type t_timer
 type c_bunzip
-type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Genarray.t
+type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Array1.t
 
 (** The Timer module exposes the atcflib timers, which in turn come
  from sl_timer These are usually used in C modules to time the
@@ -477,17 +477,10 @@ module Bunzip :
         val create : 'a -> t
         val bz_bit_pos : t -> int64 -> int64 -> unit
         val no_rle : t -> t -> int -> unit
-        val ( >>= ) :
-          ('a, 'b) result -> ('a -> ('c, 'b) result) -> ('c, 'b) result
-        val chk_error : 'a -> int -> (int, 'a) result
-        val get_bzip_block_data :
-          c_bunzip ->
-          bz_uint8_array -> int64 -> (int64 * int64 * int, string) result
         val index_entry : c_bunzip -> t -> t * int64
         val build_index_r :
-          c_bunzip ->
-          bz_uint8_array ->
-          int64 -> (int -> t -> 'a) -> int -> t -> int -> t list
+          (int64 -> ('a, string) result) ->
+          c_bunzip -> int64 -> (int -> t -> 'b) -> int -> t -> int -> t list
         val write_int_n : int -> int -> out_channel -> int64 -> unit
         val write_int64 : out_channel -> int64 -> unit
         val write_int32 : out_channel -> int32 -> unit
@@ -500,15 +493,19 @@ module Bunzip :
       end
     module Index :
       sig
-        type t = { block_size : int; entries : Indexentry.t list; }
+        type t = { entries : Indexentry.t list; }
         val verbose_progress : int -> Indexentry.t -> unit
         val quiet_progress : 'a -> 'b -> unit
-        val build_index : c_bunzip -> bz_uint8_array -> bool -> t
+        val build_index : (int64 -> ('a, string) result) -> c_bunzip -> bool -> t
         val show : (string -> unit) -> t -> unit
         val write : out_channel -> t -> unit
-        val read : 'a -> 'b -> t
+        val read : string -> 'b -> t
       end
-    type t = { fd : Unix.file_descr; ba : bz_uint8_array; bz : c_bunzip; }
+    type t = { fd : Unix.file_descr; ba : bz_uint8_array; bz : c_bunzip;            mutable index : Index.t option;}
     val open_bunzip : string -> t option
     val create_index : t -> bool -> Index.t
+    val read_index : t -> string -> 'a -> Index.t 
+    val block_decompress_no_rle :  t -> int64 -> (bz_uint8_array,string) result
+     exception Invalid_index of string
+    val read_data_no_rle : t -> bz_uint8_array -> int64 -> (bz_uint8_array,string) result
   end

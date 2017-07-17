@@ -41,10 +41,28 @@ let old_create_and_show () =
      let f s = Printf.printf "%s\n" s in
      Atcflib.Bunzip.Index.show f index
 
-let _ = 
+let old_read_index () = 
     (*old_create_and_show () ;*)
     let index = Atcflib.Bunzip.Index.read "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" true in
     let f s = Printf.printf "%s\n" s in
     Atcflib.Bunzip.Index.show f index
+
+let _ = 
+  match Atcflib.Bunzip.open_bunzip  "../../device_analyzer_data/8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2" with
+    None -> ()
+  | Some bz ->
+    let index = Atcflib.Bunzip.read_index bz "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" true in
+    let f s = Printf.printf "%s\n" s in
+    (*Atcflib.Bunzip.Index.show f index ;*)
+    let start = 5339587600L in
+    let length = 1024 in
+    let data = Bigarray.(Array1.create int8_unsigned c_layout length) in
+    let r = (Atcflib.Bunzip.read_data_no_rle bz data start) in
+    let bytes = Bytes.init length (fun i -> char_of_int (Bigarray.Array1.get data i)) in
+    print_bytes bytes ;
+    Printf.printf "\n" ;
+    for i=0 to 10 do
+        Printf.printf "%d: %d\n" i (Bigarray.Array1.get data i)
+    done
 
 

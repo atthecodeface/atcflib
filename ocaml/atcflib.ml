@@ -102,7 +102,7 @@ type c_matrix
 type c_quaternion
 type t_timer
 type c_bunzip
-type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Genarray.t
+type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Array1.t
 
 (*a Atcflib OCaml wrapper C functions - private *)
 (*b timer functions *)
@@ -426,16 +426,6 @@ module Bunzip = struct
       i.no_rle_start <- Int64.add pi.no_rle_start (Int64.of_int32 pi.no_rle_length) ;
       i.no_rle_length <- Int32.of_int l ;
       ()
-    let ( >>= ) x f =
-      match x with
-        Ok v         -> f v
-      | Error _ as e -> e
-    let chk_error m x = if x=0 then Ok x else Error m
-    let get_bzip_block_data bz ba start_bit =
-      chk_error "data" (bz_block_data bz ba start_bit 100000L) >>= fun _ ->
-      chk_error "hdr"  (bz_block_read_header bz)              >>= fun _ ->
-      chk_error "huf"  (bz_block_huffman_decode bz)           >>= fun _ ->
-      Ok ((bz_block_start_bit bz),(bz_block_end_bit bz),(bz_block_no_rle_size bz))
 
     let index_entry bz prev =
       let i = create () in
@@ -443,13 +433,13 @@ module Bunzip = struct
       no_rle i prev (bz_block_no_rle_size bz) ;
       (i,(bz_block_end_bit bz))
 
-    let rec build_index_r bz ba start_bit verbose n prev max_n =
+    let rec build_index_r bz_ba_huffman_decode bz start_bit verbose n prev max_n =
       if (n>max_n) then [] else begin
           verbose n prev ;
-          let r = get_bzip_block_data bz ba start_bit in
+          let r = bz_ba_huffman_decode start_bit in
           match r with
             Error e -> Printf.printf "Error %s\n" e ; []
-          | Ok d    -> let (i,e) = index_entry bz prev in (i::(build_index_r bz ba e verbose (n+1) i max_n))
+          | Ok _    -> let (i,e) = index_entry bz prev in (i::(build_index_r bz_ba_huffman_decode bz e verbose (n+1) i max_n))
         end
 
     let rec write_int_n i max_i f n =
@@ -500,62 +490,136 @@ module Bunzip = struct
   (*b Index submodule *)
   module Index = struct
     type t = {
-        block_size : int ;
         entries    : Indexentry.t list ;
       }
     let verbose_progress n i = Printf.printf "%d:Bz at bit %Ld : %ld : %Ld\r%!" n i.Indexentry.bz_start_bit i.Indexentry.bz_num_bits i.Indexentry.no_rle_start
     let quiet_progress n i = ()
-    let build_index bz ba verbose = { 
-        block_size = (bz_block_size bz) ;
+    let build_index bz_ba_huffman_decode bz verbose = { 
         entries = 
           let progress_fn verbose = if verbose then verbose_progress else quiet_progress in
-          Indexentry.build_index_r bz ba 32L (progress_fn verbose) 0 (Indexentry.create ()) 100000
+          Indexentry.build_index_r bz_ba_huffman_decode bz 32L (progress_fn verbose) 0 (Indexentry.create ()) 100000
       }
     let show f i = 
-      f (Printf.sprintf "Block size %d" i.block_size) ;
       let df n ie = f (Printf.sprintf "%8d: %s" n (Indexentry.str ie)) in
       List.iteri df i.entries
     let write f i =
       let wf n ie = Indexentry.write ie f in
       List.iteri wf i.entries
     let read filename verbose =
-      let f = open_in_bin "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" in
+      let f = open_in_bin filename in
       let rec read_entries f entries =
         match (Indexentry.read f) with
           Some e -> read_entries f (entries@[e])
         | None   -> entries
       in
-      { block_size=9 ;
-        entries = (read_entries f []) ;
+      { entries = (read_entries f []) ;
       }
+    let rec block_containing entries start n last = 
+      match entries with
+        [] -> last
+      | hd :: tl -> if (hd.Indexentry.no_rle_start>start) then
+                      last
+                    else
+                      block_containing tl start (n+1) (n,entries)
+    let blocks_containing index start length =
+       let last = (Int64.add start (Int64.of_int (length-1))) in
+       let rec first_n l n r = match l with
+           [] -> r
+         | hd::tl -> if (n<=0) then r else first_n tl (n-1) (r@[hd]) in
+       let (first_block,ie0) = block_containing index.entries start 0 (0,index.entries) in
+       let (last_block,ie1)  = block_containing ie0           last  first_block (first_block,ie0) in
+       first_n ie0 (1+last_block-first_block) []
   end
   (*b Structure type for module *)
   type t = {
       fd : Unix.file_descr ;
       ba : bz_uint8_array ;
-      bz : c_bunzip;
+      bz : c_bunzip ;
+      mutable index : Index.t option ;
     }
   (*f open_bunzip *)
   let open_bunzip filename =
     let open_read filename = Unix.openfile filename [Unix.O_RDONLY ;] 0 in
     let fd = open_read filename in
-    let ba = Bigarray.Genarray.map_file fd (*pos:(int64 0)*) Bigarray.Int8_unsigned c_layout false [|-1|] in
+    let ba = Bigarray.Array1.map_file fd (*pos:(int64 0)*) Bigarray.Int8_unsigned c_layout false (-1) in
     let bz = bz_create () in
-    let ba0 = Bigarray.Genarray.get ba [|0;|] in
-    let ba1 = Bigarray.Genarray.get ba [|1;|] in
-    let ba2 = Bigarray.Genarray.get ba [|2;|] in
-    let ba3 = Bigarray.Genarray.get ba [|3;|] in
+    let ba0 = Bigarray.Array1.get ba 0 in
+    let ba1 = Bigarray.Array1.get ba 1 in
+    let ba2 = Bigarray.Array1.get ba 2 in
+    let ba3 = Bigarray.Array1.get ba 3 in
     if ((ba0==0x42) &&
           (ba1==0x5a) &&
             (ba2==0x68) &&
               true
        ) then begin
         bz_set_size bz (ba3-48) ;
-        Some { fd ; bz; ba }
+        Some { fd ; bz; ba; index=None }
       end else begin
         None
       end
-  (*f create_index *)
-  let create_index bz verbose = Index.build_index bz.bz bz.ba verbose
+  (*f block_read_header *)
+    let ( >>= ) x f =
+      match x with
+        Ok v         -> f v
+      | Error _ as e -> e
+    let chk_error m x = if x=0 then Ok x else Error m
+    let block_read_header bz start_bit =
+      chk_error "data" (bz_block_data bz.bz bz.ba start_bit 100000L) >>= fun _ ->
+      chk_error "hdr"  (bz_block_read_header bz.bz) >>= fun _ -> Ok ()
+    let block_huffman_decode bz start_bit =
+      block_read_header bz start_bit >>= fun _ ->
+      chk_error "huf" (bz_block_huffman_decode bz.bz)  >>= fun _ -> Ok ()
+  (*f create_index *) 
+  let create_index bz verbose = 
+    let bz_ba_huffman_decode start_bit = block_huffman_decode bz start_bit in
+    let index = (Index.build_index bz_ba_huffman_decode bz.bz verbose) in
+    bz.index <- Some index ;
+    index
+  (*f read_index *) 
+  let read_index bz filename verbose = 
+    let index = (Index.read filename verbose) in
+    bz.index <- Some index ;
+    index
+  (*f block_decompress_no_rle *)
+  let block_decompress_no_rle bz start_bit =
+    Printf.printf "Block decompress %Ld\n" start_bit ;
+    block_huffman_decode bz start_bit >>= fun _ -> 
+    chk_error "mtf" (bz_block_mtf bz.bz) >>= fun _ ->
+    chk_error "bwt" (bz_block_bwt_order bz.bz) >>= fun _ ->
+    let length = (bz_block_no_rle_size bz.bz) in
+    Printf.printf "No RLE size %d\n" length ;
+    let data = Bigarray.Array1.create Bigarray.int8_unsigned c_layout length in
+    chk_error "decomp" (bz_block_no_rle_decompress bz.bz data ) >>= fun _ ->
+    (Ok data)
+
+  (*f read_data_no_rle *) 
+  exception Invalid_index of string
+  let rec decompress_and_copy_data bz ba blks dstart rofs length =
+    Printf.printf "decompress_and_copy_data: Num blks %d\n\n" (List.length blks) ;
+    match blks with
+      [] -> Ok ba
+    | hd::tl ->
+       block_decompress_no_rle bz hd.Indexentry.bz_start_bit >>= fun data ->
+       let ds = Int64.to_int (Int64.sub dstart hd.Indexentry.no_rle_start) in
+       let dl = (Int32.to_int hd.Indexentry.no_rle_length) - ds in
+       let l = min dl length in
+       let l_after = length - l in
+       Printf.printf "Blit %d %d %d %d %d \n" ds rofs dl (Bigarray.Array1.dim data) (Bigarray.Array1.dim ba);
+       let dstart_after = Int64.add dstart (Int64.of_int l) in
+       let portion_of_data = (Bigarray.Array1.sub data ds l) in
+       let portion_of_dest = (Bigarray.Array1.sub ba   rofs l) in
+       Bigarray.Array1.blit portion_of_data portion_of_dest ;
+       if l_after<=0 then Ok ba
+       else
+         decompress_and_copy_data bz ba tl dstart_after (rofs+l) l_after
+
+  let read_data_no_rle bz ba start = 
+    let length = (Bigarray.Array1.dim ba) in
+    match bz.index with
+    None -> raise (Invalid_index "invalid index")
+    | Some i ->
+       let blks = (Index.blocks_containing i start length) in
+       Printf.printf "Num blks %d\n" (List.length blks) ;
+       decompress_and_copy_data bz ba blks start 0 length
 
 end

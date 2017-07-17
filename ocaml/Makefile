@@ -54,6 +54,13 @@ atcfml: atcflib.cmxa
 	@echo "Compile test_compression.ml with atcflib.cmxa"
 	@$(OCAMLFIND) ocamlopt -linkpkg -package ounit,bigarray atcflib.cmxa test_compression.ml -o test_compression.native
 
+.PHONY: bunzip_index
+bunzip_index: ./bunzip_index.native
+
+./bunzip_index.native: atcflib.cmxa bunzip_index.ml
+	@echo "Compile bunzip_index.ml with atcflib.cmxa"
+	@$(OCAMLFIND) ocamlopt -linkpkg -package bigarray atcflib.cmxa bunzip_index.ml -o bunzip_index.native
+
 camltest: ./test_math.native
 	# Run it...
 	${LIBPATH} ./test_math.native -help

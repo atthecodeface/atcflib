@@ -179,7 +179,7 @@ atcf_bunzip_set_size(value v, value n)
 
 /*a Block functions
  */
-/*f atcf_bunzip_block_data : c_bunzip -> bigarray -> int -> int -> int
+/*f atcf_bunzip_block_data : c_bunzip -> bigarray -> int64 -> int64 -> int
  *
  * Return an array containing the coordinates of the bunzip
  *
@@ -190,8 +190,8 @@ atcf_bunzip_block_data(value bz, value ba, value s, value e)
 {
     CAMLparam4(bz,ba,s,e);
     c_bunzip *cb = bunzip_of_val(bz);
-    int start_bit=Long_val(s);
-    int end_bit=Long_val(e);
+    t_uint64 start_bit = Int64_val(s);
+    t_uint64 end_bit   = Int64_val(e);
     const t_uint8 *data = (const t_uint8 *)(Caml_ba_array_val(ba)->data);
     if (((end_bit+7)/8) >= Caml_ba_array_val(ba)->dim[0]) {
         fprintf(stderr,"End bit too long\n");
@@ -211,6 +211,20 @@ atcf_bunzip_block_read_header(value v)
     CAMLparam1(v);
     c_bunzip *cb = bunzip_of_val(v);
     CAMLreturn(Val_long(cb->read_header()));
+}
+
+/*f atcf_bunzip_block_size : c_bunzip -> int
+ *
+ * Return the block size (as previously set)
+ *
+ */
+extern "C"
+CAMLprim value
+atcf_bunzip_block_size(value bz)
+{
+    CAMLparam1(bz);
+    c_bunzip *cb = bunzip_of_val(bz);
+    CAMLreturn(Val_long(cb->block_size));
 }
 
 /*f atcf_bunzip_block_start_bit : c_bunzip -> int64

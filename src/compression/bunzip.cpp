@@ -329,7 +329,7 @@ c_bunzip::read_huffman_tables(void)
 
 /*f c_bunzip::read_header
  * Call after bunzip::read_block
- * Should probably check magic1/2, randomized==0, and orig_ptr is bounded properly (0...100000*block_size-1)
+ * Should probably check randomized==0, and orig_ptr is bounded properly (0...100000*block_size-1)
  * Should check number of huffman tables is 2 to 6
  */
 int
@@ -340,10 +340,10 @@ c_bunzip::read_header(void)
     block_crc           = read_data_bits(32);
 	block_randomized    = read_data_bits(1);  // Not supported if 1
     bwt_orig_offset     = read_data_bits(24); // after inverse BWT, this is where the data starts
-    fprintf(stderr,"Here %x %x %p\n",block_magic1, block_magic2,_compressed_data);
-    if (block_magic1 != 0x31415926) return 1;
-    if (block_magic2 != 0x5359) return 1;
-    fprintf(stderr,"Got through\n");
+    if ((block_magic1 == 0x17724538) && (block_magic2==0x5090)) return 1;
+    if (block_magic1 != 0x31415926) return -1;
+    if (block_magic2 != 0x5359) return -1;
+    if ((bwt_orig_offset<0) || (bwt_orig_offset>=100000*block_size)) return -2;
 
     read_symbol_map();
     number_huffman_symbols = number_symbols+2; // as Huffman has to encode RUNA and RUNB and the end, but not 0

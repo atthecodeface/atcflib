@@ -517,24 +517,6 @@ module Index = struct
     let write f i =
        let wf n ie = Indexentry.write ie f in
        List.iteri wf i.entries
-    let create filename verbose = 
-        let open_read filename = Unix.openfile filename [Unix.O_RDONLY ;] 0 in
-        let fd = open_read "../../device_analyzer_data/8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2" in
-        let ba = Bigarray.Genarray.map_file fd (*pos:(int64 0)*) Bigarray.Int8_unsigned c_layout false [|-1;|] in
-        let bz = bz_create () in
-        let ba0 = Bigarray.Genarray.get ba [|0;|] in
-        let ba1 = Bigarray.Genarray.get ba [|1;|] in
-        let ba2 = Bigarray.Genarray.get ba [|2;|] in
-        let ba3 = Bigarray.Genarray.get ba [|3;|] in
-        if ((ba0==0x42) &&
-            (ba1==0x5a) &&
-            (ba2==0x68) &&
-            true
-           ) then begin
-          bz_set_size bz (ba3-48) ;
-        Some (build_index bz ba verbose)
-        end else
-          None
     let read filename verbose =
       let f = open_in_bin "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" in
       let rec read_entries f entries =
@@ -546,5 +528,30 @@ module Index = struct
         entries = (read_entries f []) ;
       }
 end
+    type t = {
+      fd : Unix.file_descr ;
+      ba : bz_uint8_array ;
+      bz : c_bunzip;
+      }
+    let open_bunzip filename =
+        let open_read filename = Unix.openfile filename [Unix.O_RDONLY ;] 0 in
+        let fd = open_read filename in
+        let ba = Bigarray.Genarray.map_file fd (*pos:(int64 0)*) Bigarray.Int8_unsigned c_layout false [|-1;|] in
+        let bz = bz_create () in
+        let ba0 = Bigarray.Genarray.get ba [|0;|] in
+        let ba1 = Bigarray.Genarray.get ba [|1;|] in
+        let ba2 = Bigarray.Genarray.get ba [|2;|] in
+        let ba3 = Bigarray.Genarray.get ba [|3;|] in
+        if ((ba0==0x42) &&
+            (ba1==0x5a) &&
+            (ba2==0x68) &&
+            true
+           ) then begin
+              bz_set_size bz (ba3-48) ;
+              Some { fd ; bz; ba }
+    end else begin
+    None
+    end
+    let create_index bz verbose = Index.build_index bz.bz bz.ba verbose
 
 end

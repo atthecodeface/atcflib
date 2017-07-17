@@ -506,7 +506,9 @@ module Bunzip :
         val build_index : c_bunzip -> bz_uint8_array -> bool -> t
         val show : (string -> unit) -> t -> unit
         val write : out_channel -> t -> unit
-        val create : 'a -> bool -> t option
         val read : 'a -> 'b -> t
       end
+    type t = { fd : Unix.file_descr; ba : bz_uint8_array; bz : c_bunzip; }
+    val open_bunzip : string -> t option
+    val create_index : t -> bool -> Index.t
   end

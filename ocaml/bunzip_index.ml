@@ -30,20 +30,19 @@
  *
  *)
 open Atcflib
-open Bigarray
-open Unix
 
 let old_create_and_show () = 
-  let index = Atcflib.Bunzip.Index.create "../../device_analyzer_data/8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2" true in
-  let f2 = open_out_bin "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" in
-  match index with
-    Some i ->  begin Atcflib.Bunzip.Index.write f2 i ;
-                     let f s = Printf.printf "%s\n" s in
-                     Atcflib.Bunzip.Index.show f i
-               end
-  | None  -> ()
+  match Atcflib.Bunzip.open_bunzip  "../../device_analyzer_data/8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2" with
+    None -> ()
+  | Some bz ->
+     let index = Atcflib.Bunzip.create_index bz true in
+     let f2 = open_out_bin "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" in
+     Atcflib.Bunzip.Index.write f2 index ;
+     let f s = Printf.printf "%s\n" s in
+     Atcflib.Bunzip.Index.show f index
 
 let _ = 
+    (*old_create_and_show () ;*)
     let index = Atcflib.Bunzip.Index.read "8926ff5477452ba9aea697f796e7d3570195576f.csv.bz2.index" true in
     let f s = Printf.printf "%s\n" s in
     Atcflib.Bunzip.Index.show f index

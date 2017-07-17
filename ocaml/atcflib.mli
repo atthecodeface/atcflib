@@ -1,11 +1,13 @@
 (** Libraries  *)
 open Bigarray
 
-(** Atcflib wrapper  *)
+(** Basic types  *)
 type c_vector
 type c_matrix
 type c_quaternion
 type t_timer
+type c_bunzip
+type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Genarray.t
 
 (** The Timer module exposes the atcflib timers, which in turn come
  from sl_timer These are usually used in C modules to time the
@@ -456,3 +458,55 @@ module rec
            (** Quaternion.repr m produces a textual representation of the
             quaternion, for use in debugging, for example *)
            end
+(** Bunzip module **)
+module Bunzip :
+  sig
+    module Indexentry :
+      sig
+        type t = {
+          mutable no_rle_start : int64;
+          mutable rle_start : int64;
+          mutable bz_start_bit : int64;
+          mutable bz_num_bits : int32;
+          mutable no_rle_length : int32;
+          mutable rle_length : int32;
+          mutable block_crc : int32;
+          mutable decomp_data : int32;
+          mutable user_data : int32 * int32 * int32 * int32 * int32;
+        }
+        val create : 'a -> t
+        val bz_bit_pos : t -> int64 -> int64 -> unit
+        val no_rle : t -> t -> int -> unit
+        val ( >>= ) :
+          ('a, 'b) result -> ('a -> ('c, 'b) result) -> ('c, 'b) result
+        val chk_error : 'a -> int -> (int, 'a) result
+        val get_bzip_block_data :
+          c_bunzip ->
+          bz_uint8_array -> int64 -> (int64 * int64 * int, string) result
+        val index_entry : c_bunzip -> t -> t * int64
+        val build_index_r :
+          c_bunzip ->
+          bz_uint8_array ->
+          int64 -> (int -> t -> 'a) -> int -> t -> int -> t list
+        val write_int_n : int -> int -> out_channel -> int64 -> unit
+        val write_int64 : out_channel -> int64 -> unit
+        val write_int32 : out_channel -> int32 -> unit
+        val write : t -> out_channel -> unit
+        val read_int_n : int -> int -> bytes -> int -> int64 -> int64
+        val read_int64 : bytes -> int -> int64
+        val read_int32 : bytes -> int -> int32
+        val read : in_channel -> t option
+        val str : t -> string
+      end
+    module Index :
+      sig
+        type t = { block_size : int; entries : Indexentry.t list; }
+        val verbose_progress : int -> Indexentry.t -> unit
+        val quiet_progress : 'a -> 'b -> unit
+        val build_index : c_bunzip -> bz_uint8_array -> bool -> t
+        val show : (string -> unit) -> t -> unit
+        val write : out_channel -> t -> unit
+        val create : 'a -> bool -> t option
+        val read : 'a -> 'b -> t
+      end
+  end

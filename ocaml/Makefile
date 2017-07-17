@@ -96,6 +96,6 @@ doc:
 clean:
 	mkdir -p doc/html
 	mkdir -p build
-	rm build/*
+	rm -f build/*
 	rm -f *.native *.cmi *.cmx *.cmxa *.o doc/html/*
 

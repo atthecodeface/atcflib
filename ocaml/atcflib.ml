@@ -95,6 +95,7 @@ end
 
 (*a Libraries *)
 open Bigarray
+open Re
 
 (*a Types - private *)
 type c_vector
@@ -582,12 +583,12 @@ module Bunzip = struct
     index
   (*f block_decompress_no_rle *)
   let block_decompress_no_rle bz start_bit =
-    Printf.printf "Block decompress %Ld\n" start_bit ;
+    (*    Printf.printf "Block decompress %Ld\n" start_bit ;*)
     block_huffman_decode bz start_bit >>= fun _ -> 
     chk_error "mtf" (bz_block_mtf bz.bz) >>= fun _ ->
     chk_error "bwt" (bz_block_bwt_order bz.bz) >>= fun _ ->
     let length = (bz_block_no_rle_size bz.bz) in
-    Printf.printf "No RLE size %d\n" length ;
+    (*Printf.printf "No RLE size %d\n" length ;*)
     let data = Bigarray.Array1.create Bigarray.int8_unsigned c_layout length in
     chk_error "decomp" (bz_block_no_rle_decompress bz.bz data ) >>= fun _ ->
     (Ok data)
@@ -595,7 +596,7 @@ module Bunzip = struct
   (*f read_data_no_rle *) 
   exception Invalid_index of string
   let rec decompress_and_copy_data bz ba blks dstart rofs length =
-    Printf.printf "decompress_and_copy_data: Num blks %d\n\n" (List.length blks) ;
+    (*Printf.printf "decompress_and_copy_data: Num blks %d\n\n" (List.length blks) ;*)
     match blks with
       [] -> Ok ba
     | hd::tl ->
@@ -604,7 +605,7 @@ module Bunzip = struct
        let dl = (Int32.to_int hd.Indexentry.no_rle_length) - ds in
        let l = min dl length in
        let l_after = length - l in
-       Printf.printf "Blit %d %d %d %d %d \n" ds rofs dl (Bigarray.Array1.dim data) (Bigarray.Array1.dim ba);
+       (*Printf.printf "Blit %d %d %d %d %d %!\n" ds rofs dl (Bigarray.Array1.dim data) (Bigarray.Array1.dim ba);*)
        let dstart_after = Int64.add dstart (Int64.of_int l) in
        let portion_of_data = (Bigarray.Array1.sub data ds l) in
        let portion_of_dest = (Bigarray.Array1.sub ba   rofs l) in
@@ -619,7 +620,18 @@ module Bunzip = struct
     None -> raise (Invalid_index "invalid index")
     | Some i ->
        let blks = (Index.blocks_containing i start length) in
-       Printf.printf "Num blks %d\n" (List.length blks) ;
+        (*   Printf.printf "Num blks %d\n" (List.length blks) ; *)
        decompress_and_copy_data bz ba blks start 0 length
-
+  let rec unrle_rec (s:string) (i:int) (l:int) (c:char) (r:int) (result:string) =
+    if (i=l) then result else
+    if ((r=4) && (s.[i]='\x00')) then (unrle_rec s (i+1) l '\x00' 0 result) else
+    if (r=4) then (unrle_rec s (i+1) l '\x00' 0 (result ^ String.make (int_of_char s.[i]) c)) else
+    if (s.[i]=c) then (unrle_rec s (i+1) l c (r+1) (result ^ (String.make 1 c))) else
+    (unrle_rec s (i+1) l (s.[i]) 1 (result ^ (String.make 1 (s.[i]))))
+  let rec unrle_unchanged_rec (s:string) (i:int) (l:int) (c:char) (r:int) =
+    if (i=l) then s else
+    if (r=4) then unrle_rec s i l c r (String.sub s 0 i) else
+    if (s.[i]=c) then unrle_unchanged_rec s (i+1) l c (r+1) else
+    (unrle_unchanged_rec s (i+1) l (s.[i]) 1)
+  let unrle s = unrle_unchanged_rec s 0 (String.length s) '\x00' 0
 end

@@ -508,4 +508,5 @@ module Bunzip :
     val block_decompress_no_rle :  t -> int64 -> (bz_uint8_array,string) result
      exception Invalid_index of string
     val read_data_no_rle : t -> bz_uint8_array -> int64 -> (bz_uint8_array,string) result
+    val unrle : string -> string
   end

@@ -481,14 +481,7 @@ module Bunzip :
         val build_index_r :
           (int64 -> ('a, string) result) ->
           c_bunzip -> int64 -> (int -> t -> 'b) -> int -> t -> int -> t list
-        val write_int_n : int -> int -> out_channel -> int64 -> unit
-        val write_int64 : out_channel -> int64 -> unit
-        val write_int32 : out_channel -> int32 -> unit
         val write : t -> out_channel -> unit
-        val read_int_n : int -> int -> bytes -> int -> int64 -> int64
-        val read_int64 : bytes -> int -> int64
-        val read_int32 : bytes -> int -> int32
-        val read : in_channel -> t option
         val str : t -> string
       end
     module Index :

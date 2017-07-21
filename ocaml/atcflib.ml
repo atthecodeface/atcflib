@@ -470,21 +470,22 @@ module Bunzip = struct
       if (i>=max_i-8) then nv else read_int_n (8+i) max_i b (n+1) nv
     let read_int64 b n = read_int_n 0 64 b n 0L
     let read_int32 b n = Int64.to_int32(read_int_n 0 32 b n 0L)
-    let read f =
-      let b = Bytes.create 64 in
-      if ((input f b 0 64)<64) then
-        None
-      else
-        Some { no_rle_start  = read_int64 b 0 ;
-               rle_start     = read_int64 b 8 ;
-               bz_start_bit  = read_int64 b 16 ;
-               bz_num_bits   = read_int32 b 24 ;
-               no_rle_length = read_int32 b 28 ;
-               rle_length    = read_int32 b 32 ;
-               block_crc     = read_int32 b 36 ;
-               decomp_data   = read_int32 b 40 ;
-               user_data     = (0l, 0l, 0l, 0l, 0l);
-             }
+    let read file bytes =
+      try begin
+          really_input file bytes 0 64 ;
+          Some { no_rle_start  = read_int64 bytes 0 ;
+                 rle_start     = read_int64 bytes 8 ;
+                 bz_start_bit  = read_int64 bytes 16 ;
+                 bz_num_bits   = read_int32 bytes 24 ;
+                 no_rle_length = read_int32 bytes 28 ;
+                 rle_length    = read_int32 bytes 32 ;
+                 block_crc     = read_int32 bytes 36 ;
+                 decomp_data   = read_int32 bytes 40 ;
+                 user_data     = (0l, 0l, 0l, 0l, 0l);
+               }
+        end 
+      with
+        End_of_file -> None
     let str i =
       Printf.sprintf "%20Ld +%8ld : %20Ld +%8ld" i.bz_start_bit i.bz_num_bits i.no_rle_start i.no_rle_length
   end
@@ -507,13 +508,14 @@ module Bunzip = struct
       let wf n ie = Indexentry.write ie f in
       List.iteri wf i.entries
     let read filename verbose =
+      let b = Bytes.create 64 in
       let f = open_in_bin filename in
-      let rec read_entries f entries =
-        match (Indexentry.read f) with
-          Some e -> read_entries f (entries@[e])
+      let rec read_entries entries =
+        match (Indexentry.read f b) with
+          Some e -> read_entries (entries@[e])
         | None   -> entries
       in
-      { entries = (read_entries f []) ;
+      { entries = (read_entries []) ;
       }
     let rec block_containing entries start n last = 
       match entries with

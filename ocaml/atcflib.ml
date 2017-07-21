@@ -518,18 +518,22 @@ module Bunzip = struct
     let rec block_containing entries start n last = 
       match entries with
         [] -> last
-      | hd :: tl -> if (hd.Indexentry.no_rle_start>start) then
-                      last
+      | hd :: tl -> if (hd.Indexentry.no_rle_start<=start) then
+                      (block_containing tl start (n+1) (n,entries))
                     else
-                      block_containing tl start (n+1) (n,entries)
-    let blocks_containing index start length =
+                      last
+    let blocks_containing index (start:int64) (length:int) =
        let last = (Int64.add start (Int64.of_int (length-1))) in
        let rec first_n l n r = match l with
            [] -> r
          | hd::tl -> if (n<=0) then r else first_n tl (n-1) (r@[hd]) in
        let (first_block,ie0) = block_containing index.entries start 0 (0,index.entries) in
        let (last_block,ie1)  = block_containing ie0           last  first_block (first_block,ie0) in
-       first_n ie0 (1+last_block-first_block) []
+       let first_index = (List.hd ie0) in
+       let first_index_end = Int64.add first_index.Indexentry.no_rle_start (Int64.of_int32 first_index.Indexentry.no_rle_length) in
+       if ((Int64.compare first_index_end start)<0) then []
+       else
+         first_n ie0 (1+last_block-first_block) []
   end
   (*b Structure type for module *)
   type t = {
@@ -595,10 +599,10 @@ module Bunzip = struct
 
   (*f read_data_no_rle *) 
   exception Invalid_index of string
-  let rec decompress_and_copy_data bz ba blks dstart rofs length =
-    (*Printf.printf "decompress_and_copy_data: Num blks %d\n\n" (List.length blks) ;*)
+  let rec decompress_and_copy_data bz ba blks dstart rofs length verbose =
+    if verbose then Printf.printf "decompress_and_copy_data: Num blks %d\n" (List.length blks) ;
     match blks with
-      [] -> Ok ba
+      [] -> Ok rofs
     | hd::tl ->
        block_decompress_no_rle bz hd.Indexentry.bz_start_bit >>= fun data ->
        let ds = Int64.to_int (Int64.sub dstart hd.Indexentry.no_rle_start) in
@@ -610,18 +614,19 @@ module Bunzip = struct
        let portion_of_data = (Bigarray.Array1.sub data ds l) in
        let portion_of_dest = (Bigarray.Array1.sub ba   rofs l) in
        Bigarray.Array1.blit portion_of_data portion_of_dest ;
-       if l_after<=0 then Ok ba
+       if l_after<=0 then Ok (rofs+l)
        else
-         decompress_and_copy_data bz ba tl dstart_after (rofs+l) l_after
+         decompress_and_copy_data bz ba tl dstart_after (rofs+l) l_after verbose
 
-  let read_data_no_rle bz ba start = 
+  let read_data_no_rle bz ba start ?verbose:(verbose=false) = 
     let length = (Bigarray.Array1.dim ba) in
+    if verbose then Printf.printf "Read_Data_No_Rle with start %Ld length %d\n%!" start length ;
     match bz.index with
     None -> raise (Invalid_index "invalid index")
     | Some i ->
        let blks = (Index.blocks_containing i start length) in
-        (*   Printf.printf "Num blks %d\n" (List.length blks) ; *)
-       decompress_and_copy_data bz ba blks start 0 length
+       if verbose then Printf.printf "Num blks %d\n%!" (List.length blks) ;
+       decompress_and_copy_data bz ba blks start 0 length verbose
   let rec unrle_rec (s:string) (i:int) (l:int) (c:char) (r:int) (result:string) =
     if (i=l) then result else
     if ((r=4) && (s.[i]='\x00')) then (unrle_rec s (i+1) l '\x00' 0 result) else

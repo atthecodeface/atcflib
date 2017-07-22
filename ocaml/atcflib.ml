@@ -96,6 +96,7 @@ end
 (*a Libraries *)
 open Bigarray
 open Re
+open Result
 
 (*a Types - private *)
 type c_vector
@@ -396,6 +397,9 @@ end
 
 (*a Bunzip module *)
 module Bunzip = struct
+  type  ('a) block_type = | Error of string
+                    | End_marker
+                    | Ok of 'a
   (*b Indexentry submodule *)
   module Indexentry = struct
     type t = {
@@ -434,12 +438,38 @@ module Bunzip = struct
       no_rle i prev (bz_block_no_rle_size bz) ;
       (i,(bz_block_end_bit bz))
 
-    let rec build_index_r bz_ba_huffman_decode bz start_bit verbose n prev max_n =
-      if (n>max_n) then [] else begin
+    (*f build_index_r - build the index entries starting at
+    'start_bit' given last index_entry 'prev' (to give the start of
+    this entry, if it has exists)
+
+      For debug, there is a maximum number of blocks that can be put
+      in the index - if that is exceeded then the index entries from
+      here on out are empty
+
+      Otherwise try to read the header of a BZIP block starting at
+      start_bit and do its Huffman decode - that is sufficient to give
+      its non-RLE length
+
+      Possibly the block is an end marker - in which case the index
+      entries from here on out are empty.
+
+      If a really serious error occurred (such as a Huffman decode
+      error) then perhaps an exception should be raised, but should we
+      abandond all the hard work so far? For now print out a
+      warning...
+
+      If all is fine then build a new index_entry i and find its
+      file-ending-bit e, and then build the index from e onwards with
+      this as the previous.
+
+     *)
+    let rec build_index_r (bz_ba_huffman_decode:int64->int block_type) bz start_bit verbose n prev max_n =
+      if (n>max_n) then []
+      else begin
           verbose n prev ;
-          let r = bz_ba_huffman_decode start_bit in
-          match r with
+          match (bz_ba_huffman_decode start_bit) with
             Error e -> Printf.printf "Error %s\n" e ; []
+          | End_marker -> []
           | Ok _    -> let (i,e) = index_entry bz prev in (i::(build_index_r bz_ba_huffman_decode bz e verbose (n+1) i max_n))
         end
 
@@ -494,9 +524,15 @@ module Bunzip = struct
     type t = {
         entries    : Indexentry.t list ;
       }
+
+    (*f verbose_progress is used for verbose output while building the index *)
     let verbose_progress n i = Printf.printf "%d:Bz at bit %Ld : %ld : %Ld\r%!" n i.Indexentry.bz_start_bit i.Indexentry.bz_num_bits i.Indexentry.no_rle_start
+
+    (*f quiet_progress is used for non-verbose output while building the index *)
     let quiet_progress n i = ()
-    let build_index bz_ba_huffman_decode bz verbose = { 
+
+    (*f building_index *)
+    let build_index (bz_ba_huffman_decode:int64->int block_type)  bz verbose = { 
         entries = 
           let progress_fn verbose = if verbose then verbose_progress else quiet_progress in
           Indexentry.build_index_r bz_ba_huffman_decode bz 32L (progress_fn verbose) 0 (Indexentry.create ()) 100000
@@ -544,6 +580,7 @@ module Bunzip = struct
       bz : c_bunzip ;
       mutable index : Index.t option ;
     }
+
   (*f open_bunzip *)
   let open_bunzip filename =
     let open_read filename = Unix.openfile filename [Unix.O_RDONLY ;] 0 in
@@ -565,17 +602,21 @@ module Bunzip = struct
         None
       end
   (*f block_read_header *)
-    let ( >>= ) x f =
-      match x with
-        Ok v         -> f v
-      | Error _ as e -> e
-    let chk_error m x = if x=0 then Ok x else Error m
+    exception Bad_bzip_file of string
+    let chk_error (m:string) x = if x!=0 then raise (Bad_bzip_file m) else Ok x
     let block_read_header bz start_bit =
-      chk_error "data" (bz_block_data bz.bz bz.ba start_bit 100000L) >>= fun _ ->
-      chk_error "hdr"  (bz_block_read_header bz.bz) >>= fun _ -> Ok ()
+      if ((bz_block_data bz.bz bz.ba start_bit 0L)!=0) then raise (Bad_bzip_file "reading block data")
+      else
+        let hdr_type = bz_block_read_header bz.bz in
+        if (hdr_type<0) then raise (Bad_bzip_file "reading block header")
+        else if (hdr_type>0) then End_marker
+        else Ok 0
     let block_huffman_decode bz start_bit =
-      block_read_header bz start_bit >>= fun _ ->
-      chk_error "huf" (bz_block_huffman_decode bz.bz)  >>= fun _ -> Ok ()
+      match (block_read_header bz start_bit) with
+        Error _ as e -> e
+      | End_marker -> End_marker
+      | Ok _ -> if ((bz_block_huffman_decode bz.bz)!=0) then Error "Bad Huffman data"
+        else Ok 0
   (*f create_index *) 
   let create_index bz verbose = 
     let bz_ba_huffman_decode start_bit = block_huffman_decode bz start_bit in
@@ -587,7 +628,14 @@ module Bunzip = struct
     let index = (Index.read filename verbose) in
     bz.index <- Some index ;
     index
+
   (*f block_decompress_no_rle *)
+  let ( >>= ) (x:int block_type) f =
+    match x with
+      Ok v              -> f v
+    | End_marker   as e -> e
+    | Error _      as e -> e
+
   let block_decompress_no_rle bz start_bit =
     (*    Printf.printf "Block decompress %Ld\n" start_bit ;*)
     block_huffman_decode bz start_bit >>= fun _ -> 
@@ -601,26 +649,31 @@ module Bunzip = struct
 
   (*f read_data_no_rle *) 
   exception Invalid_index of string
-  let rec decompress_and_copy_data bz ba blks dstart rofs length verbose =
-    if verbose then Printf.printf "decompress_and_copy_data: Num blks %d\n" (List.length blks) ;
+  let rec decompress_and_copy_data bz ba blks dstart rofs length verbose : (int,string) result =
+    if verbose then Printf.printf "decompress_and_copy_data: Num blks %d\n%!" (List.length blks) ;
     match blks with
-      [] -> Ok rofs
+      [] -> Result.Ok rofs
     | hd::tl ->
-       block_decompress_no_rle bz hd.Indexentry.bz_start_bit >>= fun data ->
-       let ds = Int64.to_int (Int64.sub dstart hd.Indexentry.no_rle_start) in
-       let dl = (Int32.to_int hd.Indexentry.no_rle_length) - ds in
-       let l = min dl length in
-       let l_after = length - l in
-       (*Printf.printf "Blit %d %d %d %d %d %!\n" ds rofs dl (Bigarray.Array1.dim data) (Bigarray.Array1.dim ba);*)
-       let dstart_after = Int64.add dstart (Int64.of_int l) in
-       let portion_of_data = (Bigarray.Array1.sub data ds l) in
-       let portion_of_dest = (Bigarray.Array1.sub ba   rofs l) in
-       Bigarray.Array1.blit portion_of_data portion_of_dest ;
-       if l_after<=0 then Ok (rofs+l)
-       else
-         decompress_and_copy_data bz ba tl dstart_after (rofs+l) l_after verbose
+       match (block_decompress_no_rle bz hd.Indexentry.bz_start_bit) with
+       Error s -> Result.Error s
+       | End_marker -> Result.Ok rofs
+       | Ok data ->
+          let ds = Int64.to_int (Int64.sub dstart hd.Indexentry.no_rle_start) in
+          let dl = (Int32.to_int hd.Indexentry.no_rle_length) - ds in
+          let l = min dl length in
+          let l_after = length - l in
+          (*Printf.printf "Blit %d %d %d %d %d %!\n" ds rofs dl (Bigarray.Array1.dim data) (Bigarray.Array1.dim ba);*)
+          let dstart_after = Int64.add dstart (Int64.of_int l) in
+          let portion_of_data = (Bigarray.Array1.sub data ds l) in
+          let portion_of_dest = (Bigarray.Array1.sub ba   rofs l) in
+          Bigarray.Array1.blit portion_of_data portion_of_dest ;
+          if l_after<=0 then
+            Result.Ok (rofs+l)
+          else
+            decompress_and_copy_data bz ba tl dstart_after (rofs+l) l_after verbose
 
-  let read_data_no_rle bz ba start ?verbose:(verbose=false) = 
+  (*f read_data_no_rle - read data without the final RLE, from BZIP at start *)
+  let read_data_no_rle ?verbose:(verbose=false) bz ba start = 
     let length = (Bigarray.Array1.dim ba) in
     if verbose then Printf.printf "Read_Data_No_Rle with start %Ld length %d\n%!" start length ;
     match bz.index with
@@ -629,6 +682,7 @@ module Bunzip = struct
        let blks = (Index.blocks_containing i start length) in
        if verbose then Printf.printf "Num blks %d\n%!" (List.length blks) ;
        decompress_and_copy_data bz ba blks start 0 length verbose
+
   let rec unrle_rec (s:string) (i:int) (l:int) (c:char) (r:int) (result:string) =
     if (i=l) then result else
     if ((r=4) && (s.[i]='\x00')) then (unrle_rec s (i+1) l '\x00' 0 result) else

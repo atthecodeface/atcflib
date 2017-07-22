@@ -39,9 +39,9 @@ ocaml_atcflib.a: ${OCAML_WRAPPER_OBJS} ../libatcf.so
 
 atcflib.cmxa: ocaml_atcflib.a ../libatcf.so atcflib.ml atcflib.mli
 	# The next one creates atcflib.cmi, atcflib.cmx, atcflib.o
-	$(OCAMLFIND) ocamlopt  -linkpkg -package core,re -c atcflib.mli -thread 
+	$(OCAMLFIND) ocamlopt  -linkpkg -package re,result -c atcflib.mli -thread 
 	@echo "Compile atcflib.ml"
-	@$(OCAMLFIND) ocamlopt  -linkpkg -package core,re -c atcflib.ml -thread 
+	@$(OCAMLFIND) ocamlopt  -linkpkg -package re,result -c atcflib.ml -thread 
 	# The next one creates atcflib.cmxa
 	@echo "Build atcflib.cmxa"
 	#$(OCAMLFIND) ocamlopt -a -o atcflib.cmxa atcflib.cmx ${OCAML_WRAPPER_OBJS} -cclib -L$(LIBDIR) -cclib -latcf -cclib -lc++

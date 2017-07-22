@@ -461,6 +461,9 @@ module rec
 (** Bunzip module **)
 module Bunzip :
   sig
+    type  ('a) block_type = | Error of string
+                            | End_marker
+                            | Ok of 'a
     module Indexentry :
       sig
         type t = {
@@ -479,7 +482,7 @@ module Bunzip :
         val no_rle : t -> t -> int -> unit
         val index_entry : c_bunzip -> t -> t * int64
         val build_index_r :
-          (int64 -> ('a, string) result) ->
+           (int64 -> int block_type) ->
           c_bunzip -> int64 -> (int -> t -> 'b) -> int -> t -> int -> t list
         val write : t -> out_channel -> unit
         val str : t -> string
@@ -489,7 +492,7 @@ module Bunzip :
         type t = { entries : Indexentry.t list; }
         val verbose_progress : int -> Indexentry.t -> unit
         val quiet_progress : 'a -> 'b -> unit
-        val build_index : (int64 -> ('a, string) result) -> c_bunzip -> bool -> t
+        val build_index : (int64 -> int block_type) -> c_bunzip -> bool -> t
         val show : (string -> unit) -> t -> unit
         val write : out_channel -> t -> unit
         val read : string -> 'b -> t
@@ -498,8 +501,7 @@ module Bunzip :
     val open_bunzip : string -> t option
     val create_index : t -> bool -> Index.t
     val read_index : t -> string -> 'a -> Index.t 
-    val block_decompress_no_rle :  t -> int64 -> (bz_uint8_array,string) result
      exception Invalid_index of string
-    val read_data_no_rle : t -> bz_uint8_array -> int64 -> ?verbose:bool -> (int,string) result
+    val read_data_no_rle : ?verbose:bool -> t -> bz_uint8_array -> int64 -> (int,string) result
     val unrle : string -> string
   end

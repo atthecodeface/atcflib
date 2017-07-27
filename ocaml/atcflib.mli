@@ -80,7 +80,7 @@ particularly.
 
 The C++ library provides the c_vector class and appropriate methods;
 this library module mirrors that, with one c_vector class instance for
-each Vector.vector module type instance. For performance, these should
+each Vector.t module type instance. For performance, these should
 not be constantly allocated and released, hence they should be
 sensibly managed.
 
@@ -94,93 +94,93 @@ module rec
       sig
         (** The vector type is an instance of the C++ c_vector class
         *)
-    type vector = { cv : c_vector ;
+    type t = { cv : c_vector ;
                     ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
         (*type vector = { cv : c_vector; (. .) }  (.. .)*)
 
-        val create : c_vector -> vector
+        val create : c_vector -> t
         (** Vector.create is a private method to create a
-        Vector.vector from a c_vector *)
+        Vector.t from a c_vector *)
 
-        val make             : int -> vector
+        val make             : int -> t
         (** Vector.make n creates a new vector of length n; the length
         of the vector is then fixed forever. *)
 
-        val make2            : float -> float -> vector
+        val make2            : float -> float -> t
         (** Vector.make2 x y is a convenience function to create a
         vector of length 2 with value (x, y)
         *)
 
-        val make3            : float -> float -> float -> vector
+        val make3            : float -> float -> float -> t
         (** Vector.make3 x y z is a convenience function to create a
         vector of length 3 with value (x, y, z) *)
 
-        val make4            : float -> float -> float -> float -> vector
+        val make4            : float -> float -> float -> float -> t
         (** Vector.make4 w x y z is a convenience function to create a
         vector of length 4 with value (w, x, y, z) *)
 
-        val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> vector
+        val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> t
         (** Vector.make_slice_array b n o s makes a new vector using a
         slice of the big array *)
 
-        val copy             : vector -> vector
+        val copy             : t -> t
         (** Vector.copy creates a copy of a vector, using a new
         c_vector for the new vector *)
 
-        val length           : vector -> int
+        val length           : t -> int
         (** Vector.length returns the length of the vector *)
 
-        val coords           : vector -> float array
+        val coords           : t -> float array
         (** Vector.coords returns a float array with the coordinates of the vector *)
 
-        val set              : vector -> n:int -> f:float -> vector
+        val set              : t -> n:int -> f:float -> t
         (** Vector.set v n f sets the nth coordinate of the vector to be f. It returns v *)
 
-        val scale            : vector -> f:float -> vector
+        val scale            : t -> f:float -> t
         (** Vector.scale v f scales all the coordinates of the vector by f, and returns v *)
 
-        val modulus          : vector -> float
+        val modulus          : t -> float
         (** Vector.modulus v returns the modulus (length) of the
         vector - i.e. the square root of the inner product of the
         vector with itself sqrt(x*x + y*y + z*z + ...) *)
 
-        val modulus_squared  : vector -> float
+        val modulus_squared  : t -> float
         (** Vector.modulus_squared v returns the square of the modulus (length) of the
         vector - i.e. inner product of the vector with itself (x*x + y*y + z*z + ...) *)
 
-        val add              : vector -> vector -> vector
+        val add              : t -> t -> t
         (** Vector.add v v2 adds vector v2 to vector v, requiring both
         to be of the same length. After updating v, it returns it. *)
 
-        val add_scaled       : vector -> vector -> f:float -> vector
+        val add_scaled       : t -> t -> f:float -> t
         (** Vector.add_scaled v v2 adds vector v2 scaled by f to vector v,
         requiring both vectors to be of the same length. After updating v, it returns it. *)
 
-        val normalize        : vector -> vector
+        val normalize        : t -> t
         (** Vector.normalize v scales vector v by the reciprocal of
         its modulus - i.e. afterwards it should be a unit vector. If
         the modulus of the vector is less than a value epsilon (approx
         1E-20) then the vector is zeroed. It returns v*)
 
-        val assign           : vector -> vector -> vector
+        val assign           : t -> t -> t
         (** Vector.assign v v2 sets v to have the same coordinates as
         v2 (effectively v.coords := v2.coords); it requires that v
         have the same length as v2 (which is not checked). It returns v. *)
 
-        val assign_m_v       : vector -> Matrix.matrix -> vector -> vector
+        val assign_m_v       : t -> Matrix.t -> t -> t
         (** Vector.assign v m v2 sets v to be Matrix m * v2; it
         requires that v have the same length as M.nrows, and M.ncols
         is the length of v2 (neither of which is not checked). It
         returns v. *)
 
-        val assign_q_as_rotation : vector -> Quaternion.quaternion -> float * float
+        val assign_q_as_rotation : t -> Quaternion.t -> float * float
         (** Vector.assign_q_as_rotation v q assumes q is a unit
         quaternion, and sets v to be the axis of rotation that q
         represents (in three dimensions), and it returns a tuple of
         (cosine, sine) of the angle of rotation. It requires v to have
         length 3, which is not checked. *)
 
-        val apply_q          : vector -> Quaternion.quaternion -> vector
+        val apply_q          : t -> Quaternion.t -> t
         (** Vector.apply_q v q applies q to the vector v, and sets the
         first 3 coordinates of v appropriately. This requires v to be
         of length 3 or more.
@@ -195,27 +195,27 @@ module rec
         half of the angle of rotation is the real part, and ijk is
         scaled by the sine of half of the angle of rotation. *)
 
-        val dot_product      : vector -> vector -> float
+        val dot_product      : t -> t -> float
         (** Vector.dot_product v v2 calculates the inner product, or
         dot product, of two vectors. This is calculated by adding up
         the corresponding coordinates of each vector multiplied
         together (i.e. v.x*v2.x + v.y*v2.y + ...). It requires the two
         vectors to be of the same length. *)
 
-        val cross_product3   : vector -> vector -> vector
-        (** Vector.cross_product3 v v2 creates a {e new} Vector.vector
+        val cross_product3   : t -> t -> t
+        (** Vector.cross_product3 v v2 creates a {e new} Vector.t
         that is the 3-dimensional vector product (outer product) of
         two three dimensional vectors. *)
 
-        val angle_axis_to3   : vector -> vector -> vector * float * float
+        val angle_axis_to3   : t -> t -> t * float * float
         (** Vector.angle_axis_to3 v v2 creates a {e new} axis
-        Vector.vector that is the 3-dimensional vector is the cross
+        Vector.t that is the 3-dimensional vector is the cross
         product (outer product) of two three dimensional vectors, and
         it calculates the (cosine, sine) of the angle of rotation
         around the axis vector. It returns (axis, cosine, sine) as a
         tuple. *)
 
-        val repr             : vector -> string
+        val repr             : t -> string
         (** Vector.repr v produces a textual representation of the
         vector, for use in debugging, for example *)
       end
@@ -243,64 +243,64 @@ module rec
          sig
             (** The matrix type is an instance of the C++ c_vector class
             *)
-           type matrix = { cm : c_matrix; }
-           val create : c_matrix -> matrix
+           type t = { cm : c_matrix; }
+           val create : c_matrix -> t
            (** Matrix.create is a private method to create a
            Matrix.matrix from a C++ matrix class instance *)
 
-           val copy : matrix -> matrix
+           val copy : t -> t
            (** Matrix.copy m creates a copy of matrix m and returns it *)
 
-           val set : matrix -> int -> int -> float -> matrix
+           val set : t -> int -> int -> float -> t
            (** Matrix.set m c r f sets matrix m element row r column c
            to be f. It returns the matrix *)
 
-           val identity : matrix -> matrix
+           val identity : t -> t
            (** Matrix.identity m sets matrix m to be zero, except where
            for elements whose row number equals the column number,
            where it sets the element to 1. For a square matrix this
            means it sets the matrix to be the identity matrix I. It
            returns the matrix m. *)
 
-           val nrows : matrix -> int
+           val nrows : t -> int
            (** Matrix.nrows returns the number of rows in the matrix. *)
 
-           val ncols : matrix -> int
+           val ncols : t -> int
            (** Matrix.ncols returns the number of columns in the matrix. *)
 
-           val row_vector : matrix -> int -> Vector.vector
-           (** Matrix.row_vector m n returns a new Vector.vector
+           val row_vector : t -> int -> Vector.t
+           (** Matrix.row_vector m n returns a new Vector.t
            corresponding to the n'th row of the matrix. *)
 
-           val col_vector : matrix -> int -> Vector.vector
-           (** Matrix.col_vector m n returns a new Vector.vector
+           val col_vector : t -> int -> Vector.t
+           (** Matrix.col_vector m n returns a new Vector.t
            corresponding to the n'th column of the matrix. *)
 
-           val scale : matrix -> f:float -> matrix
+           val scale : t -> f:float -> t
            (** Matrix.scale m f scales (multiplies) all the elemnts of
            the matrix by f. It returns the matrix. *)
 
-           val transpose : matrix -> matrix
+           val transpose : t -> t
            (** Matrix.transpose m transposes matrix m in-place; the
            updated matrix will be of size NxM if it has originally
            been MxN.   It returns the matrix. *)
 
-           val add_scaled : matrix -> matrix -> float -> matrix
+           val add_scaled : t -> t -> float -> t
            (** Matrix.add_scaled m m2 f adds m2 scaled by f to matrix
            m, and sets m to the result; this permits add and
            subtract. It returns the matrix m. *)
 
-           val apply : matrix -> Vector.vector -> Vector.vector
+           val apply : t -> Vector.t -> Vector.t
            (** Matrix.apply m v multiplies Vector v by the matrix m
            (which must have the same length as m has columns) and
-           returns a {e new} Vector.vector with the result (of length
+           returns a {e new} Vector.t with the result (of length
            m.ncols) *)
 
-           val assign_m_m : matrix -> matrix -> matrix -> matrix
+           val assign_m_m : t -> t -> t -> t
            (** Matrix.assign_m_m m m1 m2 assigns m to be the result of
            the product of m1 and m2 (in that order). It returns m. *)
 
-           val lup_decompose : matrix -> Vector.vector
+           val lup_decompose : t -> Vector.t
            (** Matrix.lup_decompose m performs a lower-upper-pivot
            decomposition (partial pivoting) of a square N-dimensional
            matrix m; that is, it finds L, U and P such that M = L * U
@@ -323,32 +323,32 @@ module rec
            Since M = L*U*P, M' = P' * U' * L', where ' indicates
            inverse. Note that the inverse of a triangular matrix can
            be calculated relatively simply. *)
-           val lup_get_l : matrix -> matrix
+           val lup_get_l : t -> t
            (** Matrix.lup_get_l assigns an LU decomposition matrix to
            be its lower triangular matrix, by zeroing the values above
            the diagonal, and setting the diagonal to all ones. It returns the matrix. *)
-           val lup_get_u : matrix -> matrix
+           val lup_get_u : t -> t
            (** Matrix.lup_get_u assigns an LU decomposition matrix to
            be its upper triangular matrix, by zeroing the values below
            the diagonal. It returns the matrix. *)
-           val lup_invert : matrix -> matrix
+           val lup_invert : t -> t
            (** Matrix.lup_invert performs an LUP decomposition on the
            matrix, using this to determine the inverse; the matrix is
            then set to this inverse. It returns the matrix. *)
-           val lup_inverse : matrix -> matrix
+           val lup_inverse : t -> t
            (** Matrix.lup_invert performs an LUP decomposition on the
            matrix, using this to determine the inverse; a new matrix
            is then created and set to this inverse. It returns this
            new matrix. *)
-           val make          : int -> int -> matrix
+           val make          : int -> int -> t
            (** Matrix.make r c creates a new matrix with r rows anc c
            columns. The size of the matrix may change in the future, if
            it is assigned to a different size of matrix, for example. *)
-           val matrix_x_matrix : matrix -> matrix -> matrix
+           val matrix_x_matrix : t -> t -> t
            (** Matrix.matrix_x_matrix m1 m2 multiplies matrix m1 and
            m2 together (in that order, and returns a new matrix with
            the product. *)
-           val repr : matrix -> string
+           val repr : t -> string
          (** Matrix.repr m produces a textual representation of the
         matrix, for use in debugging, for example *)
          end
@@ -371,33 +371,33 @@ module rec
            sig
             (** The quaternion type is an instance of the C++ c_vector class
             *)
-             type quaternion = { cq : c_quaternion; }
+             type t = { cq : c_quaternion; }
 
-             val create : c_quaternion -> quaternion
+             val create : c_quaternion -> t
              (** Quaternion.create is a privatem method to create a quaternion from an instances of the C classs. *)
 
-             val copy : quaternion -> quaternion
+             val copy : t -> t
              (** Quaternion.copy qdm creates a copy of quaternion q and returns it *)
 
-             val get_rijk : quaternion -> float array
+             val get_rijk : t -> float array
              (** Quaternion.get_rijk q returns a float array of size 4
              containing the scalar (r) and the vector component
              (i,j,k) of the quaternion (in that order). *)
 
-             val assign : quaternion -> quaternion -> quaternion
+             val assign : t -> t -> t
              (** Quaternion.assign q q1 assigns quaternion q to have the same value as q1, returning q. *)
 
-             val assign_q_q : quaternion -> quaternion -> quaternion -> quaternion
+             val assign_q_q : t -> t -> t -> t
              (** Quaternion.assign q q1 q2 assigns quaternion q to be the product of q1 * q2. It returns q. *)
 
-             val assign_lookat_aeronautic : quaternion -> Vector.vector -> Vector.vector -> quaternion
+             val assign_lookat_aeronautic : t -> Vector.t -> Vector.t -> t
              (** Quaternion.assign_lookat_aeronautic q at up assigns quaternion q
              to be a unit quaternion that (when applied) would make
              the vector 'at' map to the positive 3-dimensional unit Z vector
              (0,0,1), with the vector 'up' mapping to be parallel to
              the unit X axis (1,0,0); this matches the aeronautical convention. It returns q. *)
 
-             val assign_lookat_graphics : quaternion -> Vector.vector -> Vector.vector -> quaternion
+             val assign_lookat_graphics : t -> Vector.t -> Vector.t -> t
              (** Quaternion.assign_lookat_graphics q at up assigns quaternion q
              to be a unit quaternion that (when applied) would make
              the vector 'at' map to the negative 3-dimensional unit Z vector
@@ -407,54 +407,54 @@ module rec
              right, postitive Y up the screen, and positive Z out of
              the screen. It returns q. *)
 
-             val assign_of_rotation : quaternion -> Vector.vector -> float -> float -> quaternion
+             val assign_of_rotation : t -> Vector.t -> float -> float -> t
              (** Quaternion.assign_of_rotation q axis cosine sine
              assigns q to be the unit quaternion that corresponds to a
              rotation around the axis by an angle whose cosine and
              sine are provided. It returns q. *)
 
-             val scale : quaternion -> float -> quaternion
+             val scale : t -> float -> t
              (** Quaternion.scale q f scales (multiplies) q by f. It returns q. *)
 
-             val add_scaled : quaternion -> quaternion -> float -> quaternion
+             val add_scaled : t -> t -> float -> t
              (** Quaternion.add_scaled q q1 f adds q1 scaled by f to q. It returns q. *)
 
-             val reciprocal : quaternion -> quaternion
+             val reciprocal : t -> t
              (** Quaternion.conjugate q updates quaternion q to be its
              reciprocal (it negates the vector component, and divides
              the whole by the modulus). It returns q. *)
 
-             val conjugate : quaternion -> quaternion
+             val conjugate : t -> t
              (** Quaternion.conjugate q updates quaternion q to be its
              conjugate (it negates the vector component); it returns
              q. *)
 
-             val modulus : quaternion -> float
+             val modulus : t -> float
              (** Quaternion.modulus q returns the modulus of the
              quaternion q - sqrt(r*r + i*i + j*j + k*k). *)
 
-             val modulus_squared : quaternion -> float
+             val modulus_squared : t -> float
              (** Quaternion.modulus_squared q returns the modulus of
              the quaternion q squared - r*r + i*i + j*j + k*k. *)
 
-             val premultiply : quaternion -> quaternion -> quaternion
+             val premultiply : t -> t -> t
              (** Quaternion.premultiply q q1 updates q to be the
              product q * q1, returning q. *)
 
-             val postmultiply : quaternion -> quaternion -> quaternion
+             val postmultiply : t -> t -> t
              (** Quaternion.postmultiply q q1 updates q to be the
              product q1 * q, returning q. *)
 
-             val make              : unit -> quaternion
-             (** Quaternion.make creates a new Quaternion.quaternion
+             val make              : unit -> t
+             (** Quaternion.make creates a new Quaternion.t
              with a value of zero. *)
 
-             val make_rijk         : float -> float -> float -> float -> quaternion
+             val make_rijk         : float -> float -> float -> float -> t
              (** Quaternion.make_rijk creates a new
-             Quaternion.quaternion with scalar part r and vector part
+             Quaternion.t with scalar part r and vector part
              (i,j,k). *)
 
-             val repr : quaternion -> string
+             val repr : t -> string
            (** Quaternion.repr m produces a textual representation of the
             quaternion, for use in debugging, for example *)
            end

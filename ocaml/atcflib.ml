@@ -232,35 +232,35 @@ end
 
 (*a Vector module version *)
 module rec Vector : sig
-    type vector = { cv : c_vector ;
+    type t = { cv : c_vector ;
                     ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
-    val create  : c_vector -> vector
-    val length  : vector -> int
-    val copy    : vector -> vector
-    val coords  : vector -> float array
-    val length  : vector -> int
-    val set     : vector -> n:int -> f:float  -> vector
-    val assign  : vector -> vector -> vector
-    val assign_m_v : vector -> Matrix.matrix -> vector -> vector
-    val assign_q_as_rotation : vector -> Quaternion.quaternion -> float * float
-    val apply_q              : vector -> Quaternion.quaternion -> vector
-    val scale                : vector -> f:float  -> vector
-    val modulus              : vector -> float
-    val modulus_squared      : vector -> float
-    val add                  : vector -> vector -> vector
-    val add_scaled           : vector -> vector -> f:float -> vector
-    val normalize            : vector -> vector
-    val dot_product          : vector -> vector -> float
-    val cross_product3       : vector -> vector -> vector
-    val angle_axis_to3       : vector -> vector -> vector * float * float
-    val make                 : int -> vector
-    val make2                : float -> float -> vector
-    val make3                : float -> float -> float -> vector
-    val make4                : float -> float -> float -> float -> vector
-    val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> vector
-    val repr                 : vector -> string
+    val create  : c_vector -> t
+    val length  : t -> int
+    val copy    : t -> t
+    val coords  : t -> float array
+    val length  : t -> int
+    val set     : t -> n:int -> f:float  -> t
+    val assign  : t -> t -> t
+    val assign_m_v : t -> Matrix.t -> t -> t
+    val assign_q_as_rotation : t -> Quaternion.t -> float * float
+    val apply_q              : t -> Quaternion.t -> t
+    val scale                : t -> f:float  -> t
+    val modulus              : t -> float
+    val modulus_squared      : t -> float
+    val add                  : t -> t -> t
+    val add_scaled           : t -> t -> f:float -> t
+    val normalize            : t -> t
+    val dot_product          : t -> t -> float
+    val cross_product3       : t -> t -> t
+    val angle_axis_to3       : t -> t -> t * float * float
+    val make                 : int -> t
+    val make2                : float -> float -> t
+    val make3                : float -> float -> float -> t
+    val make4                : float -> float -> float -> float -> t
+    val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> t
+    val repr                 : t -> string
 end = struct
-    type vector = { cv : c_vector ;
+    type t = { cv : c_vector ;
                     ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
 
      let create cv_in = { cv = cv_in; ba = None }
@@ -295,31 +295,31 @@ end = struct
 end
 (*a and Matrix module *)
    and Matrix : sig
-     type matrix = { cm: c_matrix }
-    val create : c_matrix -> matrix
-    val copy   : matrix -> matrix
-    val apply  : matrix -> Vector.vector -> Vector.vector
-    val set          : matrix -> int -> int -> float -> matrix
-    val identity     : matrix -> matrix
-    val nrows        : matrix -> int
-    val ncols        : matrix -> int
-    val row_vector   : matrix -> int -> Vector.vector
-    val col_vector   : matrix -> int -> Vector.vector
-    val scale        : matrix -> f:float -> matrix
-    val transpose    : matrix -> matrix
-    val add_scaled   : matrix -> matrix -> float -> matrix
-    val apply        : matrix -> Vector.vector -> Vector.vector
-    val assign_m_m   : matrix -> matrix -> matrix -> matrix
-    val lup_decompose : matrix -> Vector.vector
-    val lup_get_l     : matrix -> matrix
-    val lup_get_u     : matrix -> matrix
-    val lup_invert    : matrix -> matrix
-    val lup_inverse   : matrix -> matrix
-    val make          : int -> int -> matrix
-    val matrix_x_matrix : matrix -> matrix -> matrix
-    val repr          : matrix -> string
+     type t = { cm: c_matrix }
+    val create : c_matrix -> t
+    val copy   : t -> t
+    val apply  : t -> Vector.t -> Vector.t
+    val set          : t -> int -> int -> float -> t
+    val identity     : t -> t
+    val nrows        : t -> int
+    val ncols        : t -> int
+    val row_vector   : t -> int -> Vector.t
+    val col_vector   : t -> int -> Vector.t
+    val scale        : t -> f:float -> t
+    val transpose    : t -> t
+    val add_scaled   : t -> t -> float -> t
+    val apply        : t -> Vector.t -> Vector.t
+    val assign_m_m   : t -> t -> t -> t
+    val lup_decompose : t -> Vector.t
+    val lup_get_l     : t -> t
+    val lup_get_u     : t -> t
+    val lup_invert    : t -> t
+    val lup_inverse   : t -> t
+    val make          : int -> int -> t
+    val matrix_x_matrix : t -> t -> t
+    val repr          : t -> string
 end = struct
-     type matrix = { cm: c_matrix }
+     type t = { cm: c_matrix }
      let create (cm_in:c_matrix) = { cm = cm_in }
      let copy   m = Matrix.create (m_clone m.cm)
      let apply  m v = Vector.create (m_apply m v.Vector.cv)
@@ -352,28 +352,28 @@ end = struct
 end
 (*a and Quaternion module *)
 and Quaternion : sig
-    type quaternion = { cq: c_quaternion }
-    val create : c_quaternion -> quaternion
-    val copy   : quaternion -> quaternion
-    val get_rijk           : quaternion -> float array
-    val assign             : quaternion -> quaternion -> quaternion
-    val assign_q_q         : quaternion -> quaternion -> quaternion -> quaternion
-    val assign_lookat_graphics      : quaternion -> Vector.vector -> Vector.vector -> quaternion 
-    val assign_lookat_aeronautic      : quaternion -> Vector.vector -> Vector.vector -> quaternion 
-    val assign_of_rotation : quaternion -> Vector.vector -> float -> float -> quaternion
-    val scale              : quaternion -> float -> quaternion
-    val add_scaled        : quaternion -> quaternion -> float -> quaternion
-    val reciprocal        : quaternion -> quaternion
-    val conjugate         : quaternion -> quaternion
-    val modulus           : quaternion -> float
-    val modulus_squared   : quaternion -> float
-    val premultiply       : quaternion -> quaternion -> quaternion
-    val postmultiply      : quaternion -> quaternion -> quaternion
-    val make              : unit -> quaternion
-    val make_rijk         : float -> float -> float -> float -> quaternion
-    val repr              : quaternion -> string
+    type t = { cq: c_quaternion }
+    val create : c_quaternion -> t
+    val copy   : t -> t
+    val get_rijk           : t -> float array
+    val assign             : t -> t -> t
+    val assign_q_q         : t -> t -> t -> t
+    val assign_lookat_graphics      : t -> Vector.t -> Vector.t -> t 
+    val assign_lookat_aeronautic      : t -> Vector.t -> Vector.t -> t 
+    val assign_of_rotation : t -> Vector.t -> float -> float -> t
+    val scale              : t -> float -> t
+    val add_scaled        : t -> t -> float -> t
+    val reciprocal        : t -> t
+    val conjugate         : t -> t
+    val modulus           : t -> float
+    val modulus_squared   : t -> float
+    val premultiply       : t -> t -> t
+    val postmultiply      : t -> t -> t
+    val make              : unit -> t
+    val make_rijk         : float -> float -> float -> float -> t
+    val repr              : t -> string
 end = struct
-     type quaternion = { cq: c_quaternion }
+     type t = { cq: c_quaternion }
      let create (cq_in:c_quaternion) = { cq = cq_in }
      let copy   q = create (q_clone q.cq)
      let get_rijk q    = q_get_rijk q.cq
@@ -545,14 +545,17 @@ module Bunzip = struct
       List.iteri wf i.entries
     let read filename verbose =
       let b = Bytes.create 64 in
-      let f = open_in_bin filename in
-      let rec read_entries entries =
-        match (Indexentry.read f b) with
-          Some e -> read_entries (entries@[e])
-        | None   -> entries
-      in
-      { entries = (read_entries []) ;
-      }
+      try begin
+          let f = open_in_bin filename in
+          let rec read_entries entries =
+            match (Indexentry.read f b) with
+              Some e -> read_entries (entries@[e])
+            | None   -> entries
+          in
+          { entries = (read_entries []) ;
+          }
+        end
+      with Not_found as e -> Printf.printf "Index file %s not found\n" filename; raise e
     let rec block_containing entries start n last = 
       match entries with
         [] -> last
@@ -583,7 +586,12 @@ module Bunzip = struct
 
   (*f open_bunzip *)
   let open_bunzip filename =
-    let open_read filename = Unix.openfile filename [Unix.O_RDONLY ;] 0 in
+    let open_read filename =
+      try begin
+          Unix.openfile filename [Unix.O_RDONLY ;] 0
+        end
+      with Not_found as e -> Printf.printf "Bzip file %s not found\n" filename; raise e
+    in
     let fd = open_read filename in
     let ba = Bigarray.Array1.map_file fd (*pos:(int64 0)*) Bigarray.Int8_unsigned c_layout false (-1) in
     let bz = bz_create () in

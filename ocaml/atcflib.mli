@@ -300,6 +300,12 @@ module rec
            (** Matrix.assign_m_m m m1 m2 assigns m to be the result of
            the product of m1 and m2 (in that order). It returns m. *)
 
+           val assign_from_q : t -> Quaternion.t  -> t
+           (** Matrix.assign_from_q m q assumes that q is a
+           unit quaternion and it makes m be the identity matrix with
+           the top level 3x3 being a rotation that matches the
+           quaternion. *)
+
            val lup_decompose : t -> Vector.t
            (** Matrix.lup_decompose m performs a lower-upper-pivot
            decomposition (partial pivoting) of a square N-dimensional

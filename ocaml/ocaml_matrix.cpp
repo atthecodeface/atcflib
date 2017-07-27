@@ -220,6 +220,19 @@ FN_C_TO_UNIT(matrix, transpose_data)
 FN_C_TO_UNIT(matrix, lup_get_l)
 FN_C_TO_UNIT(matrix, lup_get_u)
 
+/*f assign_from_q : c_matrix -> c_quaternion
+ *
+ * Function to assign m to be the rotation due to q
+ *
+ */
+extern "C"
+CAMLprim void
+atcf_matrix_assign_from_q(value m, value q) {
+    CAMLparam2(m, q);
+    matrix_of_val(m)->set_from_quaternion(*quaternion_of_val(q));
+    CAMLreturn0;
+}
+
 /*f lup_decompose : c_matrix -> c_vector
  *
  * Function to perform m->lup_decompose -> new vector

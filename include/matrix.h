@@ -26,6 +26,7 @@
 /*a Includes
  */
 #include "vector.h"
+#include "quaternion.h"
 
 /*a Defines
  */
@@ -82,6 +83,7 @@ public:
     c_vector<T> *apply(const c_vector<T> &v); // new vector = this * v
     T *apply(const c_vector<T> &v, T *rv, int stride); // rv = this * v, return rv
     c_vector<T> &apply(const c_vector<T> &v, c_vector<T> &rv); // rv = this * v, return rv
+    c_matrix<T> &set_from_quaternion(const c_quaternion<T> &q);
     int lup_decompose(c_vector<T> **P); // Decompose this to LU setting pivot *P
     c_matrix &lup_get_l(void); // Update this to be just L of LU decomposition
     c_matrix &lup_get_u(void); // Update this to be just U of LU decomposition

@@ -152,6 +152,7 @@ external m_col_vector  : c_matrix -> int -> c_vector  = "atcf_matrix_col_vector"
 external m_apply   : c_matrix -> c_vector -> c_vector  = "atcf_matrix_apply"
 external m_identity      : c_matrix -> unit  = "atcf_matrix_set_identity"
 external m_assign_m_m    : c_matrix -> c_matrix -> c_matrix -> unit  = "atcf_matrix_assign_m_m"
+external m_assign_from_q : c_matrix -> c_quaternion -> unit  = "atcf_matrix_assign_from_q"
 external m_set           : c_matrix -> int -> int -> float -> unit  = "atcf_matrix_set"
 external m_transpose     : c_matrix -> unit  = "atcf_matrix_transpose_data"
 external m_scale         : c_matrix -> float -> unit  = "atcf_matrix_scale"
@@ -310,6 +311,7 @@ end
     val add_scaled   : t -> t -> float -> t
     val apply        : t -> Vector.t -> Vector.t
     val assign_m_m   : t -> t -> t -> t
+    val assign_from_q : t -> Quaternion.t  -> t
     val lup_decompose : t -> Vector.t
     val lup_get_l     : t -> t
     val lup_get_u     : t -> t
@@ -334,6 +336,7 @@ end = struct
      let add_scaled m m2 f = (m_add_scaled m.cm m2.cm f) ; m
      let apply m v         = Vector.create(m_apply m.cm v.Vector.cv)
      let assign_m_m m m1 m2 = m_assign_m_m m.cm m1.cm m2.cm ; m
+     let assign_from_q m q = m_assign_from_q m.cm q.Quaternion.cq ; m
      let lup_decompose m = Vector.create(m_lup_decompose m.cm)
      let lup_get_l m     = (m_lup_get_l m.cm)  ; m
      let lup_get_u m     = (m_lup_get_u m.cm)  ; m

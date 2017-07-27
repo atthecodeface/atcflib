@@ -426,6 +426,47 @@ c_vector<T> &c_matrix<T>::apply(const c_vector<T> &v, c_vector<T> &rv)
     return rv;
 }
 
+/*a Quaternion operations
+ */
+/*f c_matrix<T>::set_from_quaternion
+ Maths from http://www.gamasutra.com/view/feature/131686/rotating_objects_using_quaternions.php?page=2
+ */
+template <typename T>
+c_matrix<T> &c_matrix<T>::set_from_quaternion(const c_quaternion<T> &q)
+{
+    set_identity();
+    if (_nrows != _ncols) return *this;
+    if (_nrows < 3) return *this;
+
+    T l = q.modulus();
+
+    T x2 = q.i() + q.i();
+    T y2 = q.j() + q.j();
+    T z2 = q.k() + q.k();
+    T xx = q.i() * x2;
+    T xy = q.i() * y2;
+    T xz = q.i() * z2;
+    T yy = q.j() * y2;
+    T yz = q.j() * z2;
+    T zz = q.k() * z2;
+    T wx = q.r() * x2;
+    T wy = q.r() * y2;
+    T wz = q.r() * z2;
+
+    MATRIX_VALUE(0,0) = l - (yy + zz)/l;
+    MATRIX_VALUE(1,0) = (xy - wz)/l;
+    MATRIX_VALUE(2,0) = (xz + wy)/l;
+
+    MATRIX_VALUE(0,1) = (xy + wz)/l;
+    MATRIX_VALUE(1,1) = l - (xx + zz)/l;
+    MATRIX_VALUE(2,1) = (yz - wx)/l;
+
+    MATRIX_VALUE(0,2) = (xz - wy)/l;
+    MATRIX_VALUE(1,2) = (yz + wx)/l;
+    MATRIX_VALUE(2,2) = l - (xx + yy)/l;
+    return *this;
+}
+
 /*a LU methods */
 /*f c_matrix<T>::lup_decompose
  */

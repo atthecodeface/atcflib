@@ -172,7 +172,7 @@ atcf_vector_coords(value v)
     int n = cv->length();
     v = caml_alloc_float_array(n);
     for (int i=0; i<n; i++) {
-        Store_double_field(v,i,cv->value(i));
+        Store_double_field(v,i,cv->get(i));
     }
     CAMLreturn(v);
 }
@@ -200,6 +200,13 @@ FN_C_TO_FLOAT(vector,modulus_squared)
 
 /*a Assignment methods - side effects
  */
+/*f atcf_vector_get : c_vector -> int -> float
+ *
+ * Get the nth coordinate
+ *
+ */
+FN_C_INT_TO_FLOAT(vector,get)
+
 /*f atcf_vector_set : c_vector -> int -> float -> unit
  *
  * Set the nth coordinate to a value

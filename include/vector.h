@@ -66,7 +66,7 @@ public:
     inline const T *coords(int *stride) const {if (stride) {*stride=_stride;} return &(_coords[0]);};
     inline T *coords_to_set(int *stride) {if (stride) {*stride=_stride;} return &(_coords[0]);};
     inline void set(int n, T v) {_coords[n*_stride]=v;};
-    inline T value(int n) const {return _coords[n*_stride];};
+    inline T get(int n) const {return _coords[n*_stride];};
     c_vector<T> &assign(const c_vector<T> &other);
     c_vector<T> &assign(int length, int stride, const T *coords); // copy data
     c_vector<T> &add_scaled(const c_vector<T> &other, T scale);

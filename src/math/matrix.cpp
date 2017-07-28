@@ -394,7 +394,7 @@ c_vector<T> *c_matrix<T>::apply(const c_vector<T> &v)
     for (int r=0; r<_nrows; r++) {
         double d=0.0;
         for (int c=0; c<_ncols; c++) {
-            d += MATRIX_VALUE(r,c) * v.value(c);
+            d += MATRIX_VALUE(r,c) * v.get(c);
         }
         rv->set(r,d);
     }
@@ -410,7 +410,7 @@ T *c_matrix<T>::apply(const c_vector<T> &v, T *rv, int stride)
     for (int r=0; r<_nrows; r++) {
         double d=0.0;
         for (int c=0; c<_ncols; c++) {
-            d += MATRIX_VALUE(r,c) * v.value(c);
+            d += MATRIX_VALUE(r,c) * v.get(c);
         }
         rv[r*stride] = d;
     }
@@ -501,8 +501,8 @@ int c_matrix<T>::lup_decompose(c_vector<T> **P)
         if (r_max != d) {
             if (P) {
                 double p_r_max;
-                p_r_max = (*P)->value(r_max);
-                (*P)->set(r_max, (*P)->value(d));
+                p_r_max = (*P)->get(r_max);
+                (*P)->set(r_max, (*P)->get(d));
                 (*P)->set(d, p_r_max);
             }
             for (int c=0; c<_ncols; c++) {
@@ -574,7 +574,7 @@ c_matrix<T> *c_matrix<T>::lup_unpivot(const c_vector<T> &P)
 {
     c_matrix<T> *UP = new c_matrix<T>(_nrows, _ncols);
     for (int r=0; r<_nrows; r++) {
-        int Pr = (int) P.value(r);
+        int Pr = (int) P.get(r);
         if (Pr<0) Pr=0;
         if (Pr>=_nrows) Pr=_nrows;
         for (int c=0; c<_ncols; c++) {
@@ -677,7 +677,7 @@ c_matrix<T> *c_matrix<T>::lup_inverse(void) const
     }
     for (int c=0; c<_ncols; c++) {
         // L.U.x(c) = c'th column of I; hence R[P[c]] = x(c)
-        int p_c = (int)P->value(c);
+        int p_c = (int)P->get(c);
         for (int r=0; r<_nrows; r++) {
             MATRIX_VALUE_M(*R,r,p_c) = data[r];
         }
@@ -709,7 +709,7 @@ int c_matrix<T>::lup_invert(const c_vector<T> &P)
     }
     for (int c=0; c<_ncols; c++) {
         // L.U.x(c) = c'th column of I; hence R[P[c]] = x(c)
-        int p_c = (int)P.value(c);
+        int p_c = (int)P.get(c);
         for (int r=0; r<_nrows; r++) {
             MATRIX_VALUE(r,p_c) = data[r];
         }

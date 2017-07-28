@@ -133,6 +133,9 @@ module rec
         val coords           : t -> float array
         (** Vector.coords returns a float array with the coordinates of the vector *)
 
+        val get              : t -> n:int -> float
+        (** Vector.get v n gets the nth coordinate of the vector. *)
+
         val set              : t -> n:int -> f:float -> t
         (** Vector.set v n f sets the nth coordinate of the vector to be f. It returns v *)
 

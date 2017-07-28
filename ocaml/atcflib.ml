@@ -135,6 +135,7 @@ external v_apply_q     : c_vector -> c_quaternion -> unit = "atcf_vector_apply_q
 external v_normalize : c_vector -> unit = "atcf_vector_normalize"
 external v_length  : c_vector -> int = "atcf_vector_length"
 external v_coords  : c_vector -> float array  = "atcf_vector_coords"
+external v_get     : c_vector -> int -> float = "atcf_vector_get"
 external v_set     : c_vector -> int -> float -> unit  = "atcf_vector_set"
 external v_scale   : c_vector -> float -> unit  = "atcf_vector_scale"
 external v_add_scaled    : c_vector -> c_vector -> float -> unit  = "atcf_vector_add_scaled"
@@ -240,6 +241,7 @@ module rec Vector : sig
     val copy    : t -> t
     val coords  : t -> float array
     val length  : t -> int
+    val get     : t -> n:int -> float
     val set     : t -> n:int -> f:float  -> t
     val assign  : t -> t -> t
     val assign_m_v : t -> Matrix.t -> t -> t
@@ -268,6 +270,7 @@ end = struct
      let copy        v = Vector.create (v_clone v.cv)
      let coords      v        = v_coords v.cv
      let length      v        = v_length v.cv
+     let get         v ~n     = v_get v.cv n
      let set         v ~n ~f  = v_set v.cv n f ; v
      let assign      v v2     = v_assign v.cv v2.cv ; v
      let assign_m_v  v m2 v2  = v_assign_m_v v.cv m2.Matrix.cm v2.cv ; v

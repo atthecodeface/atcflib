@@ -64,6 +64,18 @@ extern value caml_atcf_alloc_quaternion(class c_quaternion<double> *cq);
         CAMLreturn0;                                                 \
     }
 
+/*f FN_C_INT_TO_FLOAT : ct -> int -> float
+ *
+ * Function to perform ct->fn(int) returning a float
+ *
+ */
+#define FN_C_INT_TO_FLOAT(t, fn)                                          \
+    extern "C" CAMLprim value atcf_ ## t ## _ ## fn (value v, value v2) { \
+        CAMLparam2(v,v2);                                             \
+        VERBOSE(stderr,#fn " of " #t " %p %ld\n", cobj_of_val(t,v),  Long_val(v2)); \
+        CAMLreturn(caml_copy_double(cobj_of_val(t,v)->fn(Long_val(v2)))); \
+    }
+
 /*f FN_C_CR_TO_UNIT : ct -> ct -> unit
  *
  * Function to perform ct->fn(*ct) with no return value

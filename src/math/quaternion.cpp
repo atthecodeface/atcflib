@@ -190,9 +190,9 @@ template <typename T>
 c_quaternion<T>::c_quaternion(const c_vector<T> &vector)
 {
     quat.r = 0;
-    quat.i = vector.value(0);
-    quat.j = vector.value(1);
-    quat.k = vector.value(2);
+    quat.i = vector.get(0);
+    quat.j = vector.get(1);
+    quat.k = vector.get(2);
 }
 
 /*f c_quaternion<T>::copy
@@ -297,8 +297,8 @@ c_quaternion<T> &c_quaternion<T>::lookat_aeronautic(const c_vector<T> &at, const
 {
     T at_xyz[3], up_xyz[3];
     for (int i=0; i<3; i++) {
-        at_xyz[i] = at.value(i);
-        up_xyz[i] = up.value(i);
+        at_xyz[i] = at.get(i);
+        up_xyz[i] = up.get(i);
     }
     return lookat_aeronautic(at_xyz, up_xyz);
 }
@@ -349,8 +349,8 @@ c_quaternion<T> &c_quaternion<T>::lookat_graphics(const c_vector<T> &at, const c
 {
     T at_xyz[3], up_xyz[3];
     for (int i=0; i<3; i++) {
-        at_xyz[i] = at.value(i);
-        up_xyz[i] = up.value(i);
+        at_xyz[i] = at.get(i);
+        up_xyz[i] = up.get(i);
     }
     return lookat_graphics(at_xyz, up_xyz);
 }

@@ -133,13 +133,13 @@ module rec
         val coords           : t -> float array
         (** Vector.coords returns a float array with the coordinates of the vector *)
 
-        val get              : t -> n:int -> float
+        val get              : t -> int -> float
         (** Vector.get v n gets the nth coordinate of the vector. *)
 
-        val set              : t -> n:int -> f:float -> t
+        val set              : int -> float -> t -> t
         (** Vector.set v n f sets the nth coordinate of the vector to be f. It returns v *)
 
-        val scale            : t -> f:float -> t
+        val scale            : float -> t -> t
         (** Vector.scale v f scales all the coordinates of the vector by f, and returns v *)
 
         val modulus          : t -> float
@@ -155,7 +155,7 @@ module rec
         (** Vector.add v v2 adds vector v2 to vector v, requiring both
         to be of the same length. After updating v, it returns it. *)
 
-        val add_scaled       : t -> t -> f:float -> t
+        val add_scaled       : float -> t -> t -> t
         (** Vector.add_scaled v v2 adds vector v2 scaled by f to vector v,
         requiring both vectors to be of the same length. After updating v, it returns it. *)
 
@@ -170,7 +170,7 @@ module rec
         v2 (effectively v.coords := v2.coords); it requires that v
         have the same length as v2 (which is not checked). It returns v. *)
 
-        val assign_m_v       : t -> Matrix.t -> t -> t
+        val assign_m_v       : Matrix.t -> t -> t -> t
         (** Vector.assign v m v2 sets v to be Matrix m * v2; it
         requires that v have the same length as M.nrows, and M.ncols
         is the length of v2 (neither of which is not checked). It
@@ -179,11 +179,11 @@ module rec
         val assign_q_as_rotation : t -> Quaternion.t -> float * float
         (** Vector.assign_q_as_rotation v q assumes q is a unit
         quaternion, and sets v to be the axis of rotation that q
-        represents (in three dimensions), and it returns a tuple of
+        stresents (in three dimensions), and it returns a tuple of
         (cosine, sine) of the angle of rotation. It requires v to have
         length 3, which is not checked. *)
 
-        val apply_q          : t -> Quaternion.t -> t
+        val apply_q          : Quaternion.t -> t -> t
         (** Vector.apply_q v q applies q to the vector v, and sets the
         first 3 coordinates of v appropriately. This requires v to be
         of length 3 or more.
@@ -218,8 +218,8 @@ module rec
         around the axis vector. It returns (axis, cosine, sine) as a
         tuple. *)
 
-        val repr             : t -> string
-        (** Vector.repr v produces a textual representation of the
+        val str             : t -> string
+        (** Vector.str v produces a textual representation of the
         vector, for use in debugging, for example *)
       end
 (** The Matrix module provides two dimensional float arrays of
@@ -244,7 +244,7 @@ module rec
      and
        Matrix :
          sig
-            (** The matrix type is an instance of the C++ c_vector class
+           (** The matrix type is an instance of the C++ c_vector class
             *)
            type t = { cm : c_matrix; }
            val create : c_matrix -> t
@@ -254,7 +254,7 @@ module rec
            val copy : t -> t
            (** Matrix.copy m creates a copy of matrix m and returns it *)
 
-           val set : t -> int -> int -> float -> t
+           val set : int -> int -> float -> t -> t
            (** Matrix.set m c r f sets matrix m element row r column c
            to be f. It returns the matrix *)
 
@@ -279,7 +279,7 @@ module rec
            (** Matrix.col_vector m n returns a new Vector.t
            corresponding to the n'th column of the matrix. *)
 
-           val scale : t -> f:float -> t
+           val scale : float -> t -> t
            (** Matrix.scale m f scales (multiplies) all the elemnts of
            the matrix by f. It returns the matrix. *)
 
@@ -288,7 +288,7 @@ module rec
            updated matrix will be of size NxM if it has originally
            been MxN.   It returns the matrix. *)
 
-           val add_scaled : t -> t -> float -> t
+           val add_scaled : float -> t -> t -> t
            (** Matrix.add_scaled m m2 f adds m2 scaled by f to matrix
            m, and sets m to the result; this permits add and
            subtract. It returns the matrix m. *)
@@ -303,7 +303,7 @@ module rec
            (** Matrix.assign_m_m m m1 m2 assigns m to be the result of
            the product of m1 and m2 (in that order). It returns m. *)
 
-           val assign_from_q : t -> Quaternion.t  -> t
+           val assign_from_q : Quaternion.t  -> t -> t
            (** Matrix.assign_from_q m q assumes that q is a
            unit quaternion and it makes m be the identity matrix with
            the top level 3x3 being a rotation that matches the
@@ -357,8 +357,8 @@ module rec
            (** Matrix.matrix_x_matrix m1 m2 multiplies matrix m1 and
            m2 together (in that order, and returns a new matrix with
            the product. *)
-           val repr : t -> string
-         (** Matrix.repr m produces a textual representation of the
+           val str : t -> string
+         (** Matrix.str m produces a textual representation of the
         matrix, for use in debugging, for example *)
          end
 (** The Quaternion module provides quaternions and some simple
@@ -399,14 +399,14 @@ module rec
              val assign_q_q : t -> t -> t -> t
              (** Quaternion.assign q q1 q2 assigns quaternion q to be the product of q1 * q2. It returns q. *)
 
-             val assign_lookat_aeronautic : t -> Vector.t -> Vector.t -> t
+             val assign_lookat_aeronautic : Vector.t -> Vector.t -> t -> t
              (** Quaternion.assign_lookat_aeronautic q at up assigns quaternion q
              to be a unit quaternion that (when applied) would make
              the vector 'at' map to the positive 3-dimensional unit Z vector
              (0,0,1), with the vector 'up' mapping to be parallel to
              the unit X axis (1,0,0); this matches the aeronautical convention. It returns q. *)
 
-             val assign_lookat_graphics : t -> Vector.t -> Vector.t -> t
+             val assign_lookat_graphics : Vector.t -> Vector.t -> t -> t
              (** Quaternion.assign_lookat_graphics q at up assigns quaternion q
              to be a unit quaternion that (when applied) would make
              the vector 'at' map to the negative 3-dimensional unit Z vector
@@ -416,16 +416,16 @@ module rec
              right, postitive Y up the screen, and positive Z out of
              the screen. It returns q. *)
 
-             val assign_of_rotation : t -> Vector.t -> float -> float -> t
+             val assign_of_rotation : Vector.t -> float -> float -> t -> t
              (** Quaternion.assign_of_rotation q axis cosine sine
              assigns q to be the unit quaternion that corresponds to a
              rotation around the axis by an angle whose cosine and
              sine are provided. It returns q. *)
 
-             val scale : t -> float -> t
+             val scale : float -> t -> t
              (** Quaternion.scale q f scales (multiplies) q by f. It returns q. *)
 
-             val add_scaled : t -> t -> float -> t
+             val add_scaled : float -> t -> t -> t
              (** Quaternion.add_scaled q q1 f adds q1 scaled by f to q. It returns q. *)
 
              val reciprocal : t -> t
@@ -463,8 +463,8 @@ module rec
              Quaternion.t with scalar part r and vector part
              (i,j,k). *)
 
-             val repr : t -> string
-           (** Quaternion.repr m produces a textual representation of the
+             val str : t -> string
+             (** Quaternion.str m produces a textual representation of the
             quaternion, for use in debugging, for example *)
            end
 (** Bunzip module **)

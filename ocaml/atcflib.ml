@@ -241,17 +241,17 @@ module rec Vector : sig
     val copy    : t -> t
     val coords  : t -> float array
     val length  : t -> int
-    val get     : t -> n:int -> float
-    val set     : t -> n:int -> f:float  -> t
+    val get     : t -> int -> float
+    val set     : int -> float  -> t -> t
     val assign  : t -> t -> t
-    val assign_m_v : t -> Matrix.t -> t -> t
+    val assign_m_v : Matrix.t -> t -> t -> t
     val assign_q_as_rotation : t -> Quaternion.t -> float * float
-    val apply_q              : t -> Quaternion.t -> t
-    val scale                : t -> f:float  -> t
+    val apply_q              : Quaternion.t -> t -> t
+    val scale                : float  -> t -> t
     val modulus              : t -> float
     val modulus_squared      : t -> float
     val add                  : t -> t -> t
-    val add_scaled           : t -> t -> f:float -> t
+    val add_scaled           : float -> t -> t -> t
     val normalize            : t -> t
     val dot_product          : t -> t -> float
     val cross_product3       : t -> t -> t
@@ -261,7 +261,7 @@ module rec Vector : sig
     val make3                : float -> float -> float -> t
     val make4                : float -> float -> float -> float -> t
     val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> t
-    val repr                 : t -> string
+    val str                 : t -> string
 end = struct
     type t = { cv : c_vector ;
                     ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
@@ -270,31 +270,31 @@ end = struct
      let copy        v = Vector.create (v_clone v.cv)
      let coords      v        = v_coords v.cv
      let length      v        = v_length v.cv
-     let get         v ~n     = v_get v.cv n
-     let set         v ~n ~f  = v_set v.cv n f ; v
-     let assign      v v2     = v_assign v.cv v2.cv ; v
-     let assign_m_v  v m2 v2  = v_assign_m_v v.cv m2.Matrix.cm v2.cv ; v
-     let add_scaled  v v2 ~f  = v_add_scaled v.cv v2.cv f; v
-     let add         v v2     = v_add_scaled v.cv v2.cv 1.0; v
+     let get         v n      = v_get v.cv n
+     let set         n f v    = v_set v.cv n f ; v
+     let assign      v2 v     = v_assign v.cv v2.cv ; v
+     let assign_m_v  m2 v2 v  = v_assign_m_v v.cv m2.Matrix.cm v2.cv ; v
+     let add_scaled  f v2 v   = v_add_scaled v.cv v2.cv f; v
+     let add         v2 v     = v_add_scaled v.cv v2.cv 1.0; v
      let normalize   v        = v_normalize v.cv ; v
      let modulus     v        = v_modulus v.cv
      let modulus_squared  v   = v_modulus_squared v.cv
-     let scale       v ~f     = v_scale v.cv f ; v
+     let scale       f v     = v_scale v.cv f ; v
      let dot_product v v2     = v_dot_product v.cv v2.cv
-     let assign_m_v  v m v2   = v_assign_m_v v.cv m.Matrix.cm v2.cv ; v
+     let assign_m_v  m v2 v   = v_assign_m_v v.cv m.Matrix.cm v2.cv ; v
      let assign_q_as_rotation v q = (v_assign_q v.cv q.Quaternion.cq)
-     let apply_q     v q      = (v_apply_q v.cv q.Quaternion.cq) ; v
+     let apply_q     q v      = (v_apply_q v.cv q.Quaternion.cq) ; v
      let cross_product3  v v2 = Vector.create(v_cross_product v.cv v2.cv)
      let angle_axis_to3  v v2 = let (va,c,s) = v_angle_axis_to v.cv v2.cv in (Vector.create(va),c,s)
      let make        n            = { cv = v_create n ; ba = None }
-     let make2       c0 c1        = let v = make 2 in set (set v 0 c0) 1 c1
-     let make3       c0 c1 c2     = let v = make 3 in set (set (set v 0 c0) 1 c1) 2 c2
-     let make4       c0 c1 c2 c3  = let v = make 4 in set (set (set (set v 0 c0) 1 c1) 2 c2) 3 c3
-     let matrix_x_vector      m v = assign_m_v (copy v) m v
+     let make2       c0 c1        = make 2 |> set 0 c0 |> set 1 c1
+     let make3       c0 c1 c2     = make 3 |> set 0 c0 |> set 1 c1 |> set 2 c2
+     let make4       c0 c1 c2 c3  = make 4 |> set 0 c0 |> set 1 c1 |> set 2 c2 |> set 3 c3
+     let matrix_x_vector      m v = assign_m_v m v (copy v)
      let make_slice_array b n o s   = { cv = v_create_bigarray_slice b n o s ;
                                         ba = Some b}
-     let repr        v         =
-       let f c s = (Printf.sprintf "%f%s " c s) in
+     let str        v         =
+       let f c s = (Printf.sprintf "%f %s" c s) in
        Array.fold_right f (v_coords v.cv) ""
 end
 (*a and Matrix module *)
@@ -303,18 +303,18 @@ end
     val create : c_matrix -> t
     val copy   : t -> t
     val apply  : t -> Vector.t -> Vector.t
-    val set          : t -> int -> int -> float -> t
+    val set          : int -> int -> float -> t -> t
     val identity     : t -> t
     val nrows        : t -> int
     val ncols        : t -> int
     val row_vector   : t -> int -> Vector.t
     val col_vector   : t -> int -> Vector.t
-    val scale        : t -> f:float -> t
+    val scale        : float -> t -> t
     val transpose    : t -> t
-    val add_scaled   : t -> t -> float -> t
+    val add_scaled   : float -> t -> t -> t
     val apply        : t -> Vector.t -> Vector.t
     val assign_m_m   : t -> t -> t -> t
-    val assign_from_q : t -> Quaternion.t  -> t
+    val assign_from_q : Quaternion.t  -> t -> t
     val lup_decompose : t -> Vector.t
     val lup_get_l     : t -> t
     val lup_get_u     : t -> t
@@ -322,24 +322,24 @@ end
     val lup_inverse   : t -> t
     val make          : int -> int -> t
     val matrix_x_matrix : t -> t -> t
-    val repr          : t -> string
+    val str          : t -> string
 end = struct
      type t = { cm: c_matrix }
      let create (cm_in:c_matrix) = { cm = cm_in }
      let copy   m = Matrix.create (m_clone m.cm)
      let apply  m v = Vector.create (m_apply m v.Vector.cv)
-     let set m r c f     = m_set m.cm r c f ; m
+     let set r c f m     = m_set m.cm r c f ; m
      let identity m      = m_identity m.cm ; m
      let nrows m         = m_nrows m.cm
      let ncols m         = m_ncols m.cm
      let row_vector m n  = Vector.create(m_row_vector m.cm n)
      let col_vector m n  = Vector.create(m_col_vector m.cm n)
-     let scale m ~f      = (m_scale m.cm f) ; m
+     let scale f m      = (m_scale m.cm f) ; m
      let transpose m     = (m_transpose m.cm) ; m
-     let add_scaled m m2 f = (m_add_scaled m.cm m2.cm f) ; m
+     let add_scaled f m2 m = (m_add_scaled m.cm m2.cm f) ; m
      let apply m v         = Vector.create(m_apply m.cm v.Vector.cv)
-     let assign_m_m m m1 m2 = m_assign_m_m m.cm m1.cm m2.cm ; m
-     let assign_from_q m q = m_assign_from_q m.cm q.Quaternion.cq ; m
+     let assign_m_m m1 m2 m = m_assign_m_m m.cm m1.cm m2.cm ; m
+     let assign_from_q q m = m_assign_from_q m.cm q.Quaternion.cq ; m
      let lup_decompose m = Vector.create(m_lup_decompose m.cm)
      let lup_get_l m     = (m_lup_get_l m.cm)  ; m
      let lup_get_u m     = (m_lup_get_u m.cm)  ; m
@@ -347,14 +347,13 @@ end = struct
      let lup_inverse m   = create(m_lup_inverse m.cm)
      let make r c        = create (m_create r c)
      let matrix_x_matrix m1 m2 = assign_m_m (make (nrows m1) (ncols m2)) m1 m2
-     let repr m = let f c s = (Printf.sprintf "%f%s " c s) in
-                  let rec show_row r l s =
-                         if r==l then s
-                         else begin
-                             show_row (r+1) l (Array.fold_right f (v_coords (m_row_vector m.cm r)) s)
-                           end
-                       in
-                       show_row 0 (m_nrows m.cm) ""
+     let str m = let rec show_row r l s =
+                   if r==l then s
+                   else
+                     let f acc c = (Printf.sprintf "%s %f " acc c) in
+                     show_row (r+1) l (Array.fold_left f s (v_coords (m_row_vector m.cm r)))
+                   in
+                     show_row 0 (m_nrows m.cm) ""
 end
 (*a and Quaternion module *)
 and Quaternion : sig
@@ -364,41 +363,41 @@ and Quaternion : sig
     val get_rijk           : t -> float array
     val assign             : t -> t -> t
     val assign_q_q         : t -> t -> t -> t
-    val assign_lookat_graphics      : t -> Vector.t -> Vector.t -> t 
-    val assign_lookat_aeronautic      : t -> Vector.t -> Vector.t -> t 
-    val assign_of_rotation : t -> Vector.t -> float -> float -> t
-    val scale              : t -> float -> t
-    val add_scaled        : t -> t -> float -> t
-    val reciprocal        : t -> t
-    val conjugate         : t -> t
-    val modulus           : t -> float
-    val modulus_squared   : t -> float
-    val premultiply       : t -> t -> t
-    val postmultiply      : t -> t -> t
-    val make              : unit -> t
-    val make_rijk         : float -> float -> float -> float -> t
-    val repr              : t -> string
+    val assign_lookat_graphics      : Vector.t -> Vector.t -> t -> t 
+    val assign_lookat_aeronautic    : Vector.t -> Vector.t -> t -> t 
+    val assign_of_rotation : Vector.t -> float -> float -> t -> t
+    val scale              : float -> t -> t
+    val add_scaled         : float -> t -> t -> t
+    val reciprocal         : t -> t
+    val conjugate          : t -> t
+    val modulus            : t -> float
+    val modulus_squared    : t -> float
+    val premultiply        : t -> t -> t
+    val postmultiply       : t -> t -> t
+    val make               : unit -> t
+    val make_rijk          : float -> float -> float -> float -> t
+    val str               : t -> string
 end = struct
      type t = { cq: c_quaternion }
      let create (cq_in:c_quaternion) = { cq = cq_in }
      let copy   q = create (q_clone q.cq)
      let get_rijk q    = q_get_rijk q.cq
-     let assign q q1   = q_assign_q q.cq q1.cq ; q
-     let assign_q_q q q1 q2 = (q_assign_q q.cq q1.cq) ; (q_postmultiply q.cq q2.cq) ; q
-     let assign_lookat_graphics q at up =  (q_assign_lookat_graphics q.cq at.Vector.cv up.Vector.cv) ; q
-     let assign_lookat_aeronautic q at up =  (q_assign_lookat_aeronautic q.cq at.Vector.cv up.Vector.cv) ; q
-     let assign_of_rotation q axis c s  = (q_assign_of_rotation q.cq axis.Vector.cv c s) ; q
-     let scale q f                             = (q_scale q.cq f) ; q
-     let add_scaled q q2 f          = (q_add_scaled q.cq q2.cq f) ; q
+     let assign q1 q   = q_assign_q q.cq q1.cq ; q
+     let assign_q_q q1 q2 q = (q_assign_q q.cq q1.cq) ; (q_postmultiply q.cq q2.cq) ; q
+     let assign_lookat_graphics at up q =  (q_assign_lookat_graphics q.cq at.Vector.cv up.Vector.cv) ; q
+     let assign_lookat_aeronautic at up q =  (q_assign_lookat_aeronautic q.cq at.Vector.cv up.Vector.cv) ; q
+     let assign_of_rotation axis c s  q = (q_assign_of_rotation q.cq axis.Vector.cv c s) ; q
+     let scale f q                             = (q_scale q.cq f) ; q
+     let add_scaled f q2 q            = (q_add_scaled q.cq q2.cq f) ; q
      let reciprocal q                           = q_reciprocal q.cq ; q
      let conjugate q                            = q_conjugate q.cq ; q
      let modulus q                              = q_modulus q.cq
      let modulus_squared q                      = q_modulus_squared q.cq
-     let premultiply q q2      = q_premultiply q.cq q2.cq ; q
-     let postmultiply q q2     = q_postmultiply q.cq q2.cq ; q
+     let premultiply q2 q      = q_premultiply q.cq q2.cq ; q
+     let postmultiply q2 q     = q_postmultiply q.cq q2.cq ; q
      let make _ = create (q_create ())
      let make_rijk r i j k = create (q_create_rijk r i j k)
-     let repr q = let rijk=(q_get_rijk q.cq) in (Printf.sprintf "%f,%f,%f,%f " rijk.(0) rijk.(1) rijk.(2) rijk.(3))
+     let str q = let rijk=(q_get_rijk q.cq) in (Printf.sprintf "%f,%f,%f,%f " rijk.(0) rijk.(1) rijk.(2) rijk.(3))
 end
 
 (*a Bunzip module *)

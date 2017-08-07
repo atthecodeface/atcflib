@@ -49,7 +49,7 @@ let test_suite_vector =
          fun ctxt ->
          let tim = Timer.make () in
          let v = Vector.make2 1.0 2.0 in
-         let f = fun () -> ignore (Vector.scale v 1.0) in
+         let f = fun () -> ignore (Vector.scale 1.0 v) in
          time_execution tim f (1000*1000*10) ;
          Printf.printf "Time taken per scale as module function in ns:%f\n" ((Timer.value_us tim) /. 10000.) ;
          ()

@@ -24,7 +24,10 @@ PYTHON := python2.6
 FRAMEWORK_PATH := /Library/Frameworks
 
 ATCF_INCLUDE := include
-LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o build/bunzip.o build/image_io.o
+LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o \
+	build/bunzip.o  \
+	build/image_io.o build/lens_projection.o
+
 # build/polynomial.o
 
 libatcf: libatcf.so
@@ -38,6 +41,7 @@ build/matrix.o:     src/math/matrix.cpp
 build/polynomial.o: src/math/polynomial.cpp
 build/bunzip.o:     src/compression/bunzip.cpp
 build/image_io.o:   src/image/image_io.cpp
+build/lens_projection.o:   src/image/lens_projection.cpp
 
 build/%.o: src/math/%.cpp
 	c++ -I${ATCF_INCLUDE} ${CPPFLAGS} -c $< -o $@

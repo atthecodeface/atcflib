@@ -61,7 +61,7 @@ private:
     double frame_width;   // in lens units, same as focal length
     double focal_length;  // in lens units, same as frame_width
     t_lens_projection_type lens_type;
-    c_quaternion orientation;
+    c_quaternion<double> orientation;
     f_offset_to_angle offset_to_angle;
     f_angle_to_offset angle_to_offset;
     struct t_named_polynomial *polynomial;
@@ -84,15 +84,15 @@ public:
     inline void   get_sensor(double wh[2]) { wh[0]=width; wh[1]=height; }
     inline double get_sensor_width(void)  { return width; }
     inline double get_sensor_height(void) { return height; }
-    inline c_quaternion &get_orientation(void) { return orientation; }
-    void orient(const c_quaternion &orientation);
+    inline c_quaternion<double> &get_orientation(void) { return orientation; }
+    void orient(const c_quaternion<double> &orientation);
     void set_lens(double frame_width, double focal_length, t_lens_projection_type lens_type);
     void set_sensor(double width, double height);
     int set_polynomial(const char *name);
     void xy_to_roll_yaw(const double xy[2], double ry[2]) const;
     void roll_yaw_to_xy(const double ry[2], double xy[2]) const;
-    c_quaternion orientation_of_xy(const double xy[2]) const;
-    void xy_of_orientation(const c_quaternion *orientation, double xy[2]) const;
+    c_quaternion<double> orientation_of_xy(const double xy[2]) const;
+    void xy_of_orientation(const c_quaternion<double> *orientation, double xy[2]) const;
 
     void __str__(char *buffer, int buf_size) const;
 };

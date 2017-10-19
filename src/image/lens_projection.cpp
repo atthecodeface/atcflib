@@ -1,3 +1,22 @@
+/** Copyright (C) 2016-2017,  Gavin J Stark.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @file          lens_projection.cpp
+ * @brief         Mappings of XY image positions to/from quaternions through parametrized lens projections
+ *
+ */
+
 /*a Documentation
     Camera projection is from world to (-aspect_ratio*width/2,-width/2) to (aspect_ratio*width/2,width/2) such that
     the width*aspect_ratio is the horizontal field-of-view
@@ -106,9 +125,9 @@ c_lens_projection::add_named_polynomial(const char *name,
     return 0;
 }
 
-/*a c_lens_projection methods
+/*a Constructors/destructors/string representation for c_lens_projection
  */
-/*f c_lens_projection::c_lens_projection
+/*f c_lens_projection::c_lens_projection constructor - default is 35mm lens, 36mm image size ('width'), image 1.0x1.0, equidistant lens, pointed at (0,0,1)
  */
 c_lens_projection::c_lens_projection(void)
 {
@@ -118,7 +137,7 @@ c_lens_projection::c_lens_projection(void)
     focal_length = 35.0;
     offset_to_angle = &c_lens_projection::offset_to_angle_equidistant;
     angle_to_offset = &c_lens_projection::angle_to_offset_equidistant;
-    orientation = c_quaternion::identity();
+    orientation = c_quaternion<double>::identity();
     if (named_polynomials.count("__linear")==0) {
         static double linear_poly[1]={1.0};
         add_named_polynomial("__linear", 1, linear_poly, 1, linear_poly);
@@ -131,17 +150,32 @@ c_lens_projection::~c_lens_projection()
 {
 }
 
-/*f c_lens_projection::orient
+/*f c_lens_projection::__str__
  */
-void c_lens_projection::orient(const c_quaternion &orientation)
+void c_lens_projection::__str__(char *buffer, int buf_size) const
+{
+    snprintf(buffer, buf_size, "(%lf, %lf, %lf, %lf) : ",
+             width, height, frame_width, focal_length );
+    buffer[buf_size-1] = 0;
+    orientation.__str__(buffer+strlen(buffer), buf_size-strlen(buffer) );
+}
+
+
+/*a Methods to configure a projection (orient, set lens,
+ */
+/*f c_lens_projection::orient - align the lens projection along a quaternion (which provides camera direction and 'up' orientation)
+ */
+void
+c_lens_projection::orient(const c_quaternion<double> &orientation)
 {
     this->orientation = orientation;
     this->orientation.normalize();
 }
 
-/*f c_lens_projection::set_lens
+/*f c_lens_projection::set_lens - set frame width, lens focal length, and the projection type of the lens (e.e. rectilinear, stereographic, equidistant, polynomial)
  */
-void c_lens_projection::set_lens(double frame_width, double focal_length, t_lens_projection_type lens_type)
+void
+c_lens_projection::set_lens(double frame_width, double focal_length, t_lens_projection_type lens_type)
 {
     this->frame_width = frame_width;
     this->focal_length = focal_length;
@@ -171,15 +205,16 @@ void c_lens_projection::set_lens(double frame_width, double focal_length, t_lens
     }
 }
 
-/*f c_lens_projection::set_sensor
+/*f c_lens_projection::set_sensor - sets sensor with and height
  */
-void c_lens_projection::set_sensor(double width, double height)
+void
+c_lens_projection::set_sensor(double width, double height)
 {
     this->width = width;
     this->height = height;
 }
 
-/*f c_lens_projection::set_polynomial
+/*f c_lens_projection::set_polynomial - select a named polynomial as the projection type for the lens
  */
 int
 c_lens_projection::set_polynomial(const char *name)
@@ -192,12 +227,15 @@ c_lens_projection::set_polynomial(const char *name)
     return 0;
 }
 
+/*a Mapping methods - XY to/from angle through various projections
+ */
 /*f c_lens_projection::offset_to_angle_equidistant
   fraction_from_center is 0.0 to 1.0 of the frame width (i.e. right-hand edge is 0.5)
 
   Equidistant/equiangular angle=offset/focal_length
  */
-double c_lens_projection::offset_to_angle_equidistant(double fraction_from_center) const
+double
+c_lens_projection::offset_to_angle_equidistant(double fraction_from_center) const
 {
     return fraction_from_center*frame_width/focal_length;
 }
@@ -267,6 +305,8 @@ double c_lens_projection::angle_to_offset_polynomial(double angle) const
     return x;
 }
 
+/*a Mapping methods - XY to/from quaternion ('up' vector is unpredictable)
+ */
 /*f c_lens_projection::xy_to_roll_yaw
   Convert from (x,y) in (frame_width, frame_height) to [roll(angle) yaw(angle)][0 0 1]
  */
@@ -289,24 +329,23 @@ void c_lens_projection::roll_yaw_to_xy(const double ry[2], double xy[2]) const
     xy[1] = height * r * sin(ry[0]);
 }
 
-/*f c_lens_projection::orientation_of_xy
+/*f c_lens_projection::orientation_of_xy - return a quaternion that maps (0,0,1) to where XY is on the image given this projection
   Convert (x,y) in image units (e.g. pixels) to full orientation including camera orientation
  */
-c_quaternion c_lens_projection::orientation_of_xy(const double xy[2]) const
+c_quaternion<double> c_lens_projection::orientation_of_xy(const double xy[2]) const
 {
     double ry[2];
     xy_to_roll_yaw(xy, ry);
-    return this->orientation * c_quaternion::roll(ry[0],0) * c_quaternion::yaw(ry[1],0);
+    return this->orientation * c_quaternion<double>::roll(ry[0],0) * c_quaternion<double>::yaw(ry[1],0);
 }
 
-/*f c_lens_projection::xy_of_orientation
+/*f c_lens_projection::xy_of_orientation - find XY on image that is 
   Convert orientation quaternion (which maps (0,0,1) to the (x,y) in image units (e.g. pixels)
  */
-void c_lens_projection::xy_of_orientation(const c_quaternion *orientation, double xy[2]) const
+void c_lens_projection::xy_of_orientation(const c_quaternion<double> *orientation, double xy[2]) const
 {
-    c_quaternion q = c_quaternion(this->orientation);
-    c_quaternion qc;
-    c_quaternion mapped_001;
+    c_quaternion<double> q = c_quaternion<double>(this->orientation);
+    c_quaternion<double> qc, mapped_001;
     double rxyz[4];
     double roll, yaw;
     double ry[2];
@@ -317,9 +356,9 @@ void c_lens_projection::xy_of_orientation(const c_quaternion *orientation, doubl
     q.normalize();
     // q is now input orientation - camera orientation
     // Find how (0,0,1) is mapped through q
-    qc = c_quaternion(q);
+    qc = c_quaternion<double>(q);
     qc.conjugate();
-    mapped_001 = q * c_quaternion::rijk(0,0,0,1) * qc;
+    mapped_001 = q * c_quaternion<double>::rijk(0,0,0,1) * qc;
 
     // recover as rxyz[1..3]
     mapped_001.get_rijk(rxyz);
@@ -332,29 +371,21 @@ void c_lens_projection::xy_of_orientation(const c_quaternion *orientation, doubl
     return;
 }
 
-/*f c_lens_projection::__str__
+/*a External static functions
  */
-void c_lens_projection::__str__(char *buffer, int buf_size) const
-{
-    snprintf(buffer, buf_size, "(%lf, %lf, %lf, %lf) : ",
-             width, height, frame_width, focal_length );
-    buffer[buf_size-1] = 0;
-    orientation.__str__(buffer+strlen(buffer), buf_size-strlen(buffer) );
-}
-
-
-/*f c_lens_projection::xy_b_of_a
+/*f c_lens_projection::xy_b_of_a - map XY in projection A to XY in projection B
  */
-void c_lens_projection::xy_b_of_a(const c_lens_projection *a, const c_lens_projection *b, const double xy_a[2], double xy_b[2])
+void
+c_lens_projection::xy_b_of_a(const c_lens_projection *a, const c_lens_projection *b, const double xy_a[2], double xy_b[2])
 {
-    c_quaternion wq = a->orientation_of_xy(xy_a);
+    auto wq = a->orientation_of_xy(xy_a);
     b->xy_of_orientation(&wq, xy_b);
 }
 
-
 /*f lens_projection_type
  */
-t_lens_projection_type c_lens_projection::lens_projection_type(const char *name)
+t_lens_projection_type
+c_lens_projection::lens_projection_type(const char *name)
 {
     t_lens_projection_type lp_type;
     lp_type = lens_projection_type_equidistant;
@@ -372,62 +403,3 @@ t_lens_projection_type c_lens_projection::lens_projection_type(const char *name)
     return lp_type;
 }
 
-/*a Rest
- */
-/*
-src = camera(width=5184.0, height=3456.0, focal_length=20.0)
-dst = camera(width=1024.0, height=1024.04, focal_length=100.0)
-dst = camera(width=5184.0, height=3456.0, focal_length=20.0)
-
-if False:
-    print src.xy_to_roll_yaw((0,0))
-    print src.xy_to_roll_yaw((2592,0))
-    print src.xy_to_roll_yaw((0,1728))
-    print src.roll_yaw_to_xy((math.radians(90),0.1))
-    print src.roll_yaw_to_xy((math.radians(180),0.1))
-    print src.roll_yaw_to_xy((math.radians(45),0.1))
-    print src.roll_yaw_to_xy(src.xy_to_roll_yaw((100,200)))
-
-# Want src_orientation and dst_orientation to be quaternions giving the center of the image
-# Then I want to know src xy for any dst xy
-# Note that dst xy is (roll,yaw)=dst.xy_to_roll_yaw(xy)
-# How about we want to know the (x,y,z) of dst xy.
-# This should be something like dst_orientation*roll(yaw(dst.xy_to_roll_yaw(xy))) applied to (0,0,1)
-# Then we can apply src_orientation' to this to get an (x,y,z) relative to the source
-# This has to be converted to a roll,yaw, then to an (x,y)
-
-def conjugation(q,p):
-    qc = q.copy().conjugate()
-    print p[0], p[1], p[2]
-    pq = quaternion(r=0,i=p[0],j=p[1],k=p[2])
-    r = q*pq*qc
-    print r
-    return r.get()[1:]
-
-# Orientation assumes that the camera axis is the z-axis with x-axis up, and orientation is applied to that
-dst_orientation = quaternion.yaw(-60,degrees=True) * quaternion.pitch(-30,degrees=True)
-src_orientation = quaternion.yaw(-60,degrees=True) * quaternion.pitch(-30,degrees=True)
-#dst_orientation = quaternion.of_spherical_polar(0,10,degrees=True) # looking at 10 degrees 'to the right'
-#src_orientation = quaternion.of_spherical_polar(0,0,degrees=True)  # looking straight on
-xy=(100.0,0) # 100 pixels to the right of center out of 512.0 to the right of center - i.e. center+20%
-xy=(0,100.0) # 100 pixels above the center out of 512.0
-dst_ry = dst.xy_to_roll_yaw(xy)
-print dst_ry
-q = dst_orientation * quaternion.roll(dst_ry[0]) * quaternion.yaw(dst_ry[1])
-q.repr_fmt = "euler"
-print q
-q = src_orientation.copy().conjugate() * q
-print q
-mapped_xyz = conjugation(q,(0,0,1))
-print mapped_xyz
-yaw = math.acos(mapped_xyz[2])
-roll = math.atan2(mapped_xyz[0], mapped_xyz[1]) # [0],[1] because X is up in quaternion universe
-src_ry = (-roll,-yaw) # - because we are inverting the transformation
-print src_ry
-print src.roll_yaw_to_xy(src_ry)
-
-#q=quaternion.roll(30,degrees=True)
-#q=quaternion.pitch(30,degrees=True) * quaternion.roll(30,degrees=True)
-#q=quaternion.pitch(30,degrees=True)
-#conjugation(q,(0,0,1))
-*/

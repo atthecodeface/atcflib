@@ -152,6 +152,7 @@ external m_row_vector  : c_matrix -> int -> c_vector  = "atcf_matrix_row_vector"
 external m_col_vector  : c_matrix -> int -> c_vector  = "atcf_matrix_col_vector"
 external m_apply   : c_matrix -> c_vector -> c_vector  = "atcf_matrix_apply"
 external m_identity      : c_matrix -> unit  = "atcf_matrix_set_identity"
+external m_assign        : c_matrix -> c_matrix -> unit  = "atcf_matrix_assign"
 external m_assign_m_m    : c_matrix -> c_matrix -> c_matrix -> unit  = "atcf_matrix_assign_m_m"
 external m_assign_from_q : c_matrix -> c_quaternion -> unit  = "atcf_matrix_assign_from_q"
 external m_set           : c_matrix -> int -> int -> float -> unit  = "atcf_matrix_set"
@@ -313,6 +314,7 @@ end
     val transpose    : t -> t
     val add_scaled   : float -> t -> t -> t
     val apply        : t -> Vector.t -> Vector.t
+    val assign       : t -> t -> t
     val assign_m_m   : t -> t -> t -> t
     val assign_from_q : Quaternion.t  -> t -> t
     val lup_decompose : t -> Vector.t
@@ -338,6 +340,7 @@ end = struct
      let transpose m     = (m_transpose m.cm) ; m
      let add_scaled f m2 m = (m_add_scaled m.cm m2.cm f) ; m
      let apply m v         = Vector.create(m_apply m.cm v.Vector.cv)
+     let assign m1 m        = m_assign m.cm m1.cm ; m
      let assign_m_m m1 m2 m = m_assign_m_m m.cm m1.cm m2.cm ; m
      let assign_from_q q m = m_assign_from_q m.cm q.Quaternion.cq ; m
      let lup_decompose m = Vector.create(m_lup_decompose m.cm)

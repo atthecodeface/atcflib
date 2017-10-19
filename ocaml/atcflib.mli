@@ -137,10 +137,10 @@ module rec
         (** Vector.get v n gets the nth coordinate of the vector. *)
 
         val set              : int -> float -> t -> t
-        (** Vector.set v n f sets the nth coordinate of the vector to be f. It returns v *)
+        (** Vector.set n f v sets the nth coordinate of the vector to be f. It returns v *)
 
         val scale            : float -> t -> t
-        (** Vector.scale v f scales all the coordinates of the vector by f, and returns v *)
+        (** Vector.scale f v scales all the coordinates of the vector by f, and returns v *)
 
         val modulus          : t -> float
         (** Vector.modulus v returns the modulus (length) of the
@@ -152,11 +152,11 @@ module rec
         vector - i.e. inner product of the vector with itself (x*x + y*y + z*z + ...) *)
 
         val add              : t -> t -> t
-        (** Vector.add v v2 adds vector v2 to vector v, requiring both
+        (** Vector.add v2 v adds vector v2 to vector v, requiring both
         to be of the same length. After updating v, it returns it. *)
 
         val add_scaled       : float -> t -> t -> t
-        (** Vector.add_scaled v v2 adds vector v2 scaled by f to vector v,
+        (** Vector.add_scaled v2 adds v vector v2 scaled by f to vector v,
         requiring both vectors to be of the same length. After updating v, it returns it. *)
 
         val normalize        : t -> t
@@ -166,14 +166,14 @@ module rec
         1E-20) then the vector is zeroed. It returns v*)
 
         val assign           : t -> t -> t
-        (** Vector.assign v v2 sets v to have the same coordinates as
+        (** Vector.assign v2 v sets v to have the same coordinates as
         v2 (effectively v.coords := v2.coords); it requires that v
         have the same length as v2 (which is not checked). It returns v. *)
 
         val assign_m_v       : Matrix.t -> t -> t -> t
-        (** Vector.assign v m v2 sets v to be Matrix m * v2; it
+        (** Vector.assign_m_v m v2 v sets v to be Matrix m * v2; it
         requires that v have the same length as M.nrows, and M.ncols
-        is the length of v2 (neither of which is not checked). It
+        is the length of v2 (neither of which is checked). It
         returns v. *)
 
         val assign_q_as_rotation : t -> Quaternion.t -> float * float
@@ -255,7 +255,7 @@ module rec
            (** Matrix.copy m creates a copy of matrix m and returns it *)
 
            val set : int -> int -> float -> t -> t
-           (** Matrix.set m c r f sets matrix m element row r column c
+           (** Matrix.set c r f m sets matrix m element row r column c
            to be f. It returns the matrix *)
 
            val identity : t -> t
@@ -280,7 +280,7 @@ module rec
            corresponding to the n'th column of the matrix. *)
 
            val scale : float -> t -> t
-           (** Matrix.scale m f scales (multiplies) all the elemnts of
+           (** Matrix.scale f m scales (multiplies) all the elemnts of
            the matrix by f. It returns the matrix. *)
 
            val transpose : t -> t
@@ -289,7 +289,7 @@ module rec
            been MxN.   It returns the matrix. *)
 
            val add_scaled : float -> t -> t -> t
-           (** Matrix.add_scaled m m2 f adds m2 scaled by f to matrix
+           (** Matrix.add_scaled m2 f m adds m2 scaled by f to matrix
            m, and sets m to the result; this permits add and
            subtract. It returns the matrix m. *)
 
@@ -299,8 +299,11 @@ module rec
            returns a {e new} Vector.t with the result (of length
            m.ncols) *)
 
+           val assign : t -> t -> t
+           (** Matrix.assign m1 m assigns m to be the value of m1. It returns m. *)
+
            val assign_m_m : t -> t -> t -> t
-           (** Matrix.assign_m_m m m1 m2 assigns m to be the result of
+           (** Matrix.assign_m_m m1 m2 m assigns m to be the result of
            the product of m1 and m2 (in that order). It returns m. *)
 
            val assign_from_q : Quaternion.t  -> t -> t

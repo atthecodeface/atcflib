@@ -1,5 +1,22 @@
-/*a Documentation
+/** Copyright (C) 2016-2017,  Gavin J Stark.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @file          image_io.cpp
+ * @brief         Image input and output functions
+ *
  */
+
 /*a Includes
  */
 #include <stdlib.h>
@@ -11,8 +28,9 @@
 #include <string.h>
 #include "image_io.h"
 
-/*a blah
+/*a Types
  */
+/*t prvt_data */
 struct prvt_data {
     png_structp png_ptr;
     png_infop   info_ptr;
@@ -21,6 +39,8 @@ struct prvt_data {
     jmp_buf jpeg_setjmp_buffer;
 };
 
+/*a Constructor and destructors, free etc */
+/*f c_image_io::c_image_io */
 c_image_io::c_image_io(void)
 {
     prvt = (struct prvt_data *)malloc(sizeof(prvt_data));
@@ -30,6 +50,7 @@ c_image_io::c_image_io(void)
     free_image_data_on_destruction = 1;
 }
 
+/*f c_image_io::~c_image_io */
 c_image_io::~c_image_io(void)
 {
     if (free_image_data_on_destruction) {
@@ -41,7 +62,9 @@ c_image_io::~c_image_io(void)
     }
 }
 
-void c_image_io::free_image_data(void)
+/*f c_image_io::free_image_data */
+void
+c_image_io::free_image_data(void)
 {
     if (image_data) {
         free(image_data);
@@ -49,7 +72,10 @@ void c_image_io::free_image_data(void)
     image_data = NULL;
 }
 
-int c_image_io::read_init(FILE *f)
+/*f PNG methods */
+/*f c_image_io::png_read_init - initialize for reading a PNG */
+int
+c_image_io::png_read_init(FILE *f)
 {
     int ret=1;
     unsigned char png_sig[8];
@@ -86,7 +112,9 @@ int c_image_io::read_init(FILE *f)
     return ret;
 }
 
-int c_image_io::read_set_rgb8(void)
+/*f c_image_io::png_read_set_rgb8 - */
+int
+c_image_io::png_read_set_rgb8(void)
 {
     int ret;
     int err;
@@ -116,13 +144,17 @@ int c_image_io::read_set_rgb8(void)
     return ret;
 }
 
-int c_image_io::read_alloc(void)
+/*f c_image_io::png_read_alloc - Allocate data for an image */
+int
+c_image_io::png_read_alloc(void)
 {
     image_data = (unsigned char *)malloc(height*byte_width);
     return (image_data==NULL);
 }
 
-int c_image_io::read_image(void)
+/*f c_image_io::read_image_png */
+int
+c_image_io::read_image_png(void)
 {
     int ret;
     int err;
@@ -155,7 +187,12 @@ int c_image_io::read_image(void)
     return ret;
 }
 
-void c_image_io::read_finalize(void)
+/*f c_image_io::png_read_finalize - finalize reading a PNG image
+ * 
+ * Returns zero on success
+ *
+ */
+void c_image_io::png_read_finalize(void)
 {
     if (prvt->png_ptr) {
         if (prvt->info_ptr) {
@@ -168,22 +205,34 @@ void c_image_io::read_finalize(void)
     }
 }
 
-int c_image_io::png_read(FILE *f)
+/*f c_image_io::png_read - read a PNG image from a file
+ * 
+ * Returns zero on success
+ *
+ */
+int
+c_image_io::png_read(FILE *f)
 {
     int ret;
 
-    ret = read_init(f);
+    ret = png_read_init(f);
 
-    if (!ret) ret=read_set_rgb8();
-    if (!ret) ret=read_alloc();
-    if (!ret) ret=read_image();
+    if (!ret) ret=png_read_set_rgb8();
+    if (!ret) ret=png_read_alloc();
+    if (!ret) ret=read_image_png();
 
-    read_finalize();
+    png_read_finalize();
 
     return ret;
 }
 
-int c_image_io::write_init(FILE *f)
+/*f c_image_io::png_write_init
+ * 
+ * Returns zero on success
+ *
+ */
+int
+c_image_io::png_write_init(FILE *f)
 {
     int ret=1;
 
@@ -216,7 +265,13 @@ int c_image_io::write_init(FILE *f)
     return ret;
 }
 
-int c_image_io::write_image(void)
+/*f c_image_io::write_image
+ * 
+ * Returns zero on success
+ *
+ */
+int
+c_image_io::write_image_png(void)
 {
     png_byte **row_pointers;
     row_pointers = (png_byte **)malloc(sizeof(png_byte *)*height);
@@ -228,7 +283,13 @@ int c_image_io::write_image(void)
     return 0;
 }
 
-int c_image_io::write_finalize(void)
+/*f c_image_io::png_write_finalize
+ * 
+ * Returns zero on success
+ *
+ */
+int
+c_image_io::png_write_finalize(void)
 {
     png_write_end(prvt->png_ptr, prvt->info_ptr);
     if (prvt->png_ptr) {
@@ -242,19 +303,27 @@ int c_image_io::write_finalize(void)
 }
 
 
-int c_image_io::png_write(FILE *f)
+/*f c_image_io::png_write - write an image as a PNG to a file
+ * 
+ * Returns zero on success
+ *
+ */
+int
+c_image_io::png_write(FILE *f)
 {
     int ret;
 
-    ret = write_init(f);
+    ret = png_write_init(f);
 
-    if (!ret) ret=write_image();
+    if (!ret) ret=write_image_png();
 
-    write_finalize();
+    png_write_finalize();
 
     return ret;
 }
 
+/*a Jpeg functions
+ */
 static void jpeg_error_exit(j_common_ptr cinfo)
 {
     struct prvt_data *prvt = (struct prvt_data *) cinfo->err;
@@ -321,8 +390,12 @@ int c_image_io::jpeg_read(FILE *f)
 }
 
 
+/*a External image read/write functions
+ */
+/*f image_io_write_rgba - write a 32bpp (8-bit RGBA) image as a PNG to a filename given data, width and height
+ */
 extern int
-image_write_rgba(const char *filename, const unsigned char *image_data, int width, int height)
+image_io_write_rgba(const char *filename, const unsigned char *image_data, int width, int height)
 {
     c_image_io image_io;
     int err;
@@ -345,8 +418,10 @@ image_write_rgba(const char *filename, const unsigned char *image_data, int widt
     return err;
 }
 
+/*f image_io_read_rgba - read an image from a filename, returning mallocked image data and setting width and height
+ */
 extern unsigned char *
-image_read_rgba(const char *filename, int *width, int *height)
+image_io_read_rgba(const char *filename, int *width, int *height)
 {
     c_image_io image_io;
     int err;

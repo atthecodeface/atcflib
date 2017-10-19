@@ -33,20 +33,20 @@
 class c_image_io
 {
     struct prvt_data *prvt;
+    int png_write_init(FILE *f);
+    int png_write_finalize(void);
+    int png_read_init(FILE *f);
+    int png_read_set_rgb8(void);
+    void png_read_finalize(void);
+    int png_read_alloc(void);
+    int write_image_png(void);
+    int read_image_png(void);
 public:
     c_image_io(void);
     ~c_image_io(void);
     void free_image_data(void);
     int jpeg_read(FILE *f);
     int png_read(FILE *f);
-    int read_init(FILE *f);
-    int read_set_rgb8(void);
-    int read_alloc(void);
-    int read_image(void);
-    void read_finalize(void);
-    int write_init(FILE *f);
-    int write_image(void);
-    int write_finalize(void);
     int png_write(FILE *f);
  
     unsigned char *image_data;
@@ -59,8 +59,8 @@ public:
     int free_image_data_on_destruction;
 };
 
-extern int image_write_rgba(const char *filename, const unsigned char *image_data, int width, int height);
-extern unsigned char *image_read_rgba(const char *filename, int *width, int *height);
+extern int image_io_write_rgba(const char *filename, const unsigned char *image_data, int width, int height);
+extern unsigned char *image_io_read_rgba(const char *filename, int *width, int *height);
 
 /*a Wrapper
  */

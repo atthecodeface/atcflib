@@ -180,7 +180,19 @@ FN_C_TO_INT(matrix, ncols)
 FN_C_TO_UNIT(matrix, set_identity)
 FN_C_INT_INT_FLOAT_TO_UNIT(matrix, set)
 
-/*f atcf_vector_assign_m_v
+/*f atcf_matrix_assign
+  Assign value to be that of matrix m1
+ */
+extern "C"
+CAMLprim void
+atcf_matrix_assign(value m, value m1)
+{
+    CAMLparam2(m, m1);
+    (*matrix_of_val(m)) = *matrix_of_val(m1);
+    CAMLreturn0;
+}
+
+/*f atcf_matrix_assign_m_m
   Assign value to be that of matrix m applied to other vector v2
  */
 extern "C"

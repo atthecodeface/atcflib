@@ -673,7 +673,7 @@ c_matrix<T> *c_matrix<T>::lup_inverse(void) const
     if (lup_inverse(data)!=0) {
         if (free_me) { free(free_me); }
         delete P;
-        return NULL;
+        return R;
     }
     for (int c=0; c<_ncols; c++) {
         // L.U.x(c) = c'th column of I; hence R[P[c]] = x(c)

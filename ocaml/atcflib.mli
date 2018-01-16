@@ -429,7 +429,7 @@ module rec
              (** Quaternion.scale q f scales (multiplies) q by f. It returns q. *)
 
              val add_scaled : float -> t -> t -> t
-             (** Quaternion.add_scaled q q1 f adds q1 scaled by f to q. It returns q. *)
+             (** Quaternion.add_scaled q1 q f adds q1 scaled by f to q. It returns q. *)
 
              val reciprocal : t -> t
              (** Quaternion.conjugate q updates quaternion q to be its
@@ -450,11 +450,11 @@ module rec
              the quaternion q squared - r*r + i*i + j*j + k*k. *)
 
              val premultiply : t -> t -> t
-             (** Quaternion.premultiply q q1 updates q to be the
+             (** Quaternion.premultiply q1 q updates q to be the
              product q * q1, returning q. *)
 
              val postmultiply : t -> t -> t
-             (** Quaternion.postmultiply q q1 updates q to be the
+             (** Quaternion.postmultiply q1 q updates q to be the
              product q1 * q, returning q. *)
 
              val make              : unit -> t

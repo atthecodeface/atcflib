@@ -17,6 +17,10 @@ extern value caml_atcf_alloc_quaternion(class c_quaternion<double> *cq);
  */
 #define quaternion_of_val(v) (*((c_quaternion<double> **) Data_custom_val(v)))
 
+/*f lens_projection_of_val c_lens_projection from an OCAML value
+ */
+#define lens_projection_of_val(v) (*((c_lens_projection **) Data_custom_val(v)))
+
 /*f bunzip_of_val c_bunzip from an OCAML value
  */
 #define bunzip_of_val(v) (*((c_bunzip **) Data_custom_val(v)))

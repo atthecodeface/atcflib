@@ -17,7 +17,8 @@ OCAML_INCLUDE = $(OCAMLOCAML)
 LIBDIR := /Users/gavinprivate/Git/atcflib
 LIBPATH := DYLD_LIBRARY_PATH=.:/Users/gavinprivate/Git/atcflib
 
-OCAML_WRAPPER_SRCS := ocaml_timer.cpp ocaml_vector.cpp ocaml_matrix.cpp ocaml_quaternion.cpp ocaml_bunzip.cpp
+OCAML_WRAPPER_SRCS := ocaml_timer.cpp ocaml_vector.cpp ocaml_matrix.cpp ocaml_quaternion.cpp ocaml_bunzip.cpp 
+#ocaml_lens_projection.cpp
 OCAML_WRAPPER_OBJS := $(patsubst %.cpp,build/%.o, ${OCAML_WRAPPER_SRCS} )
 #$(foreach me,$3,$(eval $(call nffw.add_obj,$1,$2,$(me))))
 

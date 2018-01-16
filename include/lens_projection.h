@@ -1,4 +1,4 @@
-/** Copyright (C) 2016,  Gavin J Stark.  All rights reserved.
+/** Copyright (C) 2016-17,  Gavin J Stark.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@
 
 /*a Includes
  */
-#include "quaternion.h"
 #include <map>
 #include <string>
+#include "quaternion.h"
 
 /*t t_lens_projection_type
  */

@@ -24,6 +24,10 @@ OCAML_WRAPPER_OBJS := $(patsubst %.cpp,build/%.o, ${OCAML_WRAPPER_SRCS} )
 
 all: camltime
 
+.PHONY: utop
+utop:
+	$(LIBPATH) jbuilder utop .
+
 .PHONY: atcflib
 atcflib: atcflib.cmxa
 

@@ -30,10 +30,13 @@ LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o \
 
 # build/polynomial.o
 
-libatcf: libatcf.so
+libatcf: libatcf.so atcflib.a
 
 libatcf.so: ${LIB_OBJS}
 	c++ -Xlinker -dylib -undefined dynamic_lookup ${LIB_OBJS} -lpng16 -ljpeg -L/usr/local/lib  -o $@
+
+atcflib.a: ${LIB_OBJS}
+	ar -r $@ ${LIB_OBJS}
 
 build/quaternion.o: src/math/quaternion.cpp
 build/vector.o:     src/math/vector.cpp

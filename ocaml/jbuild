@@ -1,0 +1,21 @@
+(jbuild_version 1)
+
+(library 
+ (
+ (name atcflib)
+ (public_name atcflib)
+ (modules (atcflib))
+  (libraries
+    (bigarray re result unix)
+  )
+  (cxx_names
+    (ocaml_bunzip ocaml_matrix ocaml_vector ocaml_quaternion ocaml_timer)
+  )
+  (cxx_flags
+    ( -I /Users/gavinprivate/Git/atcflib )
+  )
+  (c_library_flags
+   (/Users/gavinprivate/Git/atcflib/atcflib.a -lc++)
+  )
+ )
+)

@@ -1,0 +1,39 @@
+
+PYTHON=python2.7
+FRAMEWORK_PATH := /Library/Frameworks
+PYTHON_INCLUDES := -I${FRAMEWORK_PATH}/Python.framework/Versions/Current/include/${PYTHON}
+
+#all: gjslib_c.so
+
+python_%.o: python_%.cpp
+	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@
+
+gjslib_%.o: gjslib_%.cpp
+	c++ ${PYTHON_INCLUDES} ${CPPFLAGS} -c $< -o $@
+
+gjslib_c.so: ${PY_OBJS}
+	c++ -bundle -undefined dynamic_lookup -o gjslib_c.so ${PY_OBJS} -lpng16 -ljpeg -L/usr/local/lib 
+
+test: test_quaternion test_lens_projection
+
+test_quaternion: quaternion_test
+	./quaternion_test
+
+quaternion_test.o: quaternion.h quaternion_test.cpp test.h 
+
+quaternion_test: quaternion_test.o quaternion.o
+	$(LINK) quaternion_test.o quaternion.o $(LINKFLAGS) -o quaternion_test
+
+
+test_lens_projection: lens_projection_test
+	./lens_projection_test
+
+lens_projection_test.o: lens_projection.h lens_projection_test.cpp test.h 
+
+lens_projection_test: lens_projection_test.o lens_projection.o quaternion.o
+	$(LINK) lens_projection_test.o lens_projection.o quaternion.o $(LINKFLAGS) -o lens_projection_test
+
+
+clean:
+	rm -f build/*.o prog libatcf.so
+

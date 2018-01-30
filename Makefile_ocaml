@@ -1,0 +1,7 @@
+ocaml_build: $(C_LIBRARIES)
+	jbuilder build
+
+ocaml_install: $(C_LIBRARIES)
+	jbuilder build @install
+	jbuilder install
+

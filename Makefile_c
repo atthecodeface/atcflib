@@ -1,0 +1,39 @@
+all: libatcf
+
+PROG_OBJS = main.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o vector.o quaternion_image_correlator.o
+BATCH_OBJS = batch.o key_value.o texture.o shader.o filter.o image_io.o lens_projection.o quaternion.o vector.o
+# image_correlator.o
+PY_OBJS := gjslib_c.o python_texture.o python_filter.o python_lens_projection.o python_quaternion.o python_vector.o python_image_correlator.o python_quaternion_image_correlator.o\
+	filter.o shader.o key_value.o texture.o image_io.o lens_projection.o quaternion.o vector.o image_correlator.o quaternion_image_correlator.o
+PYTHON := python2.6
+FRAMEWORK_PATH := /Library/Frameworks
+
+ATCF_INCLUDE := include
+LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o \
+				build/bunzip.o  \
+				build/image_io.o build/lens_projection.o
+
+libatcf: libatcf.so atcflib.a
+
+libatcf.so: ${LIB_OBJS}
+	c++ -Xlinker -dylib -undefined dynamic_lookup ${LIB_OBJS} -lpng16 -ljpeg -L/usr/local/lib  -o $@
+
+atcflib.a: ${LIB_OBJS}
+	ar -r $@ ${LIB_OBJS}
+
+build/quaternion.o: src/math/quaternion.cpp
+build/vector.o:     src/math/vector.cpp
+build/matrix.o:     src/math/matrix.cpp
+build/polynomial.o: src/math/polynomial.cpp
+build/bunzip.o:     src/compression/bunzip.cpp
+build/image_io.o:   src/image/image_io.cpp
+build/lens_projection.o:   src/image/lens_projection.cpp
+
+build/%.o: src/math/%.cpp
+	c++ -I${ATCF_INCLUDE} ${CPPFLAGS} -c $< -o $@
+
+build/%.o: src/image/%.cpp
+	c++ -I${ATCF_INCLUDE} ${CPPFLAGS} -c $< -o $@
+
+build/%.o: src/compression/%.cpp
+	c++ -I${ATCF_INCLUDE} ${CPPFLAGS} -c $< -o $@

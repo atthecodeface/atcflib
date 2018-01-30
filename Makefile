@@ -38,6 +38,13 @@ libatcf.so: ${LIB_OBJS}
 atcflib.a: ${LIB_OBJS}
 	ar -r $@ ${LIB_OBJS}
 
+ocaml_build: libatcf
+	jbuilder build
+
+ocaml_install: libatcf
+	jbuilder build @install
+	jbuilder install
+
 build/quaternion.o: src/math/quaternion.cpp
 build/vector.o:     src/math/vector.cpp
 build/matrix.o:     src/math/matrix.cpp

@@ -77,7 +77,7 @@ let mat_1234 =
             set 1 0 3.0 |>
             set 1 1 4.0)
 
-let biggie = Bigarray.Genarray.create float64 c_layout [|1000;|]
+let biggie = Bigarray.Array1.create float64 c_layout 1000
 let b_v0_3_0_1 = (Vector.of_bigarray ~length:3 ~offset:0 ~stride:1 biggie)
 let b_v1_3_1_1 = (Vector.of_bigarray ~length:3 ~offset:1 ~stride:1 biggie)
 
@@ -351,10 +351,10 @@ let test_suite_vector_bigarray_slice =
          let v1 = Vector.make2 3.0 4.0 in
          ignore (Vector.(assign x3 b_v0_3_0_1));
          ignore (Vector.(assign x3 b_v1_3_1_1));
-         assert_equal_float "Biggie contains slice vector 0" (Genarray.get biggie [|0;|]) 1.0 ;
-         assert_equal_float "Biggie contains slice vector 1" (Genarray.get biggie [|1;|]) 1.0 ;
-         assert_equal_float "Biggie contains slice vector 2" (Genarray.get biggie [|2;|]) 0.0 ;
-         assert_equal_float "Biggie contains slice vector 3" (Genarray.get biggie [|3;|]) 0.0 ;
+         assert_equal_float "Biggie contains slice vector 0" biggie.{0} 1.0 ;
+         assert_equal_float "Biggie contains slice vector 1" biggie.{1} 1.0 ;
+         assert_equal_float "Biggie contains slice vector 2" biggie.{2} 0.0 ;
+         assert_equal_float "Biggie contains slice vector 3" biggie.{3} 0.0 ;
          assert_vector b_v1_3_1_1 x3 ;
          ()
       ) ;

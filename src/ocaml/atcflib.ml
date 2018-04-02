@@ -105,8 +105,8 @@ type c_quaternion
 type t_timer
 type c_bunzip
 type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Array1.t
-type t_ba_doubles = (float, float64_elt, c_layout) Bigarray.Genarray.t
-type t_ba_floats  = (float, float32_elt, c_layout) Bigarray.Genarray.t
+type t_ba_doubles = (float, float64_elt, c_layout) Bigarray.Array1.t
+type t_ba_floats  = (float, float32_elt, c_layout) Bigarray.Array1.t
 
 (*a Atcflib OCaml wrapper C functions - private *)
 (*b timer functions *)
@@ -274,7 +274,7 @@ end = struct
      let set         n f v    = v_set v n f ; v
      let assign      v2 v     = v_assign v v2 ; v
      let make        n  = 
-      let ba = Bigarray.(Genarray.create float64 c_layout [|n|]) in
+      let ba = Bigarray.(Array1.create float64 c_layout n) in
       v_create_bigarray_slice ba (-1) (-1) (-1)
     let create _ = make 1
     let copy        v =

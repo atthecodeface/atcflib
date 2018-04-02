@@ -8,8 +8,8 @@ type c_quaternion
 type t_timer
 type c_bunzip
 type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Array1.t
-type t_ba_doubles = (float, float64_elt, c_layout) Bigarray.Genarray.t
-type t_ba_floats  = (float, float32_elt, c_layout) Bigarray.Genarray.t
+type t_ba_doubles = (float, float64_elt, c_layout) Bigarray.Array1.t
+type t_ba_floats  = (float, float32_elt, c_layout) Bigarray.Array1.t
 
 (** The Timer module exposes the atcflib timers, which in turn come
  from sl_timer These are usually used in C modules to time the

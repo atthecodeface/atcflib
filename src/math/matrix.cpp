@@ -169,6 +169,25 @@ c_matrix<T>::c_matrix(int nrows, int ncols, const T *values)
     }
 }
 
+/*f c_matrix<T>::c_matrix (rows, cols, double *values, row_stride, col_stride)
+ */
+template <typename T>
+c_matrix<T>::c_matrix(int nrows, int ncols, T *values, int row_stride, int col_stride)
+{
+    init();
+    _nrows = nrows;
+    _ncols = ncols;
+    if ((row_stride==0) && (col_stride==0)) {
+        _col_stride = 1;
+        _row_stride = _ncols;
+    } else {
+        _row_stride = (row_stride==0) ? _ncols: 1;
+        _col_stride = (col_stride==0) ? _nrows : 1;
+    }
+    _values = values;
+    _values_must_be_freed = 0;
+}
+
 /*f c_matrix<T>::c_matrix (c_matrix<T> &a, c_matrix<T> &b) - a * b
  */
 template <typename T>

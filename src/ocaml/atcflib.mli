@@ -97,8 +97,7 @@ module rec
       sig
         (** The vector type is an instance of the C++ c_vector class
         *)
-    type t
-        (*type vector = { cv : c_vector; (. .) }  (.. .)*)
+        type t
 
         val make             : int -> t
         (** Vector.make n creates a new vector of length n; the length
@@ -118,7 +117,7 @@ module rec
         vector of length 4 with value (w, x, y, z) *)
 
         val of_bigarray  : ?length:int -> ?offset:int -> ?stride:int -> t_ba_doubles -> t
-        (** Vector.of_bigarray b n o s makes a new vector using a
+        (** Vector.of_bigarray length offset stride ba makes a new vector using a
         slice of the big array *)
 
         val copy             : t -> t
@@ -243,10 +242,11 @@ module rec
          sig
            (** The matrix type is an instance of the C++ c_vector class
             *)
-           type t = { cm : c_matrix; }
-           val create : c_matrix -> t
-           (** Matrix.create is a private method to create a
-           Matrix.matrix from a C++ matrix class instance *)
+           type t
+
+           val of_bigarray  : ncols:int -> nrows:int -> ?offset:int -> ?col_stride:int-> ?row_stride:int -> t_ba_doubles -> t
+           (** Matrix.of_bigarray makes a new matrix using a
+            slice of the big array *)
 
            val copy : t -> t
            (** Matrix.copy m creates a copy of matrix m and returns it *)
@@ -303,7 +303,7 @@ module rec
            (** Matrix.assign_m_m m1 m2 m assigns m to be the result of
            the product of m1 and m2 (in that order). It returns m. *)
 
-           val assign_from_q : Quaternion.t  -> t -> t
+           (* val assign_from_q : Quaternion.t  -> t -> t *)
            (** Matrix.assign_from_q m q assumes that q is a
            unit quaternion and it makes m be the identity matrix with
            the top level 3x3 being a rotation that matches the

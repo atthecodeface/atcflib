@@ -88,6 +88,47 @@ caml_atcf_alloc_matrix(c_matrix<double> *cm)
     return v;
 }
 
+/*f atcf_m_of_bigarray : n:int -> NEW c_vector
+ *
+ * Creates a vector of length n
+ *
+ */
+extern "C"
+CAMLprim value
+atcf_m_of_bigarray(value ba, value l, value o, value s)
+{
+    CAMLparam4(ba, l, o, s);
+    CAMLlocal1 (result);
+/*    int vl = Long_val(l);
+    int vs = Long_val(s);
+    int vo = Long_val(o);
+    struct caml_ba_array *cba = Caml_ba_array_val(ba);
+    intnat size = cba->dim[0]; // assume one-dimensional since that is what we require
+    if (vs<0) vs = 1;
+    if (vo<0) vo = 0;
+    if (vl<0) vl = size;
+    if (vs*vl+vo>size) { vs=1; vo=0; vl=size; }
+
+    t_math_type mt;
+    void *vector;
+    
+    if ((cba->flags & CAML_BA_KIND_MASK)==CAML_BA_FLOAT64) {
+        double *vb = (double *) Caml_ba_data_val(ba);
+        vector = (void *)new c_vector<double>(vl,vs,vb+vo);
+        mt = MT_V_DOUBLE;
+    } else {
+        float *vb = (float *) Caml_ba_data_val(ba);
+        vector = (void *)new c_vector<float>(vl,vs,vb+vo);
+        mt = MT_V_FLOAT;
+    }
+    VERBOSE(stderr,"Create vector from bigarray data %d %p (%p:%d:%d) %d %d %d\n", mt,
+            Caml_ba_array_val(ba)->data,Caml_ba_array_val(ba)->num_dims, Caml_ba_array_val(ba)->dim[0],
+            vl,vs,vo);
+
+    caml_atcf_alloc_math_obj(&result, mt, &ba, vector);
+*/    CAMLreturn(result);
+}
+
 /*f atcf_matrix_create : r:int -> c:int -> NEW c_matrix
  *
  * Creates a matrix of length n

@@ -145,6 +145,7 @@ external v_cross_product : c_vector -> c_vector -> c_vector -> unit  = "atcf_v_c
 external v_angle_axis_to : c_vector -> c_vector -> c_vector -> (c_vector * float * float)  = "atcf_v_angle_axis_to3"
 
 (*b matrix functions *)
+external m_of_bigarray  : t_ba_doubles -> o:int -> dims:int array -> c_matrix = "atcf_m_of_bigarray"
 external m_create  : int -> int -> c_matrix   = "atcf_matrix_create"
 external m_clone   : c_matrix -> c_matrix   = "atcf_matrix_clone"
 external m_nrows   : c_matrix -> int = "atcf_matrix_nrows"
@@ -236,6 +237,7 @@ end
 
 (*a Vector module version *)
 type t_vector = c_vector
+type t_matrix = c_matrix
 module Vector =
 struct
     exception NotImplemented
@@ -276,68 +278,46 @@ struct
        let f c s = (Printf.sprintf "%f %s" c s) in
        Array.fold_right f (v_coords v) ""
 end
-(*a and Matrix module *)
-module rec Matrix : sig
-     type t = { cm: c_matrix }
-    val create : c_matrix -> t
-    val copy   : t -> t
-    val apply  : t -> t_vector -> t_vector
-    val set          : int -> int -> float -> t -> t
-    val identity     : t -> t
-    val nrows        : t -> int
-    val ncols        : t -> int
-    val row_vector   : t -> int -> t_vector
-    val col_vector   : t -> int -> t_vector
-    val scale        : float -> t -> t
-    val transpose    : t -> t
-    val add_scaled   : float -> t -> t -> t
-    val apply        : t -> t_vector -> t_vector
-    val assign       : t -> t -> t
-    val assign_m_m   : t -> t -> t -> t
-    val assign_from_q : Quaternion.t  -> t -> t
-    val lup_decompose : t -> t_vector
-    val lup_get_l     : t -> t
-    val lup_get_u     : t -> t
-    val lup_invert    : t -> t
-    val lup_inverse   : t -> t
-    val make          : int -> int -> t
-    val matrix_x_matrix : t -> t -> t
-    val str          : t -> string
-end = struct
-     type t = { cm: c_matrix }
-     let create (cm_in:c_matrix) = { cm = cm_in }
-     let copy   m = Matrix.create (m_clone m.cm)
+(*a Matrix module *)
+module Matrix =
+ struct
+     type t = t_matrix
+     let of_bigarray ~(ncols:int) ~(nrows:int) ?offset:(offset=0) ?col_stride:(cs=0) ?row_stride:(rs=0) ba =
+       m_of_bigarray ba offset [|ncols; cs; nrows; rs|]
+
+     let create cm = cm
+     let copy   m = create (m_clone m)
      let apply  m v = Vector.create (m_apply m v)
-     let set r c f m     = m_set m.cm r c f ; m
-     let identity m      = m_identity m.cm ; m
-     let nrows m         = m_nrows m.cm
-     let ncols m         = m_ncols m.cm
-     let row_vector m n  = Vector.create(m_row_vector m.cm n)
-     let col_vector m n  = Vector.create(m_col_vector m.cm n)
-     let scale f m      = (m_scale m.cm f) ; m
-     let transpose m     = (m_transpose m.cm) ; m
-     let add_scaled f m2 m = (m_add_scaled m.cm m2.cm f) ; m
-     let apply m v         = Vector.create(m_apply m.cm v)
-     let assign m1 m        = m_assign m.cm m1.cm ; m
-     let assign_m_m m1 m2 m = m_assign_m_m m.cm m1.cm m2.cm ; m
-     let assign_from_q q m = m_assign_from_q m.cm q.Quaternion.cq ; m
-     let lup_decompose m = Vector.create(m_lup_decompose m.cm)
-     let lup_get_l m     = (m_lup_get_l m.cm)  ; m
-     let lup_get_u m     = (m_lup_get_u m.cm)  ; m
-     let lup_invert m    = (m_lup_invert m.cm) ; m
-     let lup_inverse m   = create(m_lup_inverse m.cm)
+     let set r c f m     = m_set m r c f ; m
+     let identity m      = m_identity m ; m
+     let nrows m         = m_nrows m
+     let ncols m         = m_ncols m
+     let row_vector m n  = Vector.create(m_row_vector m n)
+     let col_vector m n  = Vector.create(m_col_vector m n)
+     let scale f m      = (m_scale m f) ; m
+     let transpose m     = (m_transpose m) ; m
+     let add_scaled f m2 m = (m_add_scaled m m2 f) ; m
+     let apply m v         = Vector.create(m_apply m v)
+     let assign m1 m        = m_assign m  m1 ; m
+     let assign_m_m m1 m2 m = m_assign_m_m m m1 m2 ; m
+     (*let assign_from_q q m = m_assign_from_q m q ; m*)
+     let lup_decompose m = Vector.create(m_lup_decompose m)
+     let lup_get_l m     = (m_lup_get_l m)  ; m
+     let lup_get_u m     = (m_lup_get_u m)  ; m
+     let lup_invert m    = (m_lup_invert m) ; m
+     let lup_inverse m   = create(m_lup_inverse m)
      let make r c        = create (m_create r c)
      let matrix_x_matrix m1 m2 = assign_m_m (make (nrows m1) (ncols m2)) m1 m2
      let str m = let rec show_row r l s =
                    if r==l then s
                    else
                      let f acc c = (Printf.sprintf "%s %f " acc c) in
-                     show_row (r+1) l (Array.fold_left f s (v_coords (m_row_vector m.cm r)))
+                     show_row (r+1) l (Array.fold_left f s (v_coords (m_row_vector m r)))
                    in
-                     show_row 0 (m_nrows m.cm) ""
+                     show_row 0 (m_nrows m) ""
 end
 (*a and Quaternion module *)
-and Quaternion : sig
+module Quaternion : sig
     type t = { cq: c_quaternion }
     val create : c_quaternion -> t
     val copy   : t -> t

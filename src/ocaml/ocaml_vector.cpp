@@ -105,22 +105,6 @@ atcf_v_create_bigarray_slice(value ba, value l, value o, value s)
     CAMLreturn(result);
 }
 
-/*f atcf_vector_destroy : c_vector -> unit
- *
- * Destroys a vector
- *
- */
-extern "C"
-CAMLprim void
-atcf_vector_destroy(value v)
-{
-    CAMLparam1(v);
-    VERBOSE(stderr,"Destroy vector %p\n", vector_of_val(v));
-    delete vector_of_val(v);
-    vector_of_val(v) = NULL;
-    CAMLreturn0;
-}
-
 /*a Interrogation functions - not effecting the c_vector
  */
 /*f atcf_vector_coords : c_vector -> float array

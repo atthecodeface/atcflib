@@ -64,13 +64,16 @@ public:
     void set_size(int nrows, int ncols);
     c_matrix(void);
     c_matrix(int nrows, int ncols, const T *values);
+    c_matrix(int nrows, int ncols, T *values, int row_stride, int col_stride);
     c_matrix *copy(void) const;
 
     inline int nrows(void) {return _nrows;}
     inline int ncols(void) {return _ncols;}
+    inline int row_stride(void) {return _row_stride;}
+    inline int col_stride(void) {return _col_stride;}
     inline const T *values(void) const {return _values;};
-    inline void set(int r, int c, T v) {_values[r*_ncols+c]=v;};
-    inline T get(int r, int c) const {return _values[r*_ncols+c];};
+    inline void set(int r, int c, T v) {_values[r*_row_stride+c*_col_stride]=v;};
+    inline T get(int r, int c) const {return _values[r*_row_stride+c*_col_stride];};
 
     c_vector<T> *get_row(int row);
     c_vector<T> *get_column(int col);

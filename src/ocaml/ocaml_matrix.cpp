@@ -136,142 +136,170 @@ atcf_m_of_bigarray(value ba, value l, value o, value s)
  */
 extern "C"
 CAMLprim value
-atcf_matrix_create(value r, value c)
+atcf_m_create(value r, value c)
 {
+    fprintf(stderr, "Remove me atcf_m_create\n");
     CAMLparam2(r,c);
+    CAMLlocal1 (result);
+    int nr = Long_val(r);
+    int nc = Long_val(c);
+    int rs = 0;
+    int cs = 0;
+    int vo = 0;
     VERBOSE(stderr,"Create matrix %ld x %ld\n",Long_val(r),Long_val(c));
-    CAMLreturn(caml_atcf_alloc_matrix(new c_matrix<double>(Long_val(r),Long_val(c))));
-}
 
-/*f atcf_matrix_destroy : c_matrix -> unit
- *
- * Destroys a matrix
- *
-extern "C"
-CAMLprim void
-atcf_matrix_destroy(value v)
-{
-    CAMLparam1(v);
-    VERBOSE(stderr,"Destroy matrix %p\n", matrix_of_val(v));
-    delete matrix_of_val(v);
-    matrix_of_val(v) = NULL;
-    CAMLreturn0;
-}
- */
+    t_math_type mt;
+    void *matrix;
 
-/*f atcf_matrix_clone : c_matrix -> NEW c_matrix
- *
- * Clones a matrix
- *
- */
-extern "C"
-CAMLprim value
-atcf_matrix_clone(value v)
-{
-    CAMLparam1(v);
-    VERBOSE(stderr,"Clone matrix %p\n", matrix_of_val(v));
-    CAMLreturn(caml_atcf_alloc_matrix(new c_matrix<double>(*matrix_of_val(v))));
+    if (1) { //(cba->flags & CAML_BA_KIND_MASK)==CAML_BA_FLOAT64) {
+        //double *vb = (double *) Caml_ba_data_val(ba);
+        double *vb = (double *)malloc(sizeof(double)*nr*nc);
+        matrix = (void *)new c_matrix<double>(nr,nc,vb+vo,rs,cs);
+        mt = MT_M_DOUBLE;
+    } else {
+        //float *vb = (float *) Caml_ba_data_val(ba);
+        float *vb = (float *)malloc(sizeof(float)*nr*nc);
+        matrix = (void *)new c_matrix<float>(nr,nc,vb+vo,rs,cs);
+        mt = MT_M_FLOAT;
+    }
+    caml_atcf_alloc_math_obj(&result, mt, &r, matrix); // should be &ba
+    CAMLreturn(result);
 }
 
 /*a Interrogation functions - not effecting the c_matrix
  */
-/*f atcf_matrix_row_vector : c_matrix -> int -> c_vector
+/*f atcf_m_row_vector : c_matrix -> int -> c_vector -> unit
  *
  * Return the nth row-vector of the matrix
  *
  */
 extern "C"
-CAMLprim value
-atcf_matrix_row_vector(value v, value r)
+CAMLprim void
+atcf_m_row_vector(value m, value r, value v)
 {
-    CAMLparam2(v,r);
-    c_matrix<double> *cm = matrix_of_val(v);
-    CAMLreturn(caml_atcf_alloc_vector(cm->get_row(Long_val(r))));
+    CAMLparam3(m,r,v);
+    t_math_obj *mm = math_obj_of_val(m);
+    t_math_obj *mv = math_obj_of_val(v);
+    if (math_obj_of_double(mm)) {
+        mm->ptr.md->get_row(Long_val(r), mv->ptr.vd);
+    } else {
+        mm->ptr.mf->get_row(Long_val(r), mv->ptr.vf);
+    }
+    CAMLreturn0;
 }
 
-/*f atcf_matrix_col_vector : c_matrix -> int -> c_vector
+/*f atcf_m_col_vector : c_matrix -> int -> c_vector
  *
  * Return the nth col-vector of the matrix
  *
  */
 extern "C"
-CAMLprim value
-atcf_matrix_col_vector(value v, value r)
+CAMLprim void
+atcf_m_col_vector(value m, value r, value v)
 {
-    CAMLparam2(v,r);
-    c_matrix<double> *cm = matrix_of_val(v);
-    CAMLreturn(caml_atcf_alloc_vector(cm->get_column(Long_val(r))));
+    CAMLparam3(m,r,v);
+    t_math_obj *mm = math_obj_of_val(m);
+    t_math_obj *mv = math_obj_of_val(v);
+    if (math_obj_of_double(mm)) {
+        mm->ptr.md->get_column(Long_val(r), mv->ptr.vd);
+    } else {
+        mm->ptr.mf->get_column(Long_val(r), mv->ptr.vf);
+    }
+    CAMLreturn0;
 }
 
-/*f atcf_matrix_nrows : c_matrix -> int
+/*f atcf_m_nrows : c_matrix -> int
  *
  * Return the number of rows in the matrix
  *
  */
-FN_C_TO_INT(matrix, nrows)
+FN_MO_C_TO_INT(m, nrows)
 
-/*f atcf_matrix_ncols : c_matrix -> int
+/*f atcf_m_ncols : c_matrix -> int
  *
  * Return the number of rows in the matrix
  *
  */
-FN_C_TO_INT(matrix, ncols)
+FN_MO_C_TO_INT(m, ncols)
 
 /*a Setting functions */
-FN_C_TO_UNIT(matrix, set_identity)
-FN_C_INT_INT_FLOAT_TO_UNIT(matrix, set)
+FN_MO_C_TO_UNIT(m, set_identity)
+FN_MO_C_INT_INT_FLOAT_TO_UNIT(m, set)
 
-/*f atcf_matrix_assign
+/*f atcf_m_assign
   Assign value to be that of matrix m1
  */
 extern "C"
 CAMLprim void
-atcf_matrix_assign(value m, value m1)
+atcf_m_assign(value m, value m1)
 {
     CAMLparam2(m, m1);
-    (*matrix_of_val(m)) = *matrix_of_val(m1);
+    t_math_obj *mm = math_obj_of_val(m);
+    t_math_obj *mm1 = math_obj_of_val(m1);
+    if (math_obj_of_double(mm)) {
+        mm->ptr.md->scale(0);
+        mm->ptr.md->add_scaled(*mm1->ptr.md,1);
+    } else {
+        mm->ptr.mf->scale(0);
+        mm->ptr.mf->add_scaled(*mm1->ptr.mf,1);
+    }
     CAMLreturn0;
 }
 
-/*f atcf_matrix_assign_m_m
+/*f atcf_m_assign_m_m
   Assign value to be that of matrix m applied to other vector v2
  */
 extern "C"
 CAMLprim void
-atcf_matrix_assign_m_m(value m, value m1, value m2)
+atcf_m_assign_m_m(value m, value m1, value m2)
 {
     CAMLparam3(m, m1, m2);
-    matrix_of_val(m)->multiply(*matrix_of_val(m1),*matrix_of_val(m2));
+    t_math_obj *mm = math_obj_of_val(m);
+    t_math_obj *mm1 = math_obj_of_val(m1);
+    t_math_obj *mm2 = math_obj_of_val(m2);
+    if (math_obj_of_double(mm)) {
+        mm->ptr.md->multiply(*mm1->ptr.md,*mm2->ptr.md);
+    } else {
+        mm->ptr.mf->multiply(*mm1->ptr.mf,*mm2->ptr.mf);
+    }
     CAMLreturn0;
 }
 
 /*a Operation functions */
-/*f apply : c_matrix -> c_vector -> NEW c_vector
+/*f atcf_m_apply : c_matrix -> c_vector -> NEW c_vector
  *
  * Function to perform m * v -> new vector
  *
  */
 extern "C"
-CAMLprim value
-atcf_matrix_apply(value m, value v) {
-    CAMLparam2(m, v);
-    CAMLreturn(caml_atcf_alloc_vector(matrix_of_val(m)->apply(*vector_of_val(v))));
+CAMLprim void
+atcf_m_apply(value m, value v, value rv) {
+    CAMLparam3(m, v, rv);
+    t_math_obj *mm  = math_obj_of_val(m);
+    t_math_obj *mv  = math_obj_of_val(v);
+    t_math_obj *mrv = math_obj_of_val(rv);
+    if (math_obj_of_double(mm)) {
+        mm->ptr.md->apply(*mv->ptr.vd, *mrv->ptr.vd);
+    } else {
+        mm->ptr.mf->apply(*mv->ptr.vf, *mrv->ptr.vf);
+    }
+    CAMLreturn0;
 }
 
 /*f scale : c_matrix -> float -> unit */
-FN_C_FLOAT_TO_UNIT(matrix, scale)
+FN_MO_C_FLOAT_TO_UNIT(m, scale)
 
 /*f add_scaled : c_matrix -> c_matrix -> float -> unit */
-FN_C_CR_FLOAT_TO_UNIT(matrix, add_scaled)
+FN_MO_C_CR_FLOAT_TO_UNIT(m, add_scaled)
 
 /*f transpose_data
  */
-FN_C_TO_UNIT(matrix, transpose_data)
+FN_MO_C_TO_UNIT(m, transpose_data)
 
 /*f lup_get_l, lup_get_u
  */
-FN_C_TO_UNIT(matrix, lup_get_l)
-FN_C_TO_UNIT(matrix, lup_get_u)
+FN_MO_C_TO_UNIT(m, lup_get_l)
+FN_MO_C_TO_UNIT(m, lup_get_u)
 
 /*f assign_from_q : c_matrix -> c_quaternion
  *
@@ -286,19 +314,27 @@ atcf_matrix_assign_from_q(value m, value q) {
     CAMLreturn0;
 }
 
-/*f lup_decompose : c_matrix -> c_vector
+/*f lup_decompose : c_matrix -> c_vector -> unit
  *
  * Function to perform m->lup_decompose -> new vector
  *
  */
 extern "C"
-CAMLprim value
-atcf_matrix_lup_decompose(value m) {
-    CAMLparam1(m);
-    c_vector<double> *v;
-    if (matrix_of_val(m)->lup_decompose(&v)) { // raise exception
+CAMLprim void
+atcf_m_lup_decompose(value m, value v) {
+    CAMLparam2(m, v);
+    t_math_obj *mm  = math_obj_of_val(m);
+    t_math_obj *mv  = math_obj_of_val(v);
+    if (math_obj_of_double(mm)) {
+        if (mm->ptr.md->lup_decompose(&mv->ptr.vd)) { // raise exception
+            caml_failwith("Failed to decompose");
+        }
+    } else {
+        if (mm->ptr.mf->lup_decompose(&mv->ptr.vf)) { // raise exception
+            caml_failwith("Failed to decompose");
+        }
     }
-    CAMLreturn(caml_atcf_alloc_vector(v));
+    CAMLreturn0;
 }
 
 /*f lup_invert : c_matrix -> unit, in-place inversion
@@ -308,19 +344,26 @@ atcf_matrix_lup_decompose(value m) {
  */
 extern "C"
 CAMLprim void
-atcf_matrix_lup_invert(value m) {
+atcf_m_lup_invert(value m) {
     CAMLparam1(m);
-    c_vector<double> *v;
-    if (matrix_of_val(m)->lup_decompose(&v)) { // raise exception
+    t_math_obj *mm  = math_obj_of_val(m);
+    if (math_obj_of_double(mm)) {
+        c_vector<double> *v = NULL;
+        if (mm->ptr.md->lup_decompose(&v)) { // raise exception
+            caml_failwith("Failed to invert");
+        } else {
+            mm->ptr.md->lup_invert(*v);
+            delete v;
+        }
+    } else {
+        c_vector<float> *v = NULL;
+        if (mm->ptr.mf->lup_decompose(&v)) { // raise exception
+            caml_failwith("Failed to invert");
+        } else {
+            mm->ptr.mf->lup_invert(*v);
+            delete v;
+        }
     }
-    matrix_of_val(m)->lup_invert(*v);
-    delete v;
     CAMLreturn0;
 }
 
-/*f lup_inverse : c_matrix -> c_matrix
- *
- * Function to perform m->lup_inverse, and return the new matrix
- *
- */
-FN_C_TO_UNIT(matrix, lup_inverse)

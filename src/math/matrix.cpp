@@ -380,7 +380,29 @@ c_matrix<T> &c_matrix<T>::transpose_data(void)
 /*f c_matrix<T>::get_row
  */
 template <typename T>
-c_vector<T> *c_matrix<T>::get_row(int row)
+void c_matrix<T>::get_row(int row, c_vector<T> *v) const
+{
+    int maxc = _ncols>v->length() ? v->length() : _ncols;
+    for (int c=0; c<maxc; c++) {
+        v->set(c,MATRIX_VALUE(row,c));
+    }
+}
+
+/*f c_matrix<T>::get_column
+ */
+template <typename T>
+void c_matrix<T>::get_column(int col, c_vector<T> *v) const
+{
+    int maxr = _nrows>v->length() ? v->length() : _nrows;
+    for (int r=0; r<maxr; r++) {
+        v->set(r,MATRIX_VALUE(r,col));
+    }
+}
+
+/*f c_matrix<T>::get_row
+ */
+template <typename T>
+c_vector<T> *c_matrix<T>::get_row(int row) const
 {
     c_vector<T> *v = new c_vector<T>(_ncols);
     for (int c=0; c<_ncols; c++) {
@@ -392,7 +414,7 @@ c_vector<T> *c_matrix<T>::get_row(int row)
 /*f c_matrix<T>::get_column
  */
 template <typename T>
-c_vector<T> *c_matrix<T>::get_column(int col)
+c_vector<T> *c_matrix<T>::get_column(int col) const
 {
     c_vector<T> *v = new c_vector<T>(_nrows);
     for (int r=0; r<_nrows; r++) {

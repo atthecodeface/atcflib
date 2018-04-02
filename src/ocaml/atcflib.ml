@@ -146,26 +146,25 @@ external v_angle_axis_to : c_vector -> c_vector -> c_vector -> (c_vector * float
 
 (*b matrix functions *)
 external m_of_bigarray  : t_ba_doubles -> o:int -> dims:int array -> c_matrix = "atcf_m_of_bigarray"
-external m_create  : int -> int -> c_matrix   = "atcf_matrix_create"
-external m_clone   : c_matrix -> c_matrix   = "atcf_matrix_clone"
-external m_nrows   : c_matrix -> int = "atcf_matrix_nrows"
-external m_ncols   : c_matrix -> int = "atcf_matrix_ncols"
-external m_row_vector  : c_matrix -> int -> c_vector  = "atcf_matrix_row_vector"
-external m_col_vector  : c_matrix -> int -> c_vector  = "atcf_matrix_col_vector"
-external m_apply   : c_matrix -> c_vector -> c_vector  = "atcf_matrix_apply"
-external m_identity      : c_matrix -> unit  = "atcf_matrix_set_identity"
-external m_assign        : c_matrix -> c_matrix -> unit  = "atcf_matrix_assign"
-external m_assign_m_m    : c_matrix -> c_matrix -> c_matrix -> unit  = "atcf_matrix_assign_m_m"
+external m_create  : int -> int -> c_matrix   = "atcf_m_create"
+(*external m_clone   : c_matrix -> c_matrix   = "atcf_matrix_clone"*)
+external m_nrows   : c_matrix -> int = "atcf_m_nrows"
+external m_ncols   : c_matrix -> int = "atcf_m_ncols"
+external m_row_vector  : c_matrix -> int -> c_vector -> unit  = "atcf_m_row_vector"
+external m_col_vector  : c_matrix -> int -> c_vector -> unit  = "atcf_m_col_vector"
+external m_apply   : c_matrix -> c_vector -> c_vector -> unit = "atcf_m_apply"
+external m_identity      : c_matrix -> unit  = "atcf_m_set_identity"
+external m_assign        : c_matrix -> c_matrix -> unit  = "atcf_m_assign"
+external m_assign_m_m    : c_matrix -> c_matrix -> c_matrix -> unit  = "atcf_m_assign_m_m"
 external m_assign_from_q : c_matrix -> c_quaternion -> unit  = "atcf_matrix_assign_from_q"
-external m_set           : c_matrix -> int -> int -> float -> unit  = "atcf_matrix_set"
-external m_transpose     : c_matrix -> unit  = "atcf_matrix_transpose_data"
-external m_scale         : c_matrix -> float -> unit  = "atcf_matrix_scale"
-external m_add_scaled    : c_matrix -> c_matrix -> float -> unit  = "atcf_matrix_add_scaled"
-external m_lup_decompose : c_matrix -> c_vector = "atcf_matrix_lup_decompose"
-external m_lup_get_l     : c_matrix -> unit = "atcf_matrix_lup_get_l"
-external m_lup_get_u     : c_matrix -> unit = "atcf_matrix_lup_get_u"
-external m_lup_invert    : c_matrix -> unit  = "atcf_matrix_lup_invert"
-external m_lup_inverse   : c_matrix -> c_matrix  = "atcf_matrix_lup_inverse"
+external m_set           : c_matrix -> int -> int -> float -> unit  = "atcf_m_set"
+external m_transpose     : c_matrix -> unit  = "atcf_m_transpose_data"
+external m_scale         : c_matrix -> float -> unit  = "atcf_m_scale"
+external m_add_scaled    : c_matrix -> c_matrix -> float -> unit  = "atcf_m_add_scaled"
+external m_lup_decompose : c_matrix -> c_vector -> unit = "atcf_m_lup_decompose"
+external m_lup_get_l     : c_matrix -> unit = "atcf_m_lup_get_l"
+external m_lup_get_u     : c_matrix -> unit = "atcf_m_lup_get_u"
+external m_lup_invert    : c_matrix -> unit  = "atcf_m_lup_invert"
 
 (*b quaternion functions *)
 external q_create  : unit -> c_quaternion   = "atcf_quaternion_create"
@@ -286,14 +285,14 @@ module Matrix =
        m_of_bigarray ba offset [|ncols; cs; nrows; rs|]
 
      let create cm = cm
-     let copy   m = create (m_clone m)
-     let apply  m v = Vector.create (m_apply m v)
+(*     let copy   m = create (m_clone m)*)
+     let apply  m v1 v = m_apply m v1 v; v
      let set r c f m     = m_set m r c f ; m
      let identity m      = m_identity m ; m
      let nrows m         = m_nrows m
      let ncols m         = m_ncols m
-     let row_vector m n  = Vector.create(m_row_vector m n)
-     let col_vector m n  = Vector.create(m_col_vector m n)
+     let row_vector m n v = m_row_vector m n v; v
+     let col_vector m n v = m_col_vector m n v; v
      let scale f m      = (m_scale m f) ; m
      let transpose m     = (m_transpose m) ; m
      let add_scaled f m2 m = (m_add_scaled m m2 f) ; m
@@ -301,18 +300,18 @@ module Matrix =
      let assign m1 m        = m_assign m  m1 ; m
      let assign_m_m m1 m2 m = m_assign_m_m m m1 m2 ; m
      (*let assign_from_q q m = m_assign_from_q m q ; m*)
-     let lup_decompose m = Vector.create(m_lup_decompose m)
+     let lup_decompose m v = m_lup_decompose m v
      let lup_get_l m     = (m_lup_get_l m)  ; m
      let lup_get_u m     = (m_lup_get_u m)  ; m
      let lup_invert m    = (m_lup_invert m) ; m
-     let lup_inverse m   = create(m_lup_inverse m)
      let make r c        = create (m_create r c)
      let matrix_x_matrix m1 m2 = assign_m_m (make (nrows m1) (ncols m2)) m1 m2
-     let str m = let rec show_row r l s =
+     let str m = let tmp = Vector.make (m_ncols m) in
+                 let rec show_row r l s =
                    if r==l then s
                    else
                      let f acc c = (Printf.sprintf "%s %f " acc c) in
-                     show_row (r+1) l (Array.fold_left f s (v_coords (m_row_vector m r)))
+                     show_row (r+1) l (Array.fold_left f s (v_coords (m_row_vector m r tmp; tmp)))
                    in
                      show_row 0 (m_nrows m) ""
 end

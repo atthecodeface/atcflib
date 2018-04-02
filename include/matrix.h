@@ -75,8 +75,10 @@ public:
     inline void set(int r, int c, T v) {_values[r*_row_stride+c*_col_stride]=v;};
     inline T get(int r, int c) const {return _values[r*_row_stride+c*_col_stride];};
 
-    c_vector<T> *get_row(int row);
-    c_vector<T> *get_column(int col);
+    void get_row(int row, c_vector<T> *result) const;
+    void get_column(int col, c_vector<T> *result) const;
+    c_vector<T> *get_row(int row) const;
+    c_vector<T> *get_column(int col) const;
     c_matrix &set_identity(void);
     c_matrix &transpose_data(void);
     c_matrix &transpose_stride(void);

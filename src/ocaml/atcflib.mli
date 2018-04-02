@@ -248,7 +248,7 @@ module rec
            (** Matrix.of_bigarray makes a new matrix using a
             slice of the big array *)
 
-           val copy : t -> t
+           (* val copy : t -> t *)
            (** Matrix.copy m creates a copy of matrix m and returns it *)
 
            val set : int -> int -> float -> t -> t
@@ -268,13 +268,15 @@ module rec
            val ncols : t -> int
            (** Matrix.ncols returns the number of columns in the matrix. *)
 
-           val row_vector : t -> int -> Vector.t
-           (** Matrix.row_vector m n returns a new Vector.t
-           corresponding to the n'th row of the matrix. *)
+           val row_vector : t -> int -> Vector.t -> Vector.t
+           (** Matrix.row_vector m n fills a Vector.t
+           corresponding to the n'th row of the matrix.
+           It returns the vector *)
 
-           val col_vector : t -> int -> Vector.t
-           (** Matrix.col_vector m n returns a new Vector.t
-           corresponding to the n'th column of the matrix. *)
+           val col_vector : t -> int -> Vector.t -> Vector.t
+           (** Matrix.col_vector m n fills a Vector.t
+           corresponding to the n'th column of the matrix.
+           It returns the vector *)
 
            val scale : float -> t -> t
            (** Matrix.scale f m scales (multiplies) all the elemnts of
@@ -290,11 +292,11 @@ module rec
            m, and sets m to the result; this permits add and
            subtract. It returns the matrix m. *)
 
-           val apply : t -> Vector.t -> Vector.t
-           (** Matrix.apply m v multiplies Vector v by the matrix m
+           val apply : t -> Vector.t -> Vector.t -> Vector.t
+           (** Matrix.apply m v1 v multiplies Vector v1 by the matrix m
            (which must have the same length as m has columns) and
-           returns a {e new} Vector.t with the result (of length
-           m.ncols) *)
+           puts the result in v (of length
+           m.ncols). It returns v *)
 
            val assign : t -> t -> t
            (** Matrix.assign m1 m assigns m to be the value of m1. It returns m. *)
@@ -309,7 +311,7 @@ module rec
            the top level 3x3 being a rotation that matches the
            quaternion. *)
 
-           val lup_decompose : t -> Vector.t
+           val lup_decompose : t -> Vector.t -> unit
            (** Matrix.lup_decompose m performs a lower-upper-pivot
            decomposition (partial pivoting) of a square N-dimensional
            matrix m; that is, it finds L, U and P such that M = L * U
@@ -344,8 +346,9 @@ module rec
            (** Matrix.lup_invert performs an LUP decomposition on the
            matrix, using this to determine the inverse; the matrix is
            then set to this inverse. It returns the matrix. *)
-           val lup_inverse : t -> t
-           (** Matrix.lup_invert performs an LUP decomposition on the
+
+           (* val lup_inverse : t -> t*)
+           (** Matrix.lup_inverse performs an LUP decomposition on the
            matrix, using this to determine the inverse; a new matrix
            is then created and set to this inverse. It returns this
            new matrix. *)

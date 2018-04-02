@@ -266,14 +266,14 @@ FN_MO_C_TO_UNIT(v,normalize)
  */
 FN_MO_C_CR_TO_FLOAT(v,dot_product)
 
-/*f atcf_vector_cross_product3 : c_vector -> c_vector -> NEW c_vector
+/*f atcf_vector_cross_product3 : c_vector -> c_vector -> c_vector -> unit
  *
  * NEW vector = v0 x v1, for length 3 vectors
  *
  */
-//FN_C_CR_TO_C(vector,cross_product3)
+FN_MO_C_CR_CR_TO_UNIT(v,cross_product3)
 
-/*f atcf_vector_angle_axis_to3 : c_vector -> c_vector -> (NEW c_vector * float * float)
+/*f atcf_vector_angle_axis_to3 : c_vector -> c_vector -> c_vector -> (c_vector * float * float)
  *
  * Return the axis vector perpendicular to the two vectors, and the
  * cosine and sine of the angle require to rotate from the first to
@@ -282,16 +282,16 @@ FN_MO_C_CR_TO_FLOAT(v,dot_product)
  */
 extern "C"
 CAMLprim value 
-atcf_vector_angle_axis_to3(value v, value v2, value rv)
+atcf_v_angle_axis_to3(value v1, value v2, value rv)
 {
-    CAMLparam3(v,v2, rv);
+    CAMLparam3(v1,v2, rv);
     CAMLlocal1(result);
-    if (math_obj_validate(v, MT_V_DOUBLE, 3, 3) &&
+    if (math_obj_validate(v1, MT_V_DOUBLE, 3, 3) &&
         math_obj_validate(v2, MT_V_DOUBLE, 3, 3) &&
         math_obj_validate(rv, MT_V_DOUBLE, 3, 3)) {
         result = caml_alloc_tuple(3);
         double cos, sin;
-        (void) vector_of_val(v)->angle_axis_to_v3(*vector_of_val(v2), &cos, &sin, vector_of_val(rv));
+        (void) vector_of_val(v1)->angle_axis_to_v3(*vector_of_val(v2), &cos, &sin, vector_of_val(rv));
         Store_field(result,0,rv);
         Store_field(result,1,caml_copy_double(cos));
         Store_field(result,2,caml_copy_double(sin));

@@ -304,12 +304,11 @@ T c_vector<T>::dot_product(const c_vector<T> &other) const
 /*f c_vector<T>::cross_product3
  */
 template <typename T>
-c_vector<T> *c_vector<T>::cross_product3(const c_vector<T> &other, c_vector<T> *result) const
+void c_vector<T>::cross_product3( const c_vector<T> &other, c_vector<T> &result) const
 {
-    OCOORD(*result,0) = COORD(1)*OCOORD(other,2) - COORD(2)*OCOORD(other,1);
-    OCOORD(*result,1) = COORD(2)*OCOORD(other,0) - COORD(0)*OCOORD(other,2);
-    OCOORD(*result,2) = COORD(0)*OCOORD(other,1) - COORD(1)*OCOORD(other,0);
-    return result;
+    OCOORD(result,0) = COORD(1)*OCOORD(other,2) - COORD(2)*OCOORD(other,1);
+    OCOORD(result,1) = COORD(2)*OCOORD(other,0) - COORD(0)*OCOORD(other,2);
+    OCOORD(result,2) = COORD(0)*OCOORD(other,1) - COORD(1)*OCOORD(other,0);
 }
 
 /*f c_vector<T>::cross_product3
@@ -318,21 +317,21 @@ template <typename T>
 c_vector<T> *c_vector<T>::cross_product3(const c_vector<T> &other) const
 {
     c_vector<T> *result=new c_vector<T>(_length);
-    return cross_product3(other, result);
+    cross_product3(other, *result);
+    return result;
 }
 
 /*f c_vector<T>::angle_axis_to_v3
  */
 template <typename T>
-c_vector<T> *c_vector<T>::angle_axis_to_v3(const c_vector<T> &other, T *cos_angle, T *sin_angle, c_vector<T> *result) const
+c_vector<T> *c_vector<T>::angle_axis_to_v3(const c_vector<T> &other, T *cos_angle, T *sin_angle, c_vector<T> *axis) const
 {
     T tl, ol;
     tl = this->modulus();
     ol = other.modulus();
 
     //fprintf(stderr,"tl,ol: %lf, %lf\n",tl, ol);
-    c_vector<T> *axis=new c_vector<T>(3);
-    cross_product3(other, axis);
+    cross_product3(other, *axis);
     *axis /= (tl*ol);
     //fprintf(stderr,"axb:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
     *cos_angle = dot_product(other) / (tl*ol);
@@ -348,20 +347,8 @@ c_vector<T> *c_vector<T>::angle_axis_to_v3(const c_vector<T> &other, T *cos_angl
 template <typename T>
 c_vector<T> *c_vector<T>::angle_axis_to_v3(const c_vector<T> &other, T *cos_angle, T *sin_angle) const
 {
-    T tl, ol;
-    tl = this->modulus();
-    ol = other.modulus();
-
-    //fprintf(stderr,"tl,ol: %lf, %lf\n",tl, ol);
-    c_vector<T> *axis = cross_product3(other);
-    *axis /= (tl*ol);
-    //fprintf(stderr,"axb:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
-    *cos_angle = dot_product(other) / (tl*ol);
-    *sin_angle = axis->modulus();
-    //fprintf(stderr,"angles:%lf,%lf\n",*cos_angle,*sin_angle);
-    axis->normalize();
-    //fprintf(stderr,"axis:%lf,%lf,%lf\n",axis->_coords[0],axis->_coords[1],axis->_coords[2]);
-    return axis;
+    c_vector<T> *result=new c_vector<T>(3);
+    return angle_axis_to_v3(other, cos_angle, sin_angle, result);
 }
 
 /*f c_vector<T>::angle_axis_to_v3 (to quaternion)

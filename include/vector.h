@@ -75,8 +75,8 @@ public:
     c_vector<T> &scale(T scale);
     c_vector<T> &normalize(void);
     T dot_product(const c_vector<T> &other) const;
+    void cross_product3(const c_vector<T> &other, c_vector<T> &result) const;
     c_vector<T> *cross_product3(const c_vector<T> &other) const;
-    c_vector<T> *cross_product3(const c_vector<T> &other, c_vector<T> *result) const;
 
     // axis_angle_to_v works for 3-vectors.
     // It creates a new vector to be the axis of rotation required to

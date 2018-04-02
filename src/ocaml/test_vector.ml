@@ -63,6 +63,7 @@ let xy3 = Vector.normalize (Vector.make3 1.0 1.0 0.0)
 let xz3 = Vector.normalize(Vector.make3 1.0 0.0 1.0)
 let yz3 = Vector.normalize(Vector.make3 0.0 1.0 1.0)
 let zero3 = (Vector.make3 0.0 0.0 0.0)
+let tmp3 = (Vector.make3 0.0 0.0 0.0)
 let rot30_z = 
   Matrix.(identity (make 3 3) |>
             set 0 0 c30 |>
@@ -294,54 +295,54 @@ let test_suite_vector_vector3 =
          assert_equal_float "Commutative" (Vector.dot_product v1 v2) (Vector.dot_product v2 v1);
          assert_equal_float "Result"      (Vector.dot_product v1 v2) 0.0;
       ) ;
-(*      ("cross_product3_0" >::
+      ("cross_product3_0" >::
          fun ctxt ->
-         assert_vector (Vector.cross_product3 x3 y3) z3 ;
-         assert_vector (Vector.cross_product3 y3 z3) x3 ;
-         assert_vector (Vector.cross_product3 z3 x3) y3 ;
+         assert_vector (Vector.assign_cross_product3 x3 y3 tmp3) z3 ;
+         assert_vector (Vector.assign_cross_product3 y3 z3 tmp3) x3 ;
+         assert_vector (Vector.assign_cross_product3 z3 x3 tmp3) y3 ;
       ) ;
       ("cross_product3_1" >::
          fun ctxt ->
-         assert_vector Vector.(cross_product3 x3 (scale (-. 1.0) (copy z3))) y3 ;
-         assert_vector Vector.(cross_product3 y3 (scale (-. 1.0) (copy x3))) z3 ;
-         assert_vector Vector.(cross_product3 z3 (scale (-. 1.0) (copy y3))) x3 ;
+         assert_vector Vector.(assign_cross_product3 x3 (scale (-. 1.0) (copy z3)) tmp3) y3 ;
+         assert_vector Vector.(assign_cross_product3 y3 (scale (-. 1.0) (copy x3)) tmp3) z3 ;
+         assert_vector Vector.(assign_cross_product3 z3 (scale (-. 1.0) (copy y3)) tmp3) x3 ;
       ) ;
       ("angle_axis3_0" >::
          fun ctxt ->
-         let (v,c,s) = Vector.angle_axis_to3 x3 y3 in
+         let (v,c,s) = Vector.angle_axis_to3 x3 y3 tmp3 in
          assert_vector v z3;
          assert_equal_float "cos" c 0.0;
          assert_equal_float "sin" s 1.0;
       ) ;
       ("angle_axis3_1" >::
          fun ctxt ->
-         let (v,c,s) = Vector.angle_axis_to3 x3 z3 in
+         let (v,c,s) = Vector.angle_axis_to3 x3 z3 tmp3 in
          assert_vector v Vector.(scale (-. 1.0) (copy y3)) ;
          assert_equal_float "cos" c 0.0;
          assert_equal_float "sin" s 1.0;
       ) ;
       ("angle_axis3_2" >::
          fun ctxt ->
-         let (v,c,s) = Vector.angle_axis_to3 x3 xy3 in
+         let (v,c,s) = Vector.angle_axis_to3 x3 xy3 tmp3 in
          assert_vector v z3 ;
          assert_equal_float "cos" c rrt2;
          assert_equal_float "sin" s rrt2;
       ) ;
       ("angle_axis3_3" >::
          fun ctxt ->
-         let (v,c,s) = Vector.angle_axis_to3 xy3 y3 in
+         let (v,c,s) = Vector.angle_axis_to3 xy3 y3 tmp3 in
          assert_vector v z3;
          assert_equal_float "cos" c rrt2;
          assert_equal_float "sin" s rrt2;
       ) ;
       ("angle_axis3_4" >::
          fun ctxt ->
-         let (v,c,s) = Vector.angle_axis_to3 xy3 z3 in
+         let (v,c,s) = Vector.angle_axis_to3 xy3 z3 tmp3 in
          assert_equal_float "cos" c 0.0;
          assert_equal_float "sin" s 1.0;
          assert_coords v [|rrt2 ; n_rrt2 ; 0.0|]
       ) ;
- *)    ]
+     ]
 
 (*b Vector bigaray slice tests *)
 let test_suite_vector_bigarray_slice = 

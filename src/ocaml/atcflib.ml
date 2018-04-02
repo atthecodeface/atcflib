@@ -141,10 +141,8 @@ external v_set     : c_vector -> int -> float -> unit  = "atcf_v_set"
 external v_scale   : c_vector -> float -> unit  = "atcf_v_scale"
 external v_add_scaled    : c_vector -> c_vector -> float -> unit  = "atcf_v_add_scaled"
 external v_dot_product   : c_vector -> c_vector -> float  = "atcf_v_dot_product"
-(*
-external v_cross_product : c_vector -> c_vector -> c_vector  = "atcf_v_cross_product3"
-external v_angle_axis_to : c_vector -> c_vector -> (c_vector * float * float)  = "atcf_v_angle_axis_to3"
- *)
+external v_cross_product : c_vector -> c_vector -> c_vector -> unit  = "atcf_v_cross_product3"
+external v_angle_axis_to : c_vector -> c_vector -> c_vector -> (c_vector * float * float)  = "atcf_v_angle_axis_to3"
 
 (*b matrix functions *)
 external m_create  : int -> int -> c_matrix   = "atcf_matrix_create"
@@ -240,16 +238,19 @@ end
 type t_vector = c_vector
 module Vector =
 struct
+    exception NotImplemented
     type t = t_vector
      let coords      v        = v_coords v
      let length      v        = v_length v
      let get         v n      = v_get v n
      let set         n f v    = v_set v n f ; v
      let assign      v2 v     = v_assign v v2 ; v
+     let of_bigarray ?length:(length=(-1)) ?offset:(offset=0) ?stride:(stride=1) ba =
+       v_create_bigarray_slice ba length offset stride
      let make        n  = 
       let ba = Bigarray.(Array1.create float64 c_layout n) in
       v_create_bigarray_slice ba (-1) (-1) (-1)
-    let create _ = make 1
+    let create _ = raise NotImplemented
     let copy        v =
       let nv = make (length v) in
       assign v nv
@@ -265,15 +266,12 @@ struct
      (*let assign_m_v  m v2 v   = v_assign_m_v v m.Matrix.cm v2 ; v
      let assign_q_as_rotation v q = (v_assign_q v q.Quaternion.cq)*)
      (*let apply_q     q v      = (v_apply_q v q.Quaternion.cq) ; v*)
-(*
-     let cross_product3  v v2 = Vector.create(v_cross_product v v2)
-     let angle_axis_to3  v v2 = let (va,c,s) = v_angle_axis_to v v2 in (Vector.create(va),c,s)
- *)
+     let assign_cross_product3  v1 v2 v = v_cross_product v1 v2 v; v
+     let angle_axis_to3   v1 v2 v = v_angle_axis_to v1 v2 v
      let make2       c0 c1        = make 2 |> set 0 c0 |> set 1 c1
      let make3       c0 c1 c2     = make 3 |> set 0 c0 |> set 1 c1 |> set 2 c2
      let make4       c0 c1 c2 c3  = make 4 |> set 0 c0 |> set 1 c1 |> set 2 c2 |> set 3 c3
      (*let matrix_x_vector      m v = assign_m_v m v (copy v)*)
-     let of_bigarray ?length:(length=(-1)) ?offset:(offset=0) ?stride:(stride=1) ba = v_create_bigarray_slice ba length offset stride
      let str        v         =
        let f c s = (Printf.sprintf "%f %s" c s) in
        Array.fold_right f (v_coords v) ""

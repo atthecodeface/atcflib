@@ -203,16 +203,15 @@ module rec
         together (i.e. v.x*v2.x + v.y*v2.y + ...). It requires the two
         vectors to be of the same length. *)
 
-        (* val cross_product3   : t -> t -> t*)
-        (** Vector.cross_product3 v v2 creates a {e new} Vector.t
-        that is the 3-dimensional vector product (outer product) of
-        two three dimensional vectors. *)
+        val assign_cross_product3   : t -> t -> t -> t
+        (** Vector.assign_cross_product3 v1 v2 v sets v to be
+        the 3-dimensional vector product (outer product) of
+        two three dimensional vectors v1 x v2. *)
 
-        (* val angle_axis_to3   : t -> t -> t * float * float*)
-        (** Vector.angle_axis_to3 v v2 creates a {e new} axis
-        Vector.t that is the 3-dimensional vector is the cross
-        product (outer product) of two three dimensional vectors, and
-        it calculates the (cosine, sine) of the angle of rotation
+        val angle_axis_to3   : t -> t -> t -> t * float * float
+        (** Vector.angle_axis_to3 v1 v2 v sets v to be the 3-dimensional
+        vector is the cross product (outer product) of two three dimensional
+        vectors, and it calculates the (cosine, sine) of the angle of rotation
         around the axis vector. It returns (axis, cosine, sine) as a
         tuple. *)
 

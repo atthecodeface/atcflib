@@ -146,6 +146,23 @@ math_obj_validate( value v, t_math_type mt, ...);
         CAMLreturn0;                                                    \
     }
 
+/*f FN_MO_C_CR_CR_TO_UNIT : ct -> ct -> ct -> unit
+ *
+ * Function to perform ct->fn(*ct) with no return value
+ *
+ */
+#define FN_MO_C_CR_CR_TO_UNIT(st, fn)                                           \
+    extern "C" CAMLprim void atcf_ ## st ## _ ## fn (value v, value v2, value v3) { \
+        CAMLparam3(v, v2, v3);                                             \
+        t_math_obj *m = math_obj_of_val(v); \
+        t_math_obj *m2 = math_obj_of_val(v2); \
+        t_math_obj *m3 = math_obj_of_val(v3); \
+        VERBOSE(stderr,#fn " of " #st " %p %p %p\n", m, m2, m3);           \
+        if (math_obj_of_double(m)) { m->ptr.st ## d->fn(*m2->ptr.st ## d, *m3->ptr.st ## d); } \
+        else  { m->ptr.st ## f->fn(*m2->ptr.st ## f, *m3->ptr.st ## f ); }                \
+        CAMLreturn0;                                                    \
+    }
+
 /*f FN_MO_C_INT_FLOAT_TO_UNIT : ct -> int -> float -> unit
  *
  * Function to perform ct->fn(int,double) with no return value

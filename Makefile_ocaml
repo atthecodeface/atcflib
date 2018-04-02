@@ -1,3 +1,18 @@
+all:
+	@echo "Use 'make ocaml_build' to build the library"
+	@echo "Use 'make ocaml_install' to build and install the library using opam"
+	@echo "Use 'make ocaml_top' to build a toplevel and run it"
+
+ocaml_top:
+	jbuilder utop src/top
+
+clean: ocaml_clean
+ocaml_clean:
+	jbuilder clean
+
+ocaml_test:
+	jbuilder build @run_test_math
+
 ocaml_build: $(C_LIBRARIES)
 	jbuilder build
 

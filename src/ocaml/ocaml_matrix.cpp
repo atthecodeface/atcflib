@@ -37,8 +37,8 @@
 #include <caml/intext.h>
 #include <caml/threads.h>
 
-#include <atcf/vector.h>
-#include <atcf/matrix.h>
+#include "vector.h"
+#include "matrix.h"
 #include "ocaml_atcflib.h"
 
 #include <stdio.h>

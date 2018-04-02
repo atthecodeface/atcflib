@@ -8,6 +8,8 @@ type c_quaternion
 type t_timer
 type c_bunzip
 type bz_uint8_array = (int, int8_unsigned_elt, c_layout) Bigarray.Array1.t
+type t_ba_doubles = (float, float64_elt, c_layout) Bigarray.Genarray.t
+type t_ba_floats  = (float, float32_elt, c_layout) Bigarray.Genarray.t
 
 (** The Timer module exposes the atcflib timers, which in turn come
  from sl_timer These are usually used in C modules to time the
@@ -89,18 +91,14 @@ this means that a vector should always be of the correct length for
 the operation being requested of it. A wrapping module could be
 written that would implement these checks, but this module is aimed at
 high performance first.  *)
+(*type t_vector = { cv : c_vector ; ba : t_ba_doubles option }*)
 module rec
     Vector :
       sig
         (** The vector type is an instance of the C++ c_vector class
         *)
-    type t = { cv : c_vector ;
-                    ba : ((float, float64_elt, c_layout) Bigarray.Genarray.t) option }
+    type t
         (*type vector = { cv : c_vector; (. .) }  (.. .)*)
-
-        val create : c_vector -> t
-        (** Vector.create is a private method to create a
-        Vector.t from a c_vector *)
 
         val make             : int -> t
         (** Vector.make n creates a new vector of length n; the length
@@ -119,13 +117,13 @@ module rec
         (** Vector.make4 w x y z is a convenience function to create a
         vector of length 4 with value (w, x, y, z) *)
 
-        val make_slice_array     : (float, float64_elt, c_layout) Bigarray.Genarray.t -> int -> int -> int -> t
-        (** Vector.make_slice_array b n o s makes a new vector using a
+        val of_bigarray  : ?length:int -> ?offset:int -> ?stride:int -> t_ba_doubles -> t
+        (** Vector.of_bigarray b n o s makes a new vector using a
         slice of the big array *)
 
         val copy             : t -> t
         (** Vector.copy creates a copy of a vector, using a new
-        c_vector for the new vector *)
+        c_vector for the new vector. Create a new big array *)
 
         val length           : t -> int
         (** Vector.length returns the length of the vector *)
@@ -170,20 +168,20 @@ module rec
         v2 (effectively v.coords := v2.coords); it requires that v
         have the same length as v2 (which is not checked). It returns v. *)
 
-        val assign_m_v       : Matrix.t -> t -> t -> t
+        (* val assign_m_v       : Matrix.t -> t -> t -> t *)
         (** Vector.assign_m_v m v2 v sets v to be Matrix m * v2; it
         requires that v have the same length as M.nrows, and M.ncols
         is the length of v2 (neither of which is checked). It
         returns v. *)
 
-        val assign_q_as_rotation : t -> Quaternion.t -> float * float
+        (* val assign_q_as_rotation : t -> Quaternion.t -> float * float *)
         (** Vector.assign_q_as_rotation v q assumes q is a unit
         quaternion, and sets v to be the axis of rotation that q
         stresents (in three dimensions), and it returns a tuple of
         (cosine, sine) of the angle of rotation. It requires v to have
         length 3, which is not checked. *)
 
-        val apply_q          : Quaternion.t -> t -> t
+        (* val apply_q          : Quaternion.t -> t -> t *)
         (** Vector.apply_q v q applies q to the vector v, and sets the
         first 3 coordinates of v appropriately. This requires v to be
         of length 3 or more.
@@ -205,12 +203,12 @@ module rec
         together (i.e. v.x*v2.x + v.y*v2.y + ...). It requires the two
         vectors to be of the same length. *)
 
-        val cross_product3   : t -> t -> t
+        (* val cross_product3   : t -> t -> t*)
         (** Vector.cross_product3 v v2 creates a {e new} Vector.t
         that is the 3-dimensional vector product (outer product) of
         two three dimensional vectors. *)
 
-        val angle_axis_to3   : t -> t -> t * float * float
+        (* val angle_axis_to3   : t -> t -> t * float * float*)
         (** Vector.angle_axis_to3 v v2 creates a {e new} axis
         Vector.t that is the 3-dimensional vector is the cross
         product (outer product) of two three dimensional vectors, and

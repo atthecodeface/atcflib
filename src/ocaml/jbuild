@@ -1,0 +1,43 @@
+(jbuild_version 1)
+
+(copy_files# c_links/math/*)
+(copy_files# c_links/compression/*)
+(copy_files# c_links/include/*)
+
+(library 
+ (
+ (name atcflib)
+ (public_name atcflib)
+ (modules (atcflib))
+  (libraries
+    (bigarray re result unix)
+  )
+  (cxx_names
+    (matrix vector quaternion bunzip
+     ocaml_bunzip
+     ocaml_math_obj ocaml_matrix ocaml_vector ocaml_quaternion ocaml_timer)
+  )
+  (cxx_flags
+    ( -I atcf )
+  )
+  (c_library_flags
+   (-lc++)
+  )
+
+ )
+)
+
+(executable (
+  (name test_math)
+  (modules (test_vector test_math))
+  (libraries (
+  atcflib
+  ounit
+  ))
+))
+
+(alias (
+  (name    run_test_math)
+  (deps    (test_math.exe))
+  (action  (run ${<}))
+))

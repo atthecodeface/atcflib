@@ -81,7 +81,7 @@
 #include <caml/threads.h>
 #include <caml/bigarray.h>
 
-#include <atcf/bunzip.h>
+#include "bunzip.h"
 
 #include "ocaml_atcflib.h"
 

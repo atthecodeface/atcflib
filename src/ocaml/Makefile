@@ -28,6 +28,9 @@ all: camltime
 utop:
 	$(LIBPATH) jbuilder utop .
 
+.PHONY: test
+	jbuilder build @run_test_math
+
 .PHONY: atcflib
 atcflib: atcflib.cmxa
 

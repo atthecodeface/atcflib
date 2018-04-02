@@ -37,9 +37,9 @@
 #include <caml/threads.h>
 #include <caml/bigarray.h>
 
-#include <atcf/quaternion.h>
-#include <atcf/vector.h>
-#include <atcf/matrix.h>
+#include "quaternion.h"
+#include "vector.h"
+#include "matrix.h"
 
 #include "ocaml_atcflib.h"
 
@@ -57,74 +57,53 @@
 static void __discard(void *, ...) {}
 #endif
 
-/*a Statics
- */
-static void finalize_vector(value v)
-{
-    delete vector_of_val(v);
-}
-
-static struct custom_operations custom_ops = {
-    (char *)"atcf.vector",
-    finalize_vector,
-    custom_compare_default,
-    custom_hash_default,
-    custom_serialize_default,
-    custom_deserialize_default,
-    custom_compare_ext_default
-};
-
 /*a Creation functions
  */
-/*f caml_atcf_alloc_vector
- *
- * Creates a vector from a NEW c_vector
- *
- */
-extern value
-caml_atcf_alloc_vector(c_vector<double> *cv)
+extern value caml_atcf_alloc_vector(class c_vector<double> *cv)
 {
-    value v = caml_alloc_custom(&custom_ops, sizeof(c_vector<double> *), 0, 1);
-    vector_of_val(v) = cv;
-    VERBOSE(stderr,"Allocked caml vector %p\n", cv);
-    return v;
+    return Val_unit;
 }
 
-/*f atcf_vector_create : n:int -> NEW c_vector
+/*f atcf_v_create_bigarray_slice : n:int -> NEW c_vector
  *
  * Creates a vector of length n
  *
  */
 extern "C"
 CAMLprim value
-atcf_vector_create(value n)
+atcf_v_create_bigarray_slice(value ba, value l, value o, value s)
 {
-    CAMLparam1(n);
-    VERBOSE(stderr,"Create vector %ld\n",Long_val(n));
-    CAMLreturn(caml_atcf_alloc_vector(new c_vector<double>(Long_val(n))));
-}
-
-
-/*f atcf_vector_create : n:int -> NEW c_vector
- *
- * Creates a vector of length n
- *
- */
-extern "C"
-CAMLprim value
-atcf_vector_create_bigarray_slice(value b, value l, value o, value s)
-{
-    CAMLparam4(b, l, o, s);
+    CAMLparam4(ba, l, o, s);
+    CAMLlocal1 (result);
     int vl = Long_val(l);
     int vs = Long_val(s);
     int vo = Long_val(o);
-    double *vb = (double *) Caml_ba_data_val(b);
-    VERBOSE(stderr,"Create vector from bigarray data %p (%p:%d:%d) %d %d %d\n",
-            vb, Caml_ba_array_val(b)->data,Caml_ba_array_val(b)->num_dims, Caml_ba_array_val(b)->dim[0],
-            vl,vs,vo);
-    CAMLreturn(caml_atcf_alloc_vector(new c_vector<double>(vl,vs,vb+vo)));
-}
+    struct caml_ba_array *cba = Caml_ba_array_val(ba);
+    intnat size = cba->dim[0]; // assume one-dimensional since that is what we require
+    if (vs<0) vs = 1;
+    if (vo<0) vo = 0;
+    if (vl<0) vl = size;
+    if (vs*vl+vo>size) { vs=1; vo=0; vl=size; }
 
+    t_math_type mt;
+    void *vector;
+    
+    if ((cba->flags & CAML_BA_KIND_MASK)==CAML_BA_FLOAT64) {
+        double *vb = (double *) Caml_ba_data_val(ba);
+        vector = (void *)new c_vector<double>(vl,vs,vb+vo);
+        mt = MT_V_DOUBLE;
+    } else {
+        float *vb = (float *) Caml_ba_data_val(ba);
+        vector = (void *)new c_vector<float>(vl,vs,vb+vo);
+        mt = MT_V_FLOAT;
+    }
+    VERBOSE(stderr,"Create vector from bigarray data %d %p (%p:%d:%d) %d %d %d\n", mt,
+            Caml_ba_array_val(ba)->data,Caml_ba_array_val(ba)->num_dims, Caml_ba_array_val(ba)->dim[0],
+            vl,vs,vo);
+
+    caml_atcf_alloc_math_obj(&result, mt, &ba, vector);
+    CAMLreturn(result);
+}
 
 /*f atcf_vector_destroy : c_vector -> unit
  *
@@ -142,20 +121,6 @@ atcf_vector_destroy(value v)
     CAMLreturn0;
 }
 
-/*f atcf_vector_clone : c_vector -> NEW c_vector
- *
- * Clones a vector
- *
- */
-extern "C"
-CAMLprim value
-atcf_vector_clone(value v)
-{
-    CAMLparam1(v);
-    VERBOSE(stderr,"Clone vector %p\n", vector_of_val(v));
-    CAMLreturn(caml_atcf_alloc_vector(new c_vector<double>(*vector_of_val(v))));
-}
-
 /*a Interrogation functions - not effecting the c_vector
  */
 /*f atcf_vector_coords : c_vector -> float array
@@ -165,16 +130,17 @@ atcf_vector_clone(value v)
  */
 extern "C"
 CAMLprim value
-atcf_vector_coords(value v)
+atcf_v_coords(value v)
 {
     CAMLparam1(v);
+    CAMLlocal1(result);
     c_vector<double> *cv = vector_of_val(v);
     int n = cv->length();
-    v = caml_alloc_float_array(n);
+    result = caml_alloc_float_array(n);
     for (int i=0; i<n; i++) {
-        Store_double_field(v,i,cv->get(i));
+        Store_double_field(result,i,cv->get(i));
     }
-    CAMLreturn(v);
+    CAMLreturn(result);
 }
 
 /*f atcf_vector_length : c_vector -> int
@@ -182,21 +148,21 @@ atcf_vector_coords(value v)
  * Return the number of coordinates in the vector
  *
  */
-FN_C_TO_INT(vector,length)
+FN_MO_C_TO_INT(v,length)
 
 /*f atcf_vector_modulus : c_vector -> float
  *
  * Return the vector modulus
  *
  */
-FN_C_TO_FLOAT(vector,modulus)
+FN_MO_C_TO_FLOAT(v,modulus)
 
 /*f atcf_vector_modulus_squared : c_vector -> float
  *
  * Return the vector modulus squared
  *
  */
-FN_C_TO_FLOAT(vector,modulus_squared)
+FN_MO_C_TO_FLOAT(v,modulus_squared)
 
 /*a Assignment methods - side effects
  */
@@ -205,21 +171,21 @@ FN_C_TO_FLOAT(vector,modulus_squared)
  * Get the nth coordinate
  *
  */
-FN_C_INT_TO_FLOAT(vector,get)
+FN_MO_C_INT_TO_FLOAT(v,get)
 
 /*f atcf_vector_set : c_vector -> int -> float -> unit
  *
  * Set the nth coordinate to a value
  *
  */
-FN_C_INT_FLOAT_TO_UNIT(vector,set)
+FN_MO_C_INT_FLOAT_TO_UNIT(v,set)
 
 /*f atcf_vector_assign : c_vector -> c_vector -> unit
  *
  * Assign the vector contents to be the contents of another vector
  *
  */
-FN_C_CR_TO_UNIT(vector,assign)
+FN_MO_C_CR_TO_UNIT(v,assign)
 
 /*f atcf_vector_assign_m_v
   Assign value to be that of matrix m applied to other vector v2
@@ -273,14 +239,14 @@ atcf_vector_apply_q(value v, value q)
  * Scale the vector by a factor
  *
  */
-FN_C_FLOAT_TO_UNIT(vector,scale)
+FN_MO_C_FLOAT_TO_UNIT(v,scale)
 
 /*f atcf_vector_add_scaled : c_vector -> c_vector -> float -> unit
  *
  * vector <- vector + (vector2 * scale_factor)
  *
  */
-FN_C_CR_FLOAT_TO_UNIT(vector,add_scaled)
+FN_MO_C_CR_FLOAT_TO_UNIT(v,add_scaled)
 
 /*f atcf_vector_normalize : c_vector -> unit
  *
@@ -289,7 +255,7 @@ FN_C_CR_FLOAT_TO_UNIT(vector,add_scaled)
  * If the modulus of the vector is less than epsilon, then leave it unchanged
  *
  */
-FN_C_TO_UNIT(vector,normalize)
+FN_MO_C_TO_UNIT(v,normalize)
 
 /*a Operations that have no side-effects
  */
@@ -298,14 +264,14 @@ FN_C_TO_UNIT(vector,normalize)
  * Return the inner product of two vectors
  *
  */
-FN_C_CR_TO_FLOAT(vector,dot_product)
+FN_MO_C_CR_TO_FLOAT(v,dot_product)
 
 /*f atcf_vector_cross_product3 : c_vector -> c_vector -> NEW c_vector
  *
  * NEW vector = v0 x v1, for length 3 vectors
  *
  */
-FN_C_CR_TO_C(vector,cross_product3)
+//FN_C_CR_TO_C(vector,cross_product3)
 
 /*f atcf_vector_angle_axis_to3 : c_vector -> c_vector -> (NEW c_vector * float * float)
  *
@@ -316,18 +282,20 @@ FN_C_CR_TO_C(vector,cross_product3)
  */
 extern "C"
 CAMLprim value 
-atcf_vector_angle_axis_to3(value v, value v2)
+atcf_vector_angle_axis_to3(value v, value v2, value rv)
 {
-    CAMLparam2(v,v2);
-    value vr = caml_alloc_tuple(3);
-    value vrv = caml_alloc_custom(&custom_ops, sizeof(c_vector<double> *), 0, 1);
-    Store_field(vr,0,vrv);
-    double cos, sin;
-    c_vector<double> *cv = vector_of_val(v)->angle_axis_to_v3(*vector_of_val(v2), &cos, &sin);
-    vector_of_val(vrv) = cv;
-    Store_field(vr,1,caml_copy_double(cos));
-    Store_field(vr,2,caml_copy_double(sin));
-    VERBOSE(stderr,"Created vector from angle_axis_to3 %p\n", vector_of_val(vr));
-    CAMLreturn(vr);
+    CAMLparam3(v,v2, rv);
+    CAMLlocal1(result);
+    if (math_obj_validate(v, MT_V_DOUBLE, 3, 3) &&
+        math_obj_validate(v2, MT_V_DOUBLE, 3, 3) &&
+        math_obj_validate(rv, MT_V_DOUBLE, 3, 3)) {
+        result = caml_alloc_tuple(3);
+        double cos, sin;
+        (void) vector_of_val(v)->angle_axis_to_v3(*vector_of_val(v2), &cos, &sin, vector_of_val(rv));
+        Store_field(result,0,rv);
+        Store_field(result,1,caml_copy_double(cos));
+        Store_field(result,2,caml_copy_double(sin));
+    }
+    CAMLreturn(result);
 }
 

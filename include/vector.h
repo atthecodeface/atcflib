@@ -76,12 +76,14 @@ public:
     c_vector<T> &normalize(void);
     T dot_product(const c_vector<T> &other) const;
     c_vector<T> *cross_product3(const c_vector<T> &other) const;
+    c_vector<T> *cross_product3(const c_vector<T> &other, c_vector<T> *result) const;
 
     // axis_angle_to_v works for 3-vectors.
     // It creates a new vector to be the axis of rotation required to
     // get from 'this' to 'other' (i.e. this <= unit(this x other))
     // and sets the angle; it returns 'this'
     c_vector<T> *angle_axis_to_v3(const c_vector<T> &other, T *cos_angle, T *sin_angle) const;
+    c_vector<T> *angle_axis_to_v3(const c_vector<T> &other, T *cos_angle, T *sin_angle, c_vector<T> *result) const;
     class c_quaternion<T> *angle_axis_to_v3(const c_vector<T> &other) const;
     void __str__(char *buffer, int buf_size) const;
 };

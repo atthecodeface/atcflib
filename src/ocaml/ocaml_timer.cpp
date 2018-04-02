@@ -34,7 +34,7 @@
 #include <caml/intext.h>
 #include <caml/threads.h>
 
-#include <atcf/timer.h>
+#include "timer.h"
 
 #include <stdio.h>
 

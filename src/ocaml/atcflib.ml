@@ -238,35 +238,8 @@ end
 
 (*a Vector module version *)
 type t_vector = c_vector
-module rec Vector : sig
-    type t = t_vector
-    val create  : c_vector -> t
-    val length  : t -> int
-    val copy    : t -> t
-    val coords  : t -> float array
-    val length  : t -> int
-    val get     : t -> int -> float
-    val set     : int -> float  -> t -> t
-    val assign  : t -> t -> t
-(*val assign_m_v : Matrix.t -> t -> t -> t
-    val assign_q_as_rotation : t -> Quaternion.t -> float * float
-    val apply_q              : Quaternion.t -> t -> t*)
-    val scale                : float  -> t -> t
-    val modulus              : t -> float
-    val modulus_squared      : t -> float
-    val add                  : t -> t -> t
-    val add_scaled           : float -> t -> t -> t
-    val normalize            : t -> t
-    val dot_product          : t -> t -> float
-    (* val cross_product3       : t -> t -> t
-    val angle_axis_to3       : t -> t -> t * float * float *)
-    val make                 : int -> t
-    val make2                : float -> float -> t
-    val make3                : float -> float -> float -> t
-    val make4                : float -> float -> float -> float -> t
-    val of_bigarray  : ?length:int -> ?offset:int -> ?stride:int -> t_ba_doubles -> t
-    val str                 : t -> string
-end = struct
+module Vector =
+struct
     type t = t_vector
      let coords      v        = v_coords v
      let length      v        = v_length v
@@ -306,25 +279,25 @@ end = struct
        Array.fold_right f (v_coords v) ""
 end
 (*a and Matrix module *)
-   and Matrix : sig
+module rec Matrix : sig
      type t = { cm: c_matrix }
     val create : c_matrix -> t
     val copy   : t -> t
-    val apply  : t -> Vector.t -> Vector.t
+    val apply  : t -> t_vector -> t_vector
     val set          : int -> int -> float -> t -> t
     val identity     : t -> t
     val nrows        : t -> int
     val ncols        : t -> int
-    val row_vector   : t -> int -> Vector.t
-    val col_vector   : t -> int -> Vector.t
+    val row_vector   : t -> int -> t_vector
+    val col_vector   : t -> int -> t_vector
     val scale        : float -> t -> t
     val transpose    : t -> t
     val add_scaled   : float -> t -> t -> t
-    val apply        : t -> Vector.t -> Vector.t
+    val apply        : t -> t_vector -> t_vector
     val assign       : t -> t -> t
     val assign_m_m   : t -> t -> t -> t
     val assign_from_q : Quaternion.t  -> t -> t
-    val lup_decompose : t -> Vector.t
+    val lup_decompose : t -> t_vector
     val lup_get_l     : t -> t
     val lup_get_u     : t -> t
     val lup_invert    : t -> t
@@ -373,9 +346,9 @@ and Quaternion : sig
     val get_rijk           : t -> float array
     val assign             : t -> t -> t
     val assign_q_q         : t -> t -> t -> t
-    val assign_lookat_graphics      : Vector.t -> Vector.t -> t -> t 
-    val assign_lookat_aeronautic    : Vector.t -> Vector.t -> t -> t 
-    val assign_of_rotation : Vector.t -> float -> float -> t -> t
+    val assign_lookat_graphics      : t_vector -> t_vector -> t -> t 
+    val assign_lookat_aeronautic    : t_vector -> t_vector -> t -> t 
+    val assign_of_rotation : t_vector -> float -> float -> t -> t
     val scale              : float -> t -> t
     val add_scaled         : float -> t -> t -> t
     val reciprocal         : t -> t

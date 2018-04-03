@@ -29,7 +29,7 @@
 
 (executable (
   (name test_math)
-  (modules (test_vector test_math))
+  (modules (test_vector test_matrix test_math))
   (libraries (
   atcflib
   ounit

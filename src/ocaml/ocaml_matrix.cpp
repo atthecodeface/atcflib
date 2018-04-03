@@ -154,11 +154,13 @@ atcf_m_create(value r, value c)
     if (1) { //(cba->flags & CAML_BA_KIND_MASK)==CAML_BA_FLOAT64) {
         //double *vb = (double *) Caml_ba_data_val(ba);
         double *vb = (double *)malloc(sizeof(double)*nr*nc);
+        for (int i=0; i<nr*nc; i++) vb[i]=0;
         matrix = (void *)new c_matrix<double>(nr,nc,vb+vo,rs,cs);
         mt = MT_M_DOUBLE;
     } else {
         //float *vb = (float *) Caml_ba_data_val(ba);
         float *vb = (float *)malloc(sizeof(float)*nr*nc);
+        for (int i=0; i<nr*nc; i++) vb[i]=0;
         matrix = (void *)new c_matrix<float>(nr,nc,vb+vo,rs,cs);
         mt = MT_M_FLOAT;
     }

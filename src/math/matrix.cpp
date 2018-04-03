@@ -174,6 +174,7 @@ c_matrix<T>::c_matrix(int nrows, int ncols, const T *values)
 template <typename T>
 c_matrix<T>::c_matrix(int nrows, int ncols, T *values, int row_stride, int col_stride)
 {
+    fprintf(stderr,"Create %p\n",values);
     init();
     _nrows = nrows;
     _ncols = ncols;
@@ -216,7 +217,7 @@ void c_matrix<T>::__str__(char *buffer, int buf_size) const
 {
     int pr;
     
-    pr = snprintf(buffer, buf_size, "[" );
+    pr = snprintf(buffer, buf_size, "%p:%d:%d/%d:%d[",_values,_nrows,_ncols,_row_stride,_col_stride );
     if (pr<0) { buffer[buf_size-1] = 0; return; }
     buffer += pr; buf_size-=pr;
     for (int r=0; r<_nrows; r++) {
@@ -235,6 +236,16 @@ void c_matrix<T>::__str__(char *buffer, int buf_size) const
     pr = snprintf(buffer, buf_size, "]" );
     buffer[buf_size-1] = 0;
     return;
+}
+
+/*f c_matrix<T>::__display__
+ */
+template <typename T>
+void c_matrix<T>::__display__(FILE *f) const
+{
+    char buffer[4096];
+    __str__(buffer, sizeof(buffer));
+    fprintf( f, "%s\n", buffer );
 }
 
 /*a Linear operations
@@ -327,38 +338,84 @@ c_matrix<T> &c_matrix<T>::transpose_stride(void)
  *
  * Finally, swap nrows/ncols
  *
+ * If the matrix is square transposition is just swapping r and c
+ * 
+ * If the matrix is rectangular then r,c maps to one of
+ * (r*_ncols + c)*elt_separation OR (c*_nrows + r)*elt_separation
+ *
+ * elt_separation must be the smaller of the two strides
+ * IF _row_stride=_ncols * elt_separation THEN _col_stride=elt_separation and
+ * row of undo(j) = (j/elt_separation) / _ncols &&
+ * col of undo(j) = (j/elt_separation) % _ncols
+ * 
+ * ELSE _col_stride=_nrows * elt_separation THEN _row_stride=elt_separation and
+ * row of undo(j) = (j/elt_separation) % _nrows = (j / _row_stride) % _nrows &&
+ * col of undo(j) = (j/elt_separation) / _nrows = (j / _col_stride) % _ncols
+ *
+ * So one can have rowdiv, rowmod, coldiv, colmod, where
+ * row of undo(j) = ((j / rowdiv) % rowmod) % _nrows
+ * col of undo(j) = ((j / coldiv) % colmod) % _ncols
+ * IF _col_stride > _row_stride
+ *   rowdiv = _row_stride, rowmod = _nrows, coldiv=_col_stride, colmod=_ncols
+ * ELSE (_col_stride < _row_stride)
+ *   rowdiv = _row_stride, rowmod = _nrows, coldiv=_col_stride, colmod=_ncols
+ * 
+ * Note that a post-transpose must use _col_stride = _ncols*elt_separation
+ *
  */
 template <typename T>
 c_matrix<T> &c_matrix<T>::transpose_data(void)
 {
-    if ( (_nrows != _ncols) &&
-         (_row_stride!=(_ncols *_col_stride)) &&
-         (_col_stride!=(_nrows *_row_stride)) )
-    {
-        return *this; // cannot transpose the data
+    int next_col_stride, next_row_stride;
+    int elt_separation;
+    if (_nrows == _ncols) {
+        next_col_stride = _row_stride;
+        next_row_stride = _col_stride;
+        elt_separation = 1;
+    } else if (_col_stride>_row_stride) {
+        elt_separation = _row_stride;
+        next_row_stride = elt_separation;
+        next_col_stride = elt_separation * _ncols; // next _nrows is current _ncols
+        if (_nrows*_row_stride!=_col_stride) return *this; // data must be full for rectangular transpose
+    } else {
+        elt_separation = _col_stride;
+        next_col_stride = elt_separation;
+        next_row_stride = elt_separation * _nrows; // next _ncols is current _nrows
+        if (_ncols*_col_stride!=_row_stride) return *this; // data must be full for rectangular transpose
     }
 
-    for (int i=0; i<_nrows*_ncols; i++) {
+    __display__(stderr);
+    for (int ir=0; ir<_nrows; ir++) {
+        for (int ic=0; ic<_ncols; ic++) {
+            int i = ir*_row_stride + ic*_col_stride;
         int n=0;
         int start_of_loop=1;
         double x;
-        for (int j=i;; n++) {
-            int r,c;
-            r = j/_nrows;
-            c = j%_nrows;
-            j = c*_ncols + r; // j is after transposition
+        int j;
+        j = i;
+        for (;; n++) {
+            int jc, jr;
+            //(jr,jc) = undo_posttranspose(j) // transpose
+            jc = (j / next_row_stride) % _ncols;
+            jr = (j / next_col_stride) % _nrows;
+            j = jr*_row_stride + jc*_col_stride;
             start_of_loop = (j==i);
             if (j<=i) break;
         }
         if (n==0) continue;
         if (!start_of_loop) continue;
         x = _values[i];
-        for (int j=i;;) {
-            int r,c,pj;
+        j = i;
+        fprintf(stderr,"Loop %d:%d,%d\n",i,ir,ic);
+        for (;;) {
+            int jc, jr;
+            int pj;
             pj = j;
-            r = j/_nrows;
-            c = j%_nrows;
-            j = c*_ncols + r; // j is after transposition
+            //(jr,jc) = undo_posttranspose(i) // transpose
+            jc = (j / next_row_stride) % _ncols;
+            jr = (j / next_col_stride) % _nrows;
+            j = jr*_row_stride + jc*_col_stride;
+            fprintf(stderr,"  inner %d:%d,%d:%d\n",j,jr,jc,pj);
             //fprintf(stderr,"%d:%d,%d (%lf):",j,r,c,_values[j]);
             _values[pj] = _values[j];
             if (j==i) {
@@ -368,12 +425,11 @@ c_matrix<T> &c_matrix<T>::transpose_data(void)
         }
         //fprintf(stderr,"\n");
     }
-    SWAP(_nrows, _ncols);
-    if (_col_stride<_row_stride) { // i.e. elements are _col_stride apart throughout
-        _row_stride = _ncols * _col_stride;
-    } else {
-        _col_stride = _nrows * _row_stride;
     }
+    SWAP(_nrows, _ncols);
+    _row_stride = next_row_stride;
+    _col_stride = next_col_stride;
+    __display__(stderr);
     return *this;
 }
 
@@ -382,7 +438,7 @@ c_matrix<T> &c_matrix<T>::transpose_data(void)
 template <typename T>
 void c_matrix<T>::get_row(int row, c_vector<T> *v) const
 {
-    int maxc = _ncols>v->length() ? v->length() : _ncols;
+    int maxc = (_ncols>v->length()) ? v->length() : _ncols;
     for (int c=0; c<maxc; c++) {
         v->set(c,MATRIX_VALUE(row,c));
     }
@@ -393,7 +449,7 @@ void c_matrix<T>::get_row(int row, c_vector<T> *v) const
 template <typename T>
 void c_matrix<T>::get_column(int col, c_vector<T> *v) const
 {
-    int maxr = _nrows>v->length() ? v->length() : _nrows;
+    int maxr = (_nrows>v->length()) ? v->length() : _nrows;
     for (int r=0; r<maxr; r++) {
         v->set(r,MATRIX_VALUE(r,col));
     }

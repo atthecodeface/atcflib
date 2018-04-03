@@ -156,7 +156,7 @@ external m_apply   : c_matrix -> c_vector -> c_vector -> unit = "atcf_m_apply"
 external m_identity      : c_matrix -> unit  = "atcf_m_set_identity"
 external m_assign        : c_matrix -> c_matrix -> unit  = "atcf_m_assign"
 external m_assign_m_m    : c_matrix -> c_matrix -> c_matrix -> unit  = "atcf_m_assign_m_m"
-external m_assign_from_q : c_matrix -> c_quaternion -> unit  = "atcf_matrix_assign_from_q"
+(*external m_assign_from_q : c_matrix -> c_quaternion -> unit  = "atcf_matrix_assign_from_q"*)
 external m_set           : c_matrix -> int -> int -> float -> unit  = "atcf_m_set"
 external m_transpose     : c_matrix -> unit  = "atcf_m_transpose_data"
 external m_scale         : c_matrix -> float -> unit  = "atcf_m_scale"
@@ -285,7 +285,7 @@ module Matrix =
        m_of_bigarray ba offset [|ncols; cs; nrows; rs|]
 
      let create cm = cm
-(*     let copy   m = create (m_clone m)*)
+     let copy   m = (let m2 = m_create (m_nrows m) (m_ncols m) in m_assign m2 m; m2)
      let apply  m v1 v = m_apply m v1 v; v
      let set r c f m     = m_set m r c f ; m
      let identity m      = m_identity m ; m
@@ -300,7 +300,7 @@ module Matrix =
      let assign m1 m        = m_assign m  m1 ; m
      let assign_m_m m1 m2 m = m_assign_m_m m m1 m2 ; m
      (*let assign_from_q q m = m_assign_from_q m q ; m*)
-     let lup_decompose m v = m_lup_decompose m v
+     let lup_decompose m v = m_lup_decompose m v; v
      let lup_get_l m     = (m_lup_get_l m)  ; m
      let lup_get_u m     = (m_lup_get_u m)  ; m
      let lup_invert m    = (m_lup_invert m) ; m

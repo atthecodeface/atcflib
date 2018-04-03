@@ -63,6 +63,7 @@ let xy3 = Vector.normalize (Vector.make3 1.0 1.0 0.0)
 let xz3 = Vector.normalize(Vector.make3 1.0 0.0 1.0)
 let yz3 = Vector.normalize(Vector.make3 0.0 1.0 1.0)
 let zero3 = (Vector.make3 0.0 0.0 0.0)
+let zero3x3 = Matrix.(scale 0. (make 3 3))
 let rot30_z = 
   Matrix.(identity (make 3 3) |>
             set 0 0 c30 |>
@@ -77,9 +78,6 @@ let mat_1234 =
             set 1 0 3.0 |>
             set 1 1 4.0)
 
-let biggie = Bigarray.Genarray.create float64 c_layout [|1000;|]
-let b_v0_3_0_1 = (Vector.make_slice_array biggie 3 0 1)
-let b_v1_3_1_1 = (Vector.make_slice_array biggie 3 1 1)
 
 (*a Useful functions *)
 let rec fori (i:int) l f r =
@@ -137,6 +135,26 @@ let assert_coords v cs =
 let assert_vector v cs =
   assert_coords v (Vector.coords cs)
 
+(*f assert_matrix_rc : matrixfn -> n -> float array -> unit
+ *
+ * Assert that matrixfn n are close enough to the float array
+ * 
+ *)
+let assert_matrix_rc matrixfn n cs =
+  let tmp = Vector.make (Array.length cs) in
+  let tmp = matrixfn n tmp in
+  assert_coords tmp cs
+
+(*f assert_matrix_rc : int -> matrixfn -> n -> matrixfn -> n -> unit
+ *
+ * Assert that matrixfn n are close enough to the float array
+ * 
+ *)
+let assert_matrix_rc_rc sz mfn0 n0 mfn1 n1 =
+  let tmp0 = mfn0 n0 (Vector.make sz) in
+  let tmp1 = mfn1 n1 (Vector.make sz) in
+  assert_vector tmp0 tmp1
+
 (*a Matrix test suite *)
 (*b Matrix creation tests *)
 let test_suite_matrix_create = 
@@ -162,15 +180,17 @@ let test_suite_matrix_create =
     ]
 (*b Matrix assignment tests *)
 let assert_matrices m1 m2 =
-  let match_m_row r _ = assert_coords ((Matrix.row_vector m1) r) (Vector.coords ((Matrix.row_vector m2) r)) in
+  let match_m_row r _ = assert_matrix_rc_rc (Matrix.ncols m2) (Matrix.row_vector m1) r (Matrix.row_vector m2) r in
   fori 0 (Matrix.nrows m1) match_m_row ()
 
 let test_transpose ctxt m = 
   let mt = Matrix.transpose (Matrix.copy m) in
   assert_equal_int "nrows" (Matrix.nrows m) (Matrix.ncols mt) ;
   assert_equal_int "nrows" (Matrix.nrows mt) (Matrix.ncols m) ;
-  let match_m_col c _ = assert_coords ((Matrix.col_vector m) c) (Vector.coords ((Matrix.row_vector mt) c)) in
-  let match_m_row r _ = assert_coords ((Matrix.row_vector m) r) (Vector.coords ((Matrix.col_vector mt) r)) in
+  let tmp1 = Vector.make (Matrix.ncols m) in
+  let tmp2 = Vector.make (Matrix.ncols m) in
+  let match_m_col c _ = assert_coords (Matrix.col_vector m c tmp1) (Vector.coords (Matrix.row_vector mt c tmp2)) in
+  let match_m_row r _ = assert_coords (Matrix.row_vector m r tmp1) (Vector.coords (Matrix.col_vector mt r tmp2)) in
   fori 0 (Matrix.nrows m) match_m_row () ;
   fori 0 (Matrix.ncols m) match_m_col ()
     
@@ -191,10 +211,10 @@ let test_suite_matrix_assign =
            ignore Matrix.(set 0 1 2.0 (set 0 0 3.0 m) ) ;
            assert_equal_int "nrows" (Matrix.nrows m) 2 ;
            assert_equal_int "ncols" (Matrix.ncols m) 2 ;
-           assert_coords ((Matrix.row_vector m) 0) [|3.0; 2.0|];
-           assert_coords ((Matrix.row_vector m) 1) [|0.0; 0.0|];
-           assert_coords ((Matrix.col_vector m) 0) [|3.0; 0.0|];
-           assert_coords ((Matrix.col_vector m) 1) [|2.0; 0.0|];
+           assert_matrix_rc (Matrix.row_vector m) 0 [|3.0; 2.0|];
+           assert_matrix_rc (Matrix.row_vector m) 1 [|0.0; 0.0|];
+           assert_matrix_rc (Matrix.col_vector m) 0 [|3.0; 0.0|];
+           assert_matrix_rc (Matrix.col_vector m) 1 [|2.0; 0.0|];
         ) ;
         ("2x2" >::
            fun ctxt ->
@@ -203,10 +223,10 @@ let test_suite_matrix_assign =
            ignore Matrix.(set 1 1 4.0 (set 1 0 3.0 m)) ;
            assert_equal_int "nrows" (Matrix.nrows m) 2 ;
            assert_equal_int "ncols" (Matrix.ncols m) 2 ;
-           assert_coords ((Matrix.row_vector m) 0) [|1.0; 2.0|];
-           assert_coords ((Matrix.row_vector m) 1) [|3.0; 4.0|];
-           assert_coords ((Matrix.col_vector m) 0) [|1.0; 3.0|];
-           assert_coords ((Matrix.col_vector m) 1) [|2.0; 4.0|];
+           assert_matrix_rc (Matrix.row_vector m) 0 [|1.0; 2.0|];
+           assert_matrix_rc (Matrix.row_vector m) 1 [|3.0; 4.0|];
+           assert_matrix_rc (Matrix.col_vector m) 0 [|1.0; 3.0|];
+           assert_matrix_rc (Matrix.col_vector m) 1 [|2.0; 4.0|];
         ) ;
         ("transpose_2x2" >::
            fun ctxt ->
@@ -237,41 +257,43 @@ let test_suite_matrix_interrogation =
            let m = Matrix.make 3 3 in
            assert_equal_int "nrows" (Matrix.nrows m) 3 ;
            assert_equal_int "ncols" (Matrix.ncols m) 3 ;
-           assert_vector ((Matrix.row_vector m) 0) zero3 ;
-           assert_vector ((Matrix.row_vector m) 1) zero3 ;
-           assert_vector ((Matrix.row_vector m) 2) zero3 ;
-           assert_vector ((Matrix.col_vector m) 0) zero3 ;
-           assert_vector ((Matrix.col_vector m) 1) zero3 ;
-           assert_vector ((Matrix.col_vector m) 2) zero3
+           assert_matrices m zero3x3;
+           assert_matrix_rc (Matrix.row_vector m) 0 [|0.;0.;0.;|];
+           assert_matrix_rc (Matrix.row_vector m) 1 [|0.;0.;0.;|];
+           assert_matrix_rc (Matrix.row_vector m) 2 [|0.;0.;0.;|];
+           assert_matrix_rc (Matrix.col_vector m) 0 [|0.;0.;0.;|];
+           assert_matrix_rc (Matrix.col_vector m) 1 [|0.;0.;0.;|];
+           assert_matrix_rc (Matrix.col_vector m) 2 [|0.;0.;0.;|];
         ) ;
         ("2x1" >::
            fun ctxt ->
            let m = Matrix.make 2 1 in
            ignore Matrix.(set 0 1 2.0 (set 0 0 1.0 m)) ;
-           assert_coords ((Matrix.row_vector m) 0) [|1.0; |] ;
-           assert_coords ((Matrix.row_vector m) 1) [|2.0; |] ;
-           assert_coords ((Matrix.col_vector m) 0) [|1.0; 2.0|]
+           assert_matrix_rc (Matrix.row_vector m) 0 [|1.0; |] ;
+           assert_matrix_rc (Matrix.row_vector m) 1 [|2.0; |] ;
+           assert_matrix_rc (Matrix.col_vector m) 0 [|1.0; 2.0|]
         ) ;
         ("1x2" >::
            fun ctxt ->
            let m = Matrix.make 1 2 in
            ignore Matrix.(set  0 1 2.0 (set 0 0 1.0 m)) ;
-           assert_coords ((Matrix.col_vector m) 0) [|1.0; |] ;
-           assert_coords ((Matrix.col_vector m) 1) [|2.0; |] ;
-           assert_coords ((Matrix.row_vector m) 0) [|1.0; 2.0|]
+           assert_matrix_rc (Matrix.col_vector m) 0 [|1.0; |] ;
+           assert_matrix_rc (Matrix.col_vector m) 1 [|2.0; |] ;
+           assert_matrix_rc (Matrix.row_vector m) 0 [|1.0; 2.0|]
         ) ;
         ("3x3_identity" >::
            fun ctxt ->
            let m = Matrix.make 3 3 in
+           let tmp = Vector.make 3 in
            ignore (Matrix.identity m);
            assert_equal_int "nrows" (Matrix.nrows m) 3 ;
            assert_equal_int "ncols" (Matrix.ncols m) 3 ;
-           assert_vector ((Matrix.row_vector m) 0) x3 ;
-           assert_vector ((Matrix.row_vector m) 1) y3 ;
-           assert_vector ((Matrix.row_vector m) 2) z3 ;
-           assert_vector ((Matrix.col_vector m) 0) x3 ;
-           assert_vector ((Matrix.col_vector m) 1) y3 ;
-           assert_vector ((Matrix.col_vector m) 2) z3
+           assert_vector ((Matrix.row_vector m) 0 tmp) x3 ;
+           assert_vector ((Matrix.row_vector m) 1 tmp) y3 ;
+           assert_vector ((Matrix.row_vector m) 2 tmp) z3 ;
+           assert_vector ((Matrix.col_vector m) 0 tmp) x3 ;
+           assert_vector ((Matrix.col_vector m) 1 tmp) y3 ;
+           assert_vector ((Matrix.col_vector m) 2 tmp) z3
         ) ;
     ]
 
@@ -282,29 +304,25 @@ let test_suite_matrix_operation =
            fun ctxt ->
            let m = Matrix.make 2 2 in
            ignore Matrix.(scale 2.0 (identity m)) ;
-           assert_coords ((Matrix.row_vector m) 0) [|2.0; 0.0|];
-           assert_coords ((Matrix.row_vector m) 1) [|0.0; 2.0|];
+           assert_matrix_rc (Matrix.row_vector m) 0 [|2.0; 0.0|];
+           assert_matrix_rc (Matrix.row_vector m) 1 [|0.0; 2.0|];
         ) ;
         ("add3x3" >::
            fun ctxt ->
            let m = Matrix.(scale 0.50 (add_scaled 1.0 rot30_z (copy rot30_z))) in
-           assert_coords (Matrix.row_vector m 0) (Vector.coords (Matrix.row_vector rot30_z 0));
-           assert_coords (Matrix.row_vector m 1) (Vector.coords (Matrix.row_vector rot30_z 1));
-           assert_coords (Matrix.row_vector m 2) (Vector.coords (Matrix.row_vector rot30_z 2));
+           assert_matrices m rot30_z;
         ) ;
         ("add3x3" >::
            fun ctxt ->
            let m = Matrix.(scale 0.25 (add_scaled 3.0 rot30_z (copy rot30_z))) in
-           assert_coords (Matrix.row_vector m 0) (Vector.coords (Matrix.row_vector rot30_z 0));
-           assert_coords (Matrix.row_vector m 1) (Vector.coords (Matrix.row_vector rot30_z 1));
-           assert_coords (Matrix.row_vector m 2) (Vector.coords (Matrix.row_vector rot30_z 2));
+           assert_matrices m rot30_z;
         ) ;
        ("invert3x3" >::
            fun ctxt ->
            let m = Matrix.lup_invert (Matrix.copy rot30_z) in
-           assert_coords (Matrix.row_vector m 0) [|c30; s30; 0.0|];
-           assert_coords (Matrix.row_vector m 1) [|(-. s30); c30; 0.0|];
-           assert_coords (Matrix.row_vector m 2) (Vector.coords (Matrix.row_vector rot30_z 2));
+           assert_matrix_rc (Matrix.row_vector m) 0 [|c30; s30; 0.0|];
+           assert_matrix_rc (Matrix.row_vector m) 1 [|(-. s30); c30; 0.0|];
+           assert_matrix_rc_rc 3 (Matrix.row_vector m) 2 (Matrix.row_vector rot30_z) 2;
         ) ;
         ("invert2x2" >::
            fun ctxt ->
@@ -318,36 +336,40 @@ let test_suite_matrix_operation =
         ) ;
 
     ]
+
 (*b Matrix LUP tests *)
 let test_suite_matrix_lup = 
     "lup" >::: [
         ("lup2x2" >::
            fun ctxt ->
+           let v = Vector.make 2 in
            let m = Matrix.copy mat_1234 in
-           let p = Matrix.lup_decompose m in
+           let p = Matrix.lup_decompose m v in
            let l = Matrix.(lup_get_l (copy m)) in
            let u = Matrix.(lup_get_u (copy m)) in
            let r = Matrix.(assign_m_m l u (copy u)) in
            assert_coords p [|1.0; 0.0|];
-           assert_coords (Matrix.row_vector m 0) [|3.0; 4.0|] ;
-           assert_coords (Matrix.row_vector m 1) [|(1.0 /. 3.0); (2.0 /. 3.0)|] ;
-           assert_coords (Matrix.row_vector l 0) [|1.0; 0.0|] ;
-           assert_coords (Matrix.row_vector l 1) [|(1.0 /. 3.0); 1.0|] ;
-           assert_coords (Matrix.row_vector u 0) [|3.0; 4.0|] ;
-           assert_coords (Matrix.row_vector u 1) [|0.0; (2.0 /. 3.0)|] ;
-           assert_coords (Matrix.row_vector r 0) [|3.0; 4.0|] ;
-           assert_coords (Matrix.row_vector r 1) [|1.0; 2.0|] ;
+           assert_matrix_rc (Matrix.row_vector m) 0 [|3.0; 4.0|] ;
+           assert_matrix_rc (Matrix.row_vector m) 1 [|(1.0 /. 3.0); (2.0 /. 3.0)|] ;
+           assert_matrix_rc (Matrix.row_vector l) 0 [|1.0; 0.0|] ;
+           assert_matrix_rc (Matrix.row_vector l) 1 [|(1.0 /. 3.0); 1.0|] ;
+           assert_matrix_rc (Matrix.row_vector u) 0 [|3.0; 4.0|] ;
+           assert_matrix_rc (Matrix.row_vector u) 1 [|0.0; (2.0 /. 3.0)|] ;
+           assert_matrix_rc (Matrix.row_vector r) 0 [|3.0; 4.0|] ;
+           assert_matrix_rc (Matrix.row_vector r) 1 [|1.0; 2.0|] ;
         ) ;
         ("decomp3x3" >::
            fun ctxt ->
+           let v = Vector.make 3 in
            let m = Matrix.copy rot30_z in
-           let p = Matrix.lup_decompose m in
+           let p = Matrix.lup_decompose m v in
            assert_coords p [|0.0 ; 1.0 ; 2.0|];
-           assert_coords ((Matrix.row_vector m) 0) [|c30; (-.s30); 0.0|];
-           assert_coords ((Matrix.row_vector m) 1) [|0.5/.c30; 1.0/.c30; 0.0|];
-           assert_coords ((Matrix.row_vector m) 2) [|0.0; 0.0; 1.0|]
+           assert_matrix_rc (Matrix.row_vector m) 0 [|c30; (-.s30); 0.0|];
+           assert_matrix_rc (Matrix.row_vector m) 1 [|0.5/.c30; 1.0/.c30; 0.0|];
+           assert_matrix_rc (Matrix.row_vector m) 2 [|0.0; 0.0; 1.0|]
         ) ;
     ]
+
 (*b Matrix test suite - combine individual suites *)
 (* to do 
     set_row <vector>

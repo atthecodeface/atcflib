@@ -136,6 +136,7 @@ let assert_vector v cs =
 (*a All test suites, toplevel *)
 let test_suites = "All tests" >::: [
      Test_vector.test_suite_vector ;
+     Test_matrix.test_suite_matrix ;
      (*test_suite_quaternion ;
      test_suite_matrix ;*)
     ]

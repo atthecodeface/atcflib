@@ -349,7 +349,7 @@ let test_suite_vector_bigarray_slice =
     "bigarray" >::: [
       ("slice" >::
          fun ctxt ->
-         let v1 = Vector.make2 3.0 4.0 in
+         (*let v1 = Vector.make2 3.0 4.0 in*)
          ignore (Vector.(assign x3 b_v0_3_0_1));
          ignore (Vector.(assign x3 b_v1_3_1_1));
          assert_equal_float "Biggie contains slice vector 0" biggie.{0} 1.0 ;

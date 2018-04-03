@@ -248,7 +248,7 @@ module rec
            (** Matrix.of_bigarray makes a new matrix using a
             slice of the big array *)
 
-           (* val copy : t -> t *)
+           val copy : t -> t
            (** Matrix.copy m creates a copy of matrix m and returns it *)
 
            val set : int -> int -> float -> t -> t
@@ -311,7 +311,7 @@ module rec
            the top level 3x3 being a rotation that matches the
            quaternion. *)
 
-           val lup_decompose : t -> Vector.t -> unit
+           val lup_decompose : t -> Vector.t -> Vector.t
            (** Matrix.lup_decompose m performs a lower-upper-pivot
            decomposition (partial pivoting) of a square N-dimensional
            matrix m; that is, it finds L, U and P such that M = L * U

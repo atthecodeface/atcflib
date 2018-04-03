@@ -25,6 +25,7 @@
 
 /*a Includes
  */
+#include <stdio.h>
 #include "vector.h"
 #include "quaternion.h"
 
@@ -98,6 +99,7 @@ public:
     int lup_invert(const c_vector<T> &P);
 
     void __str__(char *buffer, int buf_size) const;
+    void __display__(FILE *f) const;
 };
 
 /*a External functions

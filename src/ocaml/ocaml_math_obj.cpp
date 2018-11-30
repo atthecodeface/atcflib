@@ -47,10 +47,10 @@
 
 /*a Defines
  */
-// Use -D__OCAML_VECTOR_VERBOSE on compilation to be verbose,
+// Use -D__OCAML_MATH_OBJ_VERBOSE on compilation to be verbose,
 // or uncomment the following
-// #define __OCAML_VECTOR_VERBOSE
-#ifdef __OCAML_VECTOR_VERBOSE
+//#define __OCAML_MATH_OBJ_VERBOSE
+#ifdef __OCAML_MATH_OBJ_VERBOSE
 #define VERBOSE fprintf
 #else
 #define VERBOSE __discard
@@ -62,23 +62,23 @@ static void __discard(void *, ...) {}
 /*f finalize
   Remove our value reference to the bigarray and delete the associated object
  */
-static void finalize(value v)
+static void math_obj_finalize(value v)
 {
     t_math_obj *m = math_obj_of_val(v);
+    VERBOSE(stderr,"Ocaml math object finalize %p type %d ba %p\n", m, m->mt, Caml_ba_data_val(m->ba));
     caml_remove_global_root(&m->ba);
     switch (m->mt) {
     case MT_V_FLOAT:  {delete (m->ptr.vf); break; }
     case MT_V_DOUBLE: {delete (m->ptr.vd); break; }
     case MT_M_FLOAT:  {delete (m->ptr.mf); break; }
     case MT_M_DOUBLE: {delete (m->ptr.md); break; }
-    case MT_Q_FLOAT:  {delete (m->ptr.qf); break; }
-    case MT_Q_DOUBLE: {delete (m->ptr.qd); break; }
     }
+    free(m);
 }
 
 static struct custom_operations custom_ops = {
     (char *)"atcf.math_obj",
-    finalize,
+    math_obj_finalize,
     custom_compare_default,
     custom_hash_default,
     custom_serialize_default,
@@ -94,26 +94,52 @@ static struct custom_operations custom_ops = {
  *
  */
 extern void
-caml_atcf_alloc_math_obj(value *v, t_math_type mt, value *ba, void *ptr)
+caml_atcf_alloc_math_obj(value *v, t_math_type mt, value *ba, int ofs, void *ptr)
 {
-    *v = caml_alloc_custom(&custom_ops, sizeof(t_math_obj), 0, 1);
-    caml_remove_global_root(v);
-    math_obj_of_val(*v)->mt = mt;
-    math_obj_of_val(*v)->ba = *ba;
-    caml_register_global_root(&math_obj_of_val(*v)->ba);
-    math_obj_of_val(*v)->ptr.v = ptr;
-    VERBOSE(stderr,"Allocked caml math object %p type %d ba %p\n", ptr, mt, Caml_ba_data_val(*ba));
+    t_math_obj *mv = (t_math_obj *)malloc(sizeof(t_math_obj));
+    *v = caml_alloc_custom(&custom_ops, sizeof(t_math_obj *), 0, 1);
+    math_obj_of_val(*v) = mv;
+    //caml_remove_global_root(v);
+    mv->mt = mt;
+    mv->ba = *ba;
+    mv->ofs = ofs;
+    mv->ptr.v = ptr;
+    caml_register_global_root(&mv->ba);
+    VERBOSE(stderr,"Allocked caml math object %p ptr %p type %d ba data %p ofs %d\n", mv, ptr, mt, Caml_ba_data_val(*ba), ofs);
 }
 
 extern int
-math_obj_validate( value v, t_math_type mt, ...)
+math_obj_validate(t_math_obj *m, t_math_type mt, ...)
 {
-    t_math_obj *m = math_obj_of_val(v);
     if (m->mt != mt) {
         caml_invalid_argument("Expected different math obj type");
         return 0;
     }
 
-    //switch (mt) {}
+    void *ba_data = Caml_ba_data_val(m->ba);
+    switch (mt) {
+    case MT_V_FLOAT:  {m->ptr.vf->set_coords((float *)ba_data+m->ofs); break; }
+    case MT_V_DOUBLE: {m->ptr.vd->set_coords((double *)ba_data+m->ofs); break; }
+    case MT_M_FLOAT:  {m->ptr.mf->set_values((float *)ba_data+m->ofs); break; }
+    case MT_M_DOUBLE: {m->ptr.md->set_values((double *)ba_data+m->ofs); break; }
+    }
     return 1;
+}
+
+extern int
+math_obj_validate_is_v(t_math_obj *m)
+{
+    if (m->mt==MT_V_FLOAT) {
+        return math_obj_validate(m, MT_V_FLOAT);
+    }
+    return math_obj_validate(m, MT_V_DOUBLE);
+}
+
+extern int
+math_obj_validate_is_m(t_math_obj *m)
+{
+    if (m->mt==MT_M_FLOAT) {
+        return math_obj_validate(m, MT_M_FLOAT);
+    }
+    return math_obj_validate(m, MT_M_DOUBLE);
 }

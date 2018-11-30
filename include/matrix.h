@@ -72,6 +72,7 @@ public:
     inline int ncols(void) {return _ncols;}
     inline int row_stride(void) {return _row_stride;}
     inline int col_stride(void) {return _col_stride;}
+    inline T *set_values(T *values) {_values=values;return _values;}
     inline const T *values(void) const {return _values;};
     inline void set(int r, int c, T v) {_values[r*_row_stride+c*_col_stride]=v;};
     inline T get(int r, int c) const {return _values[r*_row_stride+c*_col_stride];};

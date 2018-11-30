@@ -4,6 +4,12 @@
 (copy_files# c_links/compression/*)
 (copy_files# c_links/include/*)
 
+;(env
+; (dev
+;  (cxx_flags (:standard -D__OCAML_VECTOR_VERBOSE -D__OCAML_MATH_OBJ_VERBOSE -D__OCAML_MATRIX_VERBOSE -D__OCAML_QUATERNION_VERBOSE)))
+; (release
+;  (cxx_flags (:standard -O3))))
+
 (library 
  (
  (name atcflib)
@@ -18,10 +24,10 @@
      ocaml_math_obj ocaml_matrix ocaml_vector ocaml_quaternion ocaml_timer)
   )
   (cxx_flags
-    ( -I atcf )
+    (:standard -I atcf );-D__OCAML_VECTOR_VERBOSE -D__OCAML_MATH_OBJ_VERBOSE -D__OCAML_MATRIX_VERBOSE -D__OCAML_QUATERNION_VERBOSE)
   )
   (c_library_flags
-   (-lc++)
+   (:standard -lc++)
   )
 
  )

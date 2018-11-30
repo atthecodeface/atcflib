@@ -205,18 +205,17 @@ let test_invert ctxt m =
     
 let test_suite_matrix_assign = 
     "assign" >::: [
-        ("2x2" >::
+        ("2x2a" >::
            fun ctxt ->
            let m = Matrix.make 2 2 in
            ignore Matrix.(set 0 1 2.0 (set 0 0 3.0 m) ) ;
-           assert_equal_int "nrows" (Matrix.nrows m) 2 ;
-           assert_equal_int "ncols" (Matrix.ncols m) 2 ;
+           ignore Matrix.(set 1 1 0.0 (set 1 0 0.0 m) ) ;
            assert_matrix_rc (Matrix.row_vector m) 0 [|3.0; 2.0|];
            assert_matrix_rc (Matrix.row_vector m) 1 [|0.0; 0.0|];
            assert_matrix_rc (Matrix.col_vector m) 0 [|3.0; 0.0|];
            assert_matrix_rc (Matrix.col_vector m) 1 [|2.0; 0.0|];
         ) ;
-        ("2x2" >::
+       ("2x2b" >::
            fun ctxt ->
            let m = Matrix.make 2 2 in
            ignore Matrix.(set 0 1 2.0 (set 0 0 1.0 m)) ;
@@ -329,7 +328,7 @@ let test_suite_matrix_operation =
            let m = mat_1234 in
            test_invert ctxt m
         ) ;
-        ("invert3x3" >::
+         ("invert3x3" >::
            fun ctxt ->
            let m = rot30_z in
            test_invert ctxt m

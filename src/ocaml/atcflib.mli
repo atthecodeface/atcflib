@@ -167,20 +167,20 @@ module rec
         v2 (effectively v.coords := v2.coords); it requires that v
         have the same length as v2 (which is not checked). It returns v. *)
 
-        (* val assign_m_v       : Matrix.t -> t -> t -> t *)
+        val assign_m_v       : Matrix.t -> t -> t -> t
         (** Vector.assign_m_v m v2 v sets v to be Matrix m * v2; it
         requires that v have the same length as M.nrows, and M.ncols
         is the length of v2 (neither of which is checked). It
         returns v. *)
 
-        (* val assign_q_as_rotation : t -> Quaternion.t -> float * float *)
-        (** Vector.assign_q_as_rotation v q assumes q is a unit
+        val assign_q_as_rotation : t -> Quaternion.t -> float * float
+        (** Vector.assign_q_as_rotation v q assumes q is a unit *
         quaternion, and sets v to be the axis of rotation that q
         stresents (in three dimensions), and it returns a tuple of
         (cosine, sine) of the angle of rotation. It requires v to have
         length 3, which is not checked. *)
 
-        (* val apply_q          : Quaternion.t -> t -> t *)
+        val apply_q          : Quaternion.t -> t -> t
         (** Vector.apply_q v q applies q to the vector v, and sets the
         first 3 coordinates of v appropriately. This requires v to be
         of length 3 or more.
@@ -240,7 +240,7 @@ module rec
      and
        Matrix :
          sig
-           (** The matrix type is an instance of the C++ c_vector class
+           (** The matrix type is an instance of the C++ c_matrix class
             *)
            type t
 
@@ -305,7 +305,7 @@ module rec
            (** Matrix.assign_m_m m1 m2 m assigns m to be the result of
            the product of m1 and m2 (in that order). It returns m. *)
 
-           (* val assign_from_q : Quaternion.t  -> t -> t *)
+           val assign_from_q : Quaternion.t  -> t -> t
            (** Matrix.assign_from_q m q assumes that q is a
            unit quaternion and it makes m be the identity matrix with
            the top level 3x3 being a rotation that matches the
@@ -381,12 +381,9 @@ module rec
  *)
      and Quaternion :
            sig
-            (** The quaternion type is an instance of the C++ c_vector class
+            (** The quaternion type is an instance of the C++ c_quaternion class
             *)
-             type t = { cq : c_quaternion; }
-
-             val create : c_quaternion -> t
-             (** Quaternion.create is a privatem method to create a quaternion from an instances of the C classs. *)
+             type t
 
              val copy : t -> t
              (** Quaternion.copy qdm creates a copy of quaternion q and returns it *)

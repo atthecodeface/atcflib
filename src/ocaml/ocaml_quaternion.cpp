@@ -176,8 +176,10 @@ CAMLprim void
 atcf_quaternion_assign_lookat_graphics(value q, value at, value up)
 {
     CAMLparam3(q, at, up);
-    quaternion_of_val(q)->lookat_graphics(*vector_of_val(at),
-                                          *vector_of_val(up));
+    t_math_obj *mat = math_obj_of_val(at);
+    t_math_obj *mup = math_obj_of_val(up);
+
+    quaternion_of_val(q)->lookat_graphics(*mat->ptr.cvd, *mup->ptr.cvd);
                                  
     CAMLreturn0;
 }
@@ -192,8 +194,9 @@ CAMLprim void
 atcf_quaternion_assign_lookat_aeronautic(value q, value at, value up)
 {
     CAMLparam3(q, at, up);
-    quaternion_of_val(q)->lookat_aeronautic(*vector_of_val(at),
-                                            *vector_of_val(up));
+    t_math_obj *mat = math_obj_of_val(at);
+    t_math_obj *mup = math_obj_of_val(up);
+    quaternion_of_val(q)->lookat_aeronautic(*mat->ptr.cvd, *mup->ptr.cvd);
                                  
     CAMLreturn0;
 }
@@ -208,9 +211,10 @@ CAMLprim void
 atcf_quaternion_assign_of_rotation(value q, value axis, value c, value s)
 {
     CAMLparam4(q, axis, c, s);
+    t_math_obj *maxis = math_obj_of_val(axis);
     quaternion_of_val(q)->from_rotation(Double_val(c),
                                         Double_val(s),
-                                        *vector_of_val(axis));
+                                        *maxis->ptr.cvd);
     CAMLreturn0;
 }
 

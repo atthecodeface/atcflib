@@ -63,6 +63,7 @@ public:
 
     inline int length(void) const {return _length;}
     inline int stride(void) const {return _stride;}
+    inline T *set_coords(T *coords) {_coords=coords;return coords;};
     inline const T *coords(int *stride) const {if (stride) {*stride=_stride;} return &(_coords[0]);};
     inline T *coords_to_set(int *stride) {if (stride) {*stride=_stride;} return &(_coords[0]);};
     inline void set(int n, T v) {_coords[n*_stride]=v;};

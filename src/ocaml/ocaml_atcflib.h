@@ -1,8 +1,8 @@
 template <typename T> class c_vector;
 template <typename T> class c_quaternion;
 template <typename T> class c_matrix;
-extern value caml_atcf_alloc_vector(class c_vector<double> *cv);
-extern value caml_atcf_alloc_matrix(class c_matrix<double> *cm);
+//extern value caml_atcf_alloc_vector(class c_vector<double> *cv);
+//extern value caml_atcf_alloc_matrix(class c_matrix<double> *cm);
 extern value caml_atcf_alloc_quaternion(class c_quaternion<double> *cq);
 
 /*t t_math_type - doubles MUST be odd */
@@ -11,14 +11,13 @@ typedef enum {
     MT_V_DOUBLE=1,
     MT_M_FLOAT=2,
     MT_M_DOUBLE=3,
-    MT_Q_FLOAT=4,
-    MT_Q_DOUBLE=5,
 } t_math_type;
 
 /*t t_math_obj - Object stored in Ocaml value */
 typedef struct {
     t_math_type mt;
     value ba;
+    int   ofs;
     union {
         void *v;
         c_vector<double> *vd;
@@ -27,27 +26,27 @@ typedef struct {
         c_matrix<float>  *mf;
         c_quaternion<double> *qd;
         c_quaternion<float>  *qf;
+        const c_vector<double> *cvd;
+        const c_vector<float>  *cvf;
+        const c_matrix<double> *cmd;
+        const c_matrix<float>  *cmf;
+        const c_quaternion<double> *cqd;
+        const c_quaternion<float>  *cqf;
     } ptr;
 } t_math_obj;
 
 /*f caml_atcf_alloc_math_obj */
 extern void
-caml_atcf_alloc_math_obj(value *v, t_math_type mt, value *ba, void *ptr);
+caml_atcf_alloc_math_obj(value *v, t_math_type mt, value *ba, int ofs, void *ptr);
 extern int
-math_obj_validate( value v, t_math_type mt, ...);
+math_obj_validate(t_math_obj *m, t_math_type mt, ...);
+extern int math_obj_validate_is_m(t_math_obj *m);
+extern int math_obj_validate_is_v(t_math_obj *m);
 
 /*f math_obj_of_val c_vector from an OCAML value
  */
 #define math_obj_of_double(m) ((m->mt)&1)
-#define math_obj_of_val(v) ((t_math_obj *) Data_custom_val(v))
-
-/*f matrix_of_val c_matrix from an OCAML value
- */
-#define matrix_of_val(v) (*((c_matrix<double> **) Data_custom_val(v)))
-
-/*f vector_of_val c_vector from an OCAML value
- */
-#define vector_of_val(v) (math_obj_of_val(v)->ptr.vd)
+#define math_obj_of_val(v) (*((t_math_obj **) Data_custom_val(v)))
 
 /*f quaternion_of_val c_quaternion from an OCAML value
  */
@@ -93,7 +92,9 @@ math_obj_validate( value v, t_math_type mt, ...);
         CAMLparam1(v);                      \
         CAMLlocal1(result);                 \
         t_math_obj *m = math_obj_of_val(v); \
-        VERBOSE(stderr,#fn " of " #st " %p\n", m);     \
+        VERBOSE(stderr,#fn " of math obj " #st " %p ba data %p\n", \
+                m, Caml_ba_data_val(m->ba));                            \
+        math_obj_validate_is_ ## st (m); \
         if (math_obj_of_double(m)) { result = Val_long(m->ptr.st ## d->fn());} \
         else  { result = Val_long(m->ptr.st ## f->fn());}                      \
         CAMLreturn(result);   \
@@ -108,7 +109,9 @@ math_obj_validate( value v, t_math_type mt, ...);
     extern "C" CAMLprim void atcf_ ## st ## _ ## fn (value v) { \
         CAMLparam1(v);                      \
         t_math_obj *m = math_obj_of_val(v); \
-        VERBOSE(stderr,#fn " of " #st " %p\n", m);     \
+        VERBOSE(stderr,#fn " of math obj " #st " %p ba data %p\n", \
+                m, Caml_ba_data_val(m->ba));                            \
+        math_obj_validate_is_ ## st (m); \
         if (math_obj_of_double(m)) { m->ptr.st ## d->fn();} \
         else  { m->ptr.st ## f->fn();}                      \
         CAMLreturn0;   \
@@ -124,7 +127,10 @@ math_obj_validate( value v, t_math_type mt, ...);
         CAMLparam2(v,v2);                                             \
         CAMLlocal1(result);                 \
         t_math_obj *m = math_obj_of_val(v); \
-        VERBOSE(stderr,#fn " of " #st " %p %ld\n", m,  Long_val(v2)); \
+        VERBOSE(stderr,#fn " of math obj " #st " %p ba data %p and %ld\n", \
+                m, Caml_ba_data_val(m->ba),                             \
+                Long_val(v2));                                          \
+        math_obj_validate_is_ ## st (m); \
         if (math_obj_of_double(m)) { result = caml_copy_double(m->ptr.st ## d->fn(Long_val(v2))); } \
         else  { result = caml_copy_double(m->ptr.st ## f->fn(Long_val(v2)));}       \
         CAMLreturn(result); \
@@ -140,7 +146,11 @@ math_obj_validate( value v, t_math_type mt, ...);
         CAMLparam2(v, v2);                                              \
         t_math_obj *m = math_obj_of_val(v); \
         t_math_obj *m2 = math_obj_of_val(v2); \
-        VERBOSE(stderr,#fn " of " #st " %p %p\n", m, m2);     \
+        VERBOSE(stderr,#fn " of math objs " #st " %p ba data %p and %p ba data %p\n", \
+                m, Caml_ba_data_val(m->ba),                             \
+                m2, Caml_ba_data_val(m2->ba));                          \
+        math_obj_validate_is_ ## st (m); \
+        math_obj_validate_is_ ## st (m2); \
         if (math_obj_of_double(m)) { m->ptr.st ## d->fn(*m2->ptr.st ## d); } \
         else  { m->ptr.st ## f->fn(*m2->ptr.st ## f); }       \
         CAMLreturn0;                                                    \
@@ -157,7 +167,13 @@ math_obj_validate( value v, t_math_type mt, ...);
         t_math_obj *m = math_obj_of_val(v); \
         t_math_obj *m2 = math_obj_of_val(v2); \
         t_math_obj *m3 = math_obj_of_val(v3); \
-        VERBOSE(stderr,#fn " of " #st " %p %p %p\n", m, m2, m3);           \
+        VERBOSE(stderr,#fn " of math objs " #st " %p ba data %p and %p ba data %p and %p ba data %p\n", \
+                m, Caml_ba_data_val(m->ba), \
+                m2, Caml_ba_data_val(m2->ba), \
+                m3, Caml_ba_data_val(m3->ba)); \
+        math_obj_validate_is_ ## st (m); \
+        math_obj_validate_is_ ## st (m2); \
+        math_obj_validate_is_ ## st (m3); \
         if (math_obj_of_double(m)) { m->ptr.st ## d->fn(*m2->ptr.st ## d, *m3->ptr.st ## d); } \
         else  { m->ptr.st ## f->fn(*m2->ptr.st ## f, *m3->ptr.st ## f ); }                \
         CAMLreturn0;                                                    \
@@ -172,7 +188,11 @@ math_obj_validate( value v, t_math_type mt, ...);
     extern "C" CAMLprim void atcf_ ## st ## _ ## fn (value v, value n, value f) { \
         CAMLparam3(v,n,f);                                              \
         t_math_obj *m = math_obj_of_val(v); \
-        VERBOSE(stderr,#fn " of " #st " %p %ld %f\n", m, Long_val(n), Double_val(f)); \
+        VERBOSE(stderr,#fn " of math obj " #st " %p ba data %p and %ld, %f\n", \
+                m, Caml_ba_data_val(m->ba),                             \
+                Long_val(n),                                            \
+                Double_val(f));                                         \
+        math_obj_validate_is_ ## st (m); \
         if (math_obj_of_double(m)) { m->ptr.st ## d->fn(Long_val(n), Double_val(f)); } \
         else  { m->ptr.st ## f->fn(Long_val(n), Double_val(f));}        \
         CAMLreturn0;                                                    \
@@ -187,7 +207,12 @@ math_obj_validate( value v, t_math_type mt, ...);
     extern "C" CAMLprim void atcf_ ## st ## _ ## fn (value v, value r, value c, value f) { \
         CAMLparam4(v,r,c,f);                                            \
         t_math_obj *m = math_obj_of_val(v); \
-        VERBOSE(stderr,#fn " of " #st " %p %ld %ld %f\n", m, Long_val(r), Long_val(c), Double_val(f)); \
+        VERBOSE(stderr,#fn " of math obj " #st " %p ba data %p and %ld, %ld, %f\n", \
+                m, Caml_ba_data_val(m->ba),                             \
+                Long_val(r),                                            \
+                Long_val(c),                                            \
+                Double_val(f));                                         \
+        math_obj_validate_is_ ## st (m); \
         if (math_obj_of_double(m)) { m->ptr.st ## d->fn(Long_val(r), Long_val(c), Double_val(f)); } \
         else  { m->ptr.st ## f->fn(Long_val(r), Long_val(c), Double_val(f));} \
         CAMLreturn0;                                                    \
@@ -202,7 +227,10 @@ math_obj_validate( value v, t_math_type mt, ...);
     extern "C" CAMLprim void atcf_ ## st ## _ ## fn (value v, value f) {   \
         CAMLparam2(v,f);                                                \
         t_math_obj *m = math_obj_of_val(v);                            \
-        VERBOSE(stderr,#fn " of " #st " %p %f\n", m, Double_val(f));    \
+        VERBOSE(stderr,#fn " of math obj " #st " %p ba data %p and %f\n", \
+                m, Caml_ba_data_val(m->ba),                             \
+                Double_val(f));                                         \
+        math_obj_validate_is_ ## st (m); \
         if (math_obj_of_double(m)) { m->ptr.st ## d ->fn(Double_val(f)); } \
         else  {m->ptr.st ## d ->fn(Double_val(f)); }  \
                                           \
@@ -219,7 +247,12 @@ math_obj_validate( value v, t_math_type mt, ...);
         CAMLparam3(v,v2,f);                                             \
         t_math_obj *m = math_obj_of_val(v); \
         t_math_obj *m2 = math_obj_of_val(v2); \
-        VERBOSE(stderr,#fn " of " #st " %p %p %f\n", m, m2, Double_val(f)); \
+        VERBOSE(stderr,#fn " of math objs " #st " %p ba data %p and %p ba data %p and %f\n", \
+                m, Caml_ba_data_val(m->ba),                             \
+                m2, Caml_ba_data_val(m2->ba),                           \
+                Double_val(f));                                         \
+        math_obj_validate_is_ ## st (m); \
+        math_obj_validate_is_ ## st (m2); \
         if (math_obj_of_double(m)) { m->ptr.st ## d->fn(*m2->ptr.st ## d, Double_val(f)); } \
         else  { m->ptr.st ## f->fn(*m2->ptr.st ## f, Double_val(f)); }       \
         CAMLreturn0;                                                    \
@@ -237,7 +270,11 @@ math_obj_validate( value v, t_math_type mt, ...);
         double result_f; \
         t_math_obj *m = math_obj_of_val(v); \
         t_math_obj *m2 = math_obj_of_val(v2); \
-        VERBOSE(stderr,#fn " of " #st " %p %p\n", m, m2); \
+        VERBOSE(stderr,#fn " of math objs " #st " %p ba data %p and %p ba data %p\n", \
+                m, Caml_ba_data_val(m->ba),                             \
+                m2, Caml_ba_data_val(m2->ba));                          \
+        math_obj_validate_is_ ## st (m); \
+        math_obj_validate_is_ ## st (m2); \
         if (math_obj_of_double(m)) { result_f = m->ptr.st ## d->fn(*m2->ptr.st ## d); } \
         else  { result_f = m->ptr.st ## f->fn(*m2->ptr.st ## f); }       \
         result = caml_copy_double(result_f); \

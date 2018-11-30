@@ -130,9 +130,9 @@ external v_create_bigarray_slice  : t_ba_doubles -> l:int -> o:int -> s:int -> c
 external v_modulus : c_vector -> float = "atcf_v_modulus"
 external v_modulus_squared : c_vector -> float = "atcf_v_modulus_squared"
 external v_assign  : c_vector -> c_vector -> unit = "atcf_v_assign"
-(*external v_assign_m_v  : c_vector -> c_matrix -> c_vector -> unit = "atcf_v_assign_m_v"*)
-(*external v_assign_q    : c_vector -> c_quaternion -> float * float = "atcf_v_assign_q"*)
-(*external v_apply_q     : c_vector -> c_quaternion -> unit = "atcf_v_apply_q"*)
+external v_assign_m_v  : c_vector -> c_matrix -> c_vector -> unit = "atcf_v_assign_m_v"
+external v_assign_q    : c_vector -> c_quaternion -> float * float = "atcf_v_assign_q"
+external v_apply_q     : c_vector -> c_quaternion -> unit = "atcf_v_apply_q"
 external v_normalize : c_vector -> unit = "atcf_v_normalize"
 external v_length  : c_vector -> int = "atcf_v_length"
 external v_coords  : c_vector -> float array  = "atcf_v_coords"
@@ -146,7 +146,6 @@ external v_angle_axis_to : c_vector -> c_vector -> c_vector -> (c_vector * float
 
 (*b matrix functions *)
 external m_of_bigarray  : t_ba_doubles -> o:int -> dims:int array -> c_matrix = "atcf_m_of_bigarray"
-external m_create  : int -> int -> c_matrix   = "atcf_m_create"
 (*external m_clone   : c_matrix -> c_matrix   = "atcf_matrix_clone"*)
 external m_nrows   : c_matrix -> int = "atcf_m_nrows"
 external m_ncols   : c_matrix -> int = "atcf_m_ncols"
@@ -156,7 +155,7 @@ external m_apply   : c_matrix -> c_vector -> c_vector -> unit = "atcf_m_apply"
 external m_identity      : c_matrix -> unit  = "atcf_m_set_identity"
 external m_assign        : c_matrix -> c_matrix -> unit  = "atcf_m_assign"
 external m_assign_m_m    : c_matrix -> c_matrix -> c_matrix -> unit  = "atcf_m_assign_m_m"
-(*external m_assign_from_q : c_matrix -> c_quaternion -> unit  = "atcf_matrix_assign_from_q"*)
+external m_assign_from_q : c_matrix -> c_quaternion -> unit  = "atcf_matrix_assign_from_q" (* was removed dont know why *)
 external m_set           : c_matrix -> int -> int -> float -> unit  = "atcf_m_set"
 external m_transpose     : c_matrix -> unit  = "atcf_m_transpose_data"
 external m_scale         : c_matrix -> float -> unit  = "atcf_m_scale"
@@ -237,6 +236,7 @@ end
 (*a Vector module version *)
 type t_vector = c_vector
 type t_matrix = c_matrix
+type t_quaternion = c_quaternion
 module Vector =
 struct
     exception NotImplemented
@@ -250,13 +250,11 @@ struct
        v_create_bigarray_slice ba length offset stride
      let make        n  = 
       let ba = Bigarray.(Array1.create float64 c_layout n) in
-      v_create_bigarray_slice ba (-1) (-1) (-1)
-    let create _ = raise NotImplemented
+      v_create_bigarray_slice ba (-1) (0) (1)
     let copy        v =
       let nv = make (length v) in
       assign v nv
 
-(*let assign_m_v  m2 v2 v  = v_assign_m_v v m2.Matrix.cm v2 ; v*)
      let add_scaled  f v2 v   = v_add_scaled v v2 f; v
      let add         v2 v     = v_add_scaled v v2 1.0; v
      let normalize   v        = v_normalize v ; v
@@ -264,15 +262,15 @@ struct
      let modulus_squared  v   = v_modulus_squared v
      let scale       f v     = v_scale v f ; v
      let dot_product v v2     = v_dot_product v v2
-     (*let assign_m_v  m v2 v   = v_assign_m_v v m.Matrix.cm v2 ; v
-     let assign_q_as_rotation v q = (v_assign_q v q.Quaternion.cq)*)
-     (*let apply_q     q v      = (v_apply_q v q.Quaternion.cq) ; v*)
+     let assign_m_v  m v2 v   = v_assign_m_v v m v2 ; v
+     let assign_q_as_rotation v q = (v_assign_q v q)
+     let apply_q     q v      = (v_apply_q v q) ; v
      let assign_cross_product3  v1 v2 v = v_cross_product v1 v2 v; v
      let angle_axis_to3   v1 v2 v = v_angle_axis_to v1 v2 v
      let make2       c0 c1        = make 2 |> set 0 c0 |> set 1 c1
      let make3       c0 c1 c2     = make 3 |> set 0 c0 |> set 1 c1 |> set 2 c2
      let make4       c0 c1 c2 c3  = make 4 |> set 0 c0 |> set 1 c1 |> set 2 c2 |> set 3 c3
-     (*let matrix_x_vector      m v = assign_m_v m v (copy v)*)
+     let matrix_x_vector      m v = assign_m_v m v (copy v)
      let str        v         =
        let f c s = (Printf.sprintf "%f %s" c s) in
        Array.fold_right f (v_coords v) ""
@@ -281,11 +279,14 @@ end
 module Matrix =
  struct
      type t = t_matrix
-     let of_bigarray ~(ncols:int) ~(nrows:int) ?offset:(offset=0) ?col_stride:(cs=0) ?row_stride:(rs=0) ba =
+     let of_bigarray ~(ncols:int) ~(nrows:int) ?offset:(offset=0) ?col_stride:(cs=1) ?row_stride:(rs=0) ba =
        m_of_bigarray ba offset [|ncols; cs; nrows; rs|]
-
-     let create cm = cm
-     let copy   m = (let m2 = m_create (m_nrows m) (m_ncols m) in m_assign m2 m; m2)
+     let make r c =
+       let ba = Bigarray.(Array1.create float64 c_layout (r*c)) in
+       Bigarray.Array1.fill ba 0.;
+       let m = of_bigarray ~ncols:c ~nrows:r ba in
+       m
+     let copy   m = (let m2 = make (m_nrows m) (m_ncols m) in m_assign m2 m; m2)
      let apply  m v1 v = m_apply m v1 v; v
      let set r c f m     = m_set m r c f ; m
      let identity m      = m_identity m ; m
@@ -296,15 +297,14 @@ module Matrix =
      let scale f m      = (m_scale m f) ; m
      let transpose m     = (m_transpose m) ; m
      let add_scaled f m2 m = (m_add_scaled m m2 f) ; m
-     let apply m v         = Vector.create(m_apply m v)
+     (*let apply m v         = Vector.create(m_apply m v)*)
      let assign m1 m        = m_assign m  m1 ; m
      let assign_m_m m1 m2 m = m_assign_m_m m m1 m2 ; m
-     (*let assign_from_q q m = m_assign_from_q m q ; m*)
+     let assign_from_q q m = m_assign_from_q m q ; m
      let lup_decompose m v = m_lup_decompose m v; v
      let lup_get_l m     = (m_lup_get_l m)  ; m
      let lup_get_u m     = (m_lup_get_u m)  ; m
      let lup_invert m    = (m_lup_invert m) ; m
-     let make r c        = create (m_create r c)
      let matrix_x_matrix m1 m2 = assign_m_m (make (nrows m1) (ncols m2)) m1 m2
      let str m = let tmp = Vector.make (m_ncols m) in
                  let rec show_row r l s =
@@ -316,48 +316,27 @@ module Matrix =
                      show_row 0 (m_nrows m) ""
 end
 (*a and Quaternion module *)
-module Quaternion : sig
-    type t = { cq: c_quaternion }
-    val create : c_quaternion -> t
-    val copy   : t -> t
-    val get_rijk           : t -> float array
-    val assign             : t -> t -> t
-    val assign_q_q         : t -> t -> t -> t
-    val assign_lookat_graphics      : t_vector -> t_vector -> t -> t 
-    val assign_lookat_aeronautic    : t_vector -> t_vector -> t -> t 
-    val assign_of_rotation : t_vector -> float -> float -> t -> t
-    val scale              : float -> t -> t
-    val add_scaled         : float -> t -> t -> t
-    val reciprocal         : t -> t
-    val conjugate          : t -> t
-    val modulus            : t -> float
-    val modulus_squared    : t -> float
-    val premultiply        : t -> t -> t
-    val postmultiply       : t -> t -> t
-    val make               : unit -> t
-    val make_rijk          : float -> float -> float -> float -> t
-    val str               : t -> string
-end = struct
-     type t = { cq: c_quaternion }
-     let create (cq_in:c_quaternion) = { cq = cq_in }
-     let copy   q = create (q_clone q.cq)
-     let get_rijk q    = q_get_rijk q.cq
-     let assign q1 q   = q_assign_q q.cq q1.cq ; q
-     let assign_q_q q1 q2 q = (q_assign_q q.cq q1.cq) ; (q_postmultiply q.cq q2.cq) ; q
-     let assign_lookat_graphics at up q =  (q_assign_lookat_graphics q.cq at up) ; q
-     let assign_lookat_aeronautic at up q =  (q_assign_lookat_aeronautic q.cq at up) ; q
-     let assign_of_rotation axis c s  q = (q_assign_of_rotation q.cq axis c s) ; q
-     let scale f q                             = (q_scale q.cq f) ; q
-     let add_scaled f q2 q            = (q_add_scaled q.cq q2.cq f) ; q
-     let reciprocal q                           = q_reciprocal q.cq ; q
-     let conjugate q                            = q_conjugate q.cq ; q
-     let modulus q                              = q_modulus q.cq
-     let modulus_squared q                      = q_modulus_squared q.cq
-     let premultiply q2 q      = q_premultiply q.cq q2.cq ; q
-     let postmultiply q2 q     = q_postmultiply q.cq q2.cq ; q
+module Quaternion = struct
+     type t = t_quaternion
+     let create cq = cq
+     let copy   q = create (q_clone q)
+     let get_rijk q    = q_get_rijk q
+     let assign q1 q   = q_assign_q q q1 ; q
+     let assign_q_q q1 q2 q = (q_assign_q q q1) ; (q_postmultiply q q2) ; q
+     let assign_lookat_graphics at up q =  (q_assign_lookat_graphics q at up) ; q
+     let assign_lookat_aeronautic at up q =  (q_assign_lookat_aeronautic q at up) ; q
+     let assign_of_rotation axis c s  q = (q_assign_of_rotation q axis c s) ; q
+     let scale f q                             = (q_scale q f) ; q
+     let add_scaled f q2 q            = (q_add_scaled q q2 f) ; q
+     let reciprocal q                           = q_reciprocal q ; q
+     let conjugate q                            = q_conjugate q ; q
+     let modulus q                              = q_modulus q
+     let modulus_squared q                      = q_modulus_squared q
+     let premultiply q2 q      = q_premultiply q q2 ; q
+     let postmultiply q2 q     = q_postmultiply q q2 ; q
      let make _ = create (q_create ())
      let make_rijk r i j k = create (q_create_rijk r i j k)
-     let str q = let rijk=(q_get_rijk q.cq) in (Printf.sprintf "%f,%f,%f,%f " rijk.(0) rijk.(1) rijk.(2) rijk.(3))
+     let str q = let rijk=(q_get_rijk q) in (Printf.sprintf "%f,%f,%f,%f " rijk.(0) rijk.(1) rijk.(2) rijk.(3))
 end
 
 (*a Bunzip module *)

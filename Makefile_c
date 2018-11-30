@@ -16,7 +16,7 @@ LIB_OBJS     := build/quaternion.o build/vector.o build/matrix.o \
 libatcf: libatcf.so atcflib.a
 
 libatcf.so: ${LIB_OBJS}
-	c++ -Xlinker -dylib -undefined dynamic_lookup ${LIB_OBJS} -lpng16 -ljpeg -L/usr/local/lib  -o $@
+	c++ -g -Xlinker -dylib -undefined dynamic_lookup ${LIB_OBJS} -lpng16 -ljpeg -L/usr/local/lib  -o $@
 
 atcflib.a: ${LIB_OBJS}
 	ar -r $@ ${LIB_OBJS}

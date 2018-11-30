@@ -105,9 +105,11 @@ void c_matrix<T>::set_size(int nrows, int ncols)
 template <typename T>
 c_matrix<T>::~c_matrix(void)
 {
-    if (_values!=NULL) {
-        free(_values);
-        _values = NULL;
+    if (_values_must_be_freed) {
+        if (_values!=NULL) {
+            free(_values);
+            _values = NULL;
+        }
     }
 }
 
@@ -174,7 +176,6 @@ c_matrix<T>::c_matrix(int nrows, int ncols, const T *values)
 template <typename T>
 c_matrix<T>::c_matrix(int nrows, int ncols, T *values, int row_stride, int col_stride)
 {
-    fprintf(stderr,"Create %p\n",values);
     init();
     _nrows = nrows;
     _ncols = ncols;
@@ -182,8 +183,8 @@ c_matrix<T>::c_matrix(int nrows, int ncols, T *values, int row_stride, int col_s
         _col_stride = 1;
         _row_stride = _ncols;
     } else {
-        _row_stride = (row_stride==0) ? _ncols: 1;
-        _col_stride = (col_stride==0) ? _nrows : 1;
+        _row_stride = (row_stride==0) ? _ncols: row_stride;
+        _col_stride = (col_stride==0) ? _nrows : col_stride;
     }
     _values = values;
     _values_must_be_freed = 0;
@@ -384,7 +385,7 @@ c_matrix<T> &c_matrix<T>::transpose_data(void)
         if (_ncols*_col_stride!=_row_stride) return *this; // data must be full for rectangular transpose
     }
 
-    __display__(stderr);
+    //__display__(stderr);
     for (int ir=0; ir<_nrows; ir++) {
         for (int ic=0; ic<_ncols; ic++) {
             int i = ir*_row_stride + ic*_col_stride;
@@ -406,7 +407,7 @@ c_matrix<T> &c_matrix<T>::transpose_data(void)
         if (!start_of_loop) continue;
         x = _values[i];
         j = i;
-        fprintf(stderr,"Loop %d:%d,%d\n",i,ir,ic);
+        //fprintf(stderr,"Loop %d:%d,%d\n",i,ir,ic);
         for (;;) {
             int jc, jr;
             int pj;
@@ -415,8 +416,8 @@ c_matrix<T> &c_matrix<T>::transpose_data(void)
             jc = (j / next_row_stride) % _ncols;
             jr = (j / next_col_stride) % _nrows;
             j = jr*_row_stride + jc*_col_stride;
-            fprintf(stderr,"  inner %d:%d,%d:%d\n",j,jr,jc,pj);
-            //fprintf(stderr,"%d:%d,%d (%lf):",j,r,c,_values[j]);
+            //fprintf(stderr,"  inner %d:%d,%d:%d\n",j,jr,jc,pj);
+            // //fprintf(stderr,"%d:%d,%d (%lf):",j,r,c,_values[j]);
             _values[pj] = _values[j];
             if (j==i) {
                 _values[pj] = x;
@@ -429,7 +430,7 @@ c_matrix<T> &c_matrix<T>::transpose_data(void)
     SWAP(_nrows, _ncols);
     _row_stride = next_row_stride;
     _col_stride = next_col_stride;
-    __display__(stderr);
+    //__display__(stderr);
     return *this;
 }
 
@@ -461,9 +462,7 @@ template <typename T>
 c_vector<T> *c_matrix<T>::get_row(int row) const
 {
     c_vector<T> *v = new c_vector<T>(_ncols);
-    for (int c=0; c<_ncols; c++) {
-        v->set(c,MATRIX_VALUE(row,c));
-    }
+    get_row(row, v);
     return v;
 }
 
@@ -473,9 +472,7 @@ template <typename T>
 c_vector<T> *c_matrix<T>::get_column(int col) const
 {
     c_vector<T> *v = new c_vector<T>(_nrows);
-    for (int r=0; r<_nrows; r++) {
-        v->set(r,MATRIX_VALUE(r,col));
-    }
+    get_column(col, v);
     return v;
 }
 

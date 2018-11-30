@@ -36,6 +36,7 @@
 #include <caml/custom.h>
 #include <caml/intext.h>
 #include <caml/threads.h>
+#include <caml/bigarray.h>
 
 #include "vector.h"
 #include "matrix.h"
@@ -47,7 +48,7 @@
  */
 // Use -D__OCAML_MATRIX_VERBOSE on compilation to be verbose,
 // or uncomment the following
-// #define __OCAML_MATRIX_VERBOSE
+//#define __OCAML_MATRIX_VERBOSE
 #ifdef __OCAML_MATRIX_VERBOSE
 #define VERBOSE fprintf
 #else
@@ -59,7 +60,7 @@ static void __discard(void *, ...) {}
  */
 static void finalize_matrix(value v)
 {
-    delete matrix_of_val(v);
+    //delete matrix_of_val(v);
 }
 
 static struct custom_operations custom_ops = {
@@ -74,97 +75,58 @@ static struct custom_operations custom_ops = {
 
 /*a Creation functions
  */
-/*f caml_atcf_alloc_matrix
+/*f atcf_m_of_bigarray : ba -> offset -> size_stride:int array -> NEW c_vector
  *
- * Creates a matrix from a NEW c_matrix
- *
- */
-extern value
-caml_atcf_alloc_matrix(c_matrix<double> *cm)
-{
-    value v = caml_alloc_custom(&custom_ops, sizeof(c_matrix<double> *), 0, 1);
-    matrix_of_val(v) = cm;
-    VERBOSE(stderr,"Created matrix %p\n", cm);
-    return v;
-}
-
-/*f atcf_m_of_bigarray : n:int -> NEW c_vector
- *
- * Creates a vector of length n
+ * Creates a matrix from bigarray data starting at offset
+ * size_stride must be an array of size 4 of ncols, col stride, nrows, row stride
  *
  */
 extern "C"
 CAMLprim value
-atcf_m_of_bigarray(value ba, value l, value o, value s)
+atcf_m_of_bigarray(value ba, value o, value ss_array)
 {
-    CAMLparam4(ba, l, o, s);
+    CAMLparam3(ba, o, ss_array);
     CAMLlocal1 (result);
-/*    int vl = Long_val(l);
-    int vs = Long_val(s);
     int vo = Long_val(o);
     struct caml_ba_array *cba = Caml_ba_array_val(ba);
+    int ncols  = Long_val(Field(ss_array, 0));
+    int colstr = Long_val(Field(ss_array, 1));
+    int nrows  = Long_val(Field(ss_array, 2));
+    int rowstr = Long_val(Field(ss_array, 3));
+    // caml_array_length(ss_array) == 4;   /* size in items */
     intnat size = cba->dim[0]; // assume one-dimensional since that is what we require
-    if (vs<0) vs = 1;
-    if (vo<0) vo = 0;
-    if (vl<0) vl = size;
-    if (vs*vl+vo>size) { vs=1; vo=0; vl=size; }
-
-    t_math_type mt;
-    void *vector;
-    
-    if ((cba->flags & CAML_BA_KIND_MASK)==CAML_BA_FLOAT64) {
-        double *vb = (double *) Caml_ba_data_val(ba);
-        vector = (void *)new c_vector<double>(vl,vs,vb+vo);
-        mt = MT_V_DOUBLE;
-    } else {
-        float *vb = (float *) Caml_ba_data_val(ba);
-        vector = (void *)new c_vector<float>(vl,vs,vb+vo);
-        mt = MT_V_FLOAT;
-    }
-    VERBOSE(stderr,"Create vector from bigarray data %d %p (%p:%d:%d) %d %d %d\n", mt,
-            Caml_ba_array_val(ba)->data,Caml_ba_array_val(ba)->num_dims, Caml_ba_array_val(ba)->dim[0],
-            vl,vs,vo);
-
-    caml_atcf_alloc_math_obj(&result, mt, &ba, vector);
-*/    CAMLreturn(result);
-}
-
-/*f atcf_matrix_create : r:int -> c:int -> NEW c_matrix
- *
- * Creates a matrix of length n
- *
- */
-extern "C"
-CAMLprim value
-atcf_m_create(value r, value c)
-{
-    fprintf(stderr, "Remove me atcf_m_create\n");
-    CAMLparam2(r,c);
-    CAMLlocal1 (result);
-    int nr = Long_val(r);
-    int nc = Long_val(c);
-    int rs = 0;
-    int cs = 0;
-    int vo = 0;
-    VERBOSE(stderr,"Create matrix %ld x %ld\n",Long_val(r),Long_val(c));
+    if (ncols<=0) {ncols=1;}
+    if (nrows<=0) {nrows=1;}
+    if (colstr<=0) {colstr=nrows;}
+    if (rowstr<=0) {rowstr=ncols;}
+    if ((ncols*nrows)>size) { ncols=1; nrows=1; }
+    if (vo<0) {vo=0;}
+    if (vo>=size) {vo=0;}
+    int index;
+    index = (ncols-1)*colstr+vo;
+    if ((index<0) || (index>=size)) { vo=0; colstr=1; rowstr=1; }
+    index = (nrows-1)*rowstr+vo;
+    if ((index<0) || (index>=size)) { vo=0; colstr=1; rowstr=1; }
+    index = (ncols-1)*colstr+(nrows-1)*rowstr+vo;
+    if ((index<0) || (index>=size)) { vo=0; colstr=1; rowstr=1; }
 
     t_math_type mt;
     void *matrix;
-
-    if (1) { //(cba->flags & CAML_BA_KIND_MASK)==CAML_BA_FLOAT64) {
-        //double *vb = (double *) Caml_ba_data_val(ba);
-        double *vb = (double *)malloc(sizeof(double)*nr*nc);
-        for (int i=0; i<nr*nc; i++) vb[i]=0;
-        matrix = (void *)new c_matrix<double>(nr,nc,vb+vo,rs,cs);
+    
+    if ((cba->flags & CAML_BA_KIND_MASK)==CAML_BA_FLOAT64) {
+        double *vb = (double *) Caml_ba_data_val(ba);
+        matrix = (void *)new c_matrix<double>(nrows, ncols, vb+vo, rowstr, colstr);
         mt = MT_M_DOUBLE;
     } else {
-        //float *vb = (float *) Caml_ba_data_val(ba);
-        float *vb = (float *)malloc(sizeof(float)*nr*nc);
-        for (int i=0; i<nr*nc; i++) vb[i]=0;
-        matrix = (void *)new c_matrix<float>(nr,nc,vb+vo,rs,cs);
+        float *vb = (float *) Caml_ba_data_val(ba);
+        matrix = (void *)new c_matrix<float>(nrows, ncols, vb+vo, rowstr, colstr);
         mt = MT_M_FLOAT;
     }
-    caml_atcf_alloc_math_obj(&result, mt, &r, matrix); // should be &ba
+    VERBOSE(stderr,"Create matrix from bigarray data type %d ba (%p:%ld:%ld) %d %d %d %d %d\n", mt,
+            Caml_ba_array_val(ba)->data,Caml_ba_array_val(ba)->num_dims, Caml_ba_array_val(ba)->dim[0],
+            vo,nrows,ncols,rowstr,colstr);
+
+    caml_atcf_alloc_math_obj(&result, mt, &ba, vo, matrix);
     CAMLreturn(result);
 }
 
@@ -182,6 +144,7 @@ atcf_m_row_vector(value m, value r, value v)
     CAMLparam3(m,r,v);
     t_math_obj *mm = math_obj_of_val(m);
     t_math_obj *mv = math_obj_of_val(v);
+    VERBOSE(stderr,"Get row vector of mm %p into mv %p data types %d %d\n", mm, mv, mm->mt, mv->mt);
     if (math_obj_of_double(mm)) {
         mm->ptr.md->get_row(Long_val(r), mv->ptr.vd);
     } else {
@@ -202,6 +165,7 @@ atcf_m_col_vector(value m, value r, value v)
     CAMLparam3(m,r,v);
     t_math_obj *mm = math_obj_of_val(m);
     t_math_obj *mv = math_obj_of_val(v);
+    VERBOSE(stderr,"Get col vector of mm %p into mv %p data types %d %d\n", mm, mv, mm->mt, mv->mt);
     if (math_obj_of_double(mm)) {
         mm->ptr.md->get_column(Long_val(r), mv->ptr.vd);
     } else {
@@ -229,7 +193,7 @@ FN_MO_C_TO_UNIT(m, set_identity)
 FN_MO_C_INT_INT_FLOAT_TO_UNIT(m, set)
 
 /*f atcf_m_assign
-  Assign value to be that of matrix m1
+  Assign value of m to be that of matrix m1
  */
 extern "C"
 CAMLprim void
@@ -240,10 +204,10 @@ atcf_m_assign(value m, value m1)
     t_math_obj *mm1 = math_obj_of_val(m1);
     if (math_obj_of_double(mm)) {
         mm->ptr.md->scale(0);
-        mm->ptr.md->add_scaled(*mm1->ptr.md,1);
+        mm->ptr.md->add_scaled(*mm1->ptr.cmd,1);
     } else {
         mm->ptr.mf->scale(0);
-        mm->ptr.mf->add_scaled(*mm1->ptr.mf,1);
+        mm->ptr.mf->add_scaled(*mm1->ptr.cmf,1);
     }
     CAMLreturn0;
 }
@@ -280,6 +244,7 @@ atcf_m_apply(value m, value v, value rv) {
     t_math_obj *mm  = math_obj_of_val(m);
     t_math_obj *mv  = math_obj_of_val(v);
     t_math_obj *mrv = math_obj_of_val(rv);
+    VERBOSE(stderr,"Multiply mv %p by mm %p in to mrv %p types %d %d %d\n", mv, mm, mrv, mv->mt, mm->mt, mrv->mt);
     if (math_obj_of_double(mm)) {
         mm->ptr.md->apply(*mv->ptr.vd, *mrv->ptr.vd);
     } else {
@@ -312,7 +277,14 @@ extern "C"
 CAMLprim void
 atcf_matrix_assign_from_q(value m, value q) {
     CAMLparam2(m, q);
-    matrix_of_val(m)->set_from_quaternion(*quaternion_of_val(q));
+    t_math_obj *mm = math_obj_of_val(m);
+    VERBOSE(stderr,"Assign mm %p from quaterion type %d\n", mm, mm->mt );
+    if (math_obj_of_double(mm)) {
+        mm->ptr.md->set_from_quaternion(*quaternion_of_val(q));
+    } else {
+        fprintf(stderr, "atcf_matrix_assign_from_q(value m, value q) { not written yet\n");
+        //mm->ptr.mf->set_from_quaternion(*quaternion_of_val(q));
+    }
     CAMLreturn0;
 }
 
@@ -349,6 +321,7 @@ CAMLprim void
 atcf_m_lup_invert(value m) {
     CAMLparam1(m);
     t_math_obj *mm  = math_obj_of_val(m);
+    VERBOSE(stderr,"LUP decompose mm %p type %d ba data %p\n", mm, mm->mt, Caml_ba_data_val(mm->ba) );
     if (math_obj_of_double(mm)) {
         c_vector<double> *v = NULL;
         if (mm->ptr.md->lup_decompose(&v)) { // raise exception
